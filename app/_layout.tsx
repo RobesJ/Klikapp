@@ -12,7 +12,21 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="addClientScreen"
-          options={{ headerShown: false }}
+          options={{ headerTransparent: true,
+                     headerTitle: ''
+                  }}
+        />
+        <Stack.Screen
+          name="addObjectScreen"
+          options={{ headerTransparent: true,
+                     headerTitle: ''
+                  }}
+        />
+        <Stack.Screen
+          name="addProjectScreen"
+          options={{ headerTransparent: true,
+                     headerTitle: ''
+                  }}
         />
         <Stack.Screen
           name="(auth)/login"
@@ -22,6 +36,7 @@ export default function RootLayout() {
           name="(auth)/register"
           options={{ headerShown: false }}
         />
+
       </Stack>
     </AuthProvider>
   );

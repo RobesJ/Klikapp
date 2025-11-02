@@ -145,14 +145,14 @@ export default function Login() {
                         ):
                         (
                             <Text className='font-bold'>
-                                Prihlasit sa
+                                Prihlásiť sa
                             </Text>
                         )}
                     </TouchableOpacity>
 
                     <View className='flex-row justify-center items-center'>
                         <Text className='text-base'>
-                            Nemate ucet?{' '}
+                            Nemáte účet?{'  '}
                         </Text>
                         <TouchableOpacity
                             onPress={() => router.push("/(auth)/register")}

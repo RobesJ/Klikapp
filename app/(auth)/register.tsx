@@ -118,10 +118,10 @@ export default function Register() {
             {/*header*/}
             <View className='items-center mb-8'>
                 <Text className='text-4xl font-bold mb-2'>
-                    Vytvorit ucet
+                    Vytvoriť účet
                 </Text>
                 <Text className='text-base'>
-                    Zadajte vase udaje pre registraciu
+                    Zadajte vaše údaje pre registráciu
                 </Text>
             </View>
 
@@ -180,7 +180,7 @@ export default function Register() {
                     )}
                 </View>
                 <View className='mb-4'>
-                <Text className='ml-2 mb-1'>Potvrdit heslo</Text>
+                <Text className='ml-2 mb-1'>Potvrdiť heslo</Text>
                     <TextInput
                         className='border-2 rounded-2xl w-96 pl-3'
                         placeholder='Zadajte heslo'
@@ -208,26 +208,26 @@ export default function Register() {
                         (
                             <View>
                                 <Text>
-                                    Vytvaram ucet...
+                                    Vytváram účet...
                                 </Text>
                             </View>
                         ) : (
                             <Text>
-                                Vytvorit ucet
+                                Vytvoriť účet
                             </Text>
                         )
                     }
                 </TouchableOpacity>
                 <View className='flex-row justify-center items-center'>
                     <Text>
-                        Uz mate ucet?{' '}
+                        Už máte účet?{'  '}
                     </Text>
                     <TouchableOpacity
                         onPress = {() => router.push("/(auth)/login")}
                         disabled = {loading}
                     >
                         <Text className='font-bold'>
-                            Prihlasit sa
+                            Prihláste sa
                         </Text>
                     </TouchableOpacity>
                 </View>

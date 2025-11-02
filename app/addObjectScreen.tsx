@@ -1,12 +1,12 @@
-import ClientForm from '@/components/forms/clientForm';
+import ObjectForm from '@/components/forms/objectForm';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function AddClientScreen() {
+export default function AddObjectScreen() {
   const router = useRouter();
 
-  const handleSuccess = (client: any) => {
+  const handleSuccess = (object: any) => {
     router.back();
   }
 
@@ -17,12 +17,12 @@ export default function AddClientScreen() {
   return (
     <SafeAreaView className='flex-1'>
       <View>
-        <ClientForm
+        <ObjectForm
           mode="create"
           onSuccess={handleSuccess}
           onCancel={handleCancel}
         >
-        </ClientForm>
+        </ObjectForm>
       </View>
     </SafeAreaView>
   );
