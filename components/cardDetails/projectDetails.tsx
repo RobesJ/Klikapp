@@ -1,14 +1,4 @@
-import { Text, TouchableOpacity, View } from "react-native";
-
-interface Client {
-    id: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    type: string | null;
-    notes: string | null;
-}
+import { Text, View } from "react-native";
 
 interface Project {
     id: string;
@@ -25,6 +15,16 @@ interface User {
     id: string;
     name: string;
     email: string | null;
+}
+
+interface Client {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+    type: string | null;
+    notes: string | null;
 }
 
 interface Object {
@@ -47,54 +47,43 @@ interface ObjectWithRelations {
     chimneys: Chimney[];
 }
 
-interface ProjectCardProps {
+interface ProjectCardDetailsProps{
     project: Project;
     client: Client;
-    users: User[];
-    objects: ObjectWithRelations[];
-    onPress? : () => void;
+    assignedUsers: User[] | null;
+    objects: ObjectWithRelations[] | null;
 }
 
-export default function ProjectCard({ project, client, users, objects, onPress } : ProjectCardProps) {
-   
-    const handlePress = () => {
-        if (onPress){
-            onPress();
-        }
-    };
-   
+export default function ProjectDetails({ project, client, assignedUsers, objects } : ProjectCardDetailsProps) {
     return (
-        <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handlePress}
-            className="rounded-2xl mb-3 border border-gray-800 p-3"
-        >
-            <View className="flex-row items-center justify-between mb-2">
-                <View className="flex-1">
-                <Text className="text-lg font-bold">
-                    {project.type}
-                </Text> 
-                </View>
+        <View className="flex-1">
 
-            </View>
-
-            {client?.name &&
-                <View className="flex-row items-center mb-2">
+          {project.type &&
+                <View className="mt-2 text-xs">
                     <Text>
-                        {client?.name}
+                        {project.type}
                     </Text>
                 </View>
             }
+
             {project.state &&
-                <View className="flex-row items-center mb-2">
+                 <View className="mt-2 text-xs">
                     <Text>
                         {project.state}
                     </Text>
                 </View>
             }
 
+            {client?.name && 
+                <View className="mt-2 text-xs">
+                    <Text>
+                        {client.name}
+                    </Text>
+                </View>
+            }
+
             {project.scheduled_date &&
-                 <View className="flex-row items-center mb-2">
+                <View className="mt-2 text-xs">
                     <Text>
                         {project.scheduled_date}
                     </Text>
@@ -116,26 +105,16 @@ export default function ProjectCard({ project, client, users, objects, onPress }
                     </Text>
                 </View>
             }
-
-            {users && users.length > 0 && (
-                <View className="mt-2 text-xs">
-                    {users.map((user) => (
+            {assignedUsers &&
+                <View className=" mb-2">                    
+                    {assignedUsers.map(user => (
                         <Text key={user.id}>
                             {user.name}
-                        </Text>
-                    ))}
+                            </Text>
+                        ))
+                    }
                 </View>
-            )}
-
-            {objects && objects.length > 0 && (
-                <View className="mt-2 text-xs">
-                    {objects.map((object) => (
-                        <Text key={object.object.id}>
-                            {object.object.appliance}{' '}{object.object.placement}{' '}{object.object.address}
-                        </Text>
-                    ))}
-                </View>
-            )}
+            }
             {project.notes &&
                 <View className="mt-2 text-xs">
                     <Text>
@@ -143,6 +122,6 @@ export default function ProjectCard({ project, client, users, objects, onPress }
                     </Text>
                 </View>
             }
-        </TouchableOpacity>
-    )
+        </View>
+    );
 }

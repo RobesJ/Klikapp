@@ -1,30 +1,34 @@
 import ProjectForm from '@/components/forms/projectForm';
-import { useRouter } from 'expo-router';
-import { KeyboardAvoidingView, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AddProjectScreen() {
   const router = useRouter();
+  const { project, mode, preselectedClient } = useLocalSearchParams();
+
+  const parsedProject = project ? JSON.parse(project as string) : undefined;
+  const parsedClient =  preselectedClient ? JSON.parse(preselectedClient as string) : undefined;
 
   const handleSuccess = (project: any) => {
     router.back();
-  }
+  };
 
-  const handleCancel = () => {
-    router.back();
-  }
-  
   return (
     <SafeAreaView className='flex-1'>
-        <KeyboardAvoidingView>
-      <View>
-        <ProjectForm
-          mode="create"
-          onSuccess={handleSuccess}
-          onCancel={handleCancel}
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "android" ? "padding" : "height"}
+            className='flex-1'
         >
-        </ProjectForm>
-      </View>
+          <View>
+            <ProjectForm
+              mode={(mode as "create" | "edit") || "create"}
+              initialData={parsedProject}
+              onSuccess={handleSuccess}
+              preselectedClient={parsedClient}
+            >
+          </ProjectForm>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

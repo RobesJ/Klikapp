@@ -24,6 +24,7 @@ export default function Login() {
             })
         }
     }
+    
     const validate = () : boolean => {
         const newErrors: Record<string, string> = {};
 
@@ -36,6 +37,10 @@ export default function Login() {
         if (!formData.password){
             newErrors.password = "Heslo je povinne!";
         }
+        else if (formData.password.length < 8 ){
+            newErrors.password = "Heslo musi obsahovat aspon 8 znakov!";
+        }
+        
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     }
@@ -94,9 +99,9 @@ export default function Login() {
 
                     {/* form */}
                     <View className='mb-6 rounded-3xl p-6 items-start'>
-                        <View>
+                        <View className='mb-3'>
                             <TextInput
-                                className='border-2 rounded-2xl w-64 pl-3 mb-3'
+                                className='border-2 rounded-2xl w-64 pl-3'
                                 placeholder='Email'
                                 value={formData.email}
                                 onChangeText={(value) => handleChange("email", value)}
@@ -106,7 +111,7 @@ export default function Login() {
                             />
                             {errors.email &&
                             (
-                                <Text className='text-red-500'>
+                                <Text className='text-red-500 font-semibold ml-2 mt-1'>
                                     {errors.email}
                                 </Text>
                             )}
@@ -122,7 +127,7 @@ export default function Login() {
                             />
                             {errors.password &&
                             (
-                                <Text className='text-red-500'>
+                                <Text className='text-red-500 font-semibold ml-2 mt-1'>
                                     {errors.password}
                                 </Text>
                             )}

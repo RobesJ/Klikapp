@@ -1,29 +1,33 @@
 import ClientForm from '@/components/forms/clientForm';
-import { useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function AddClientScreen() {
+export default function AddClientScreen(){
   const router = useRouter();
+  const { mode, client } = useLocalSearchParams();
+
+  const parsedClient = client ? JSON.parse(client as string) : undefined;
 
   const handleSuccess = (client: any) => {
     router.back();
-  }
+  };
 
-  const handleCancel = () => {
-    router.back();
-  }
-  
   return (
     <SafeAreaView className='flex-1'>
-      <View>
+      <KeyboardAvoidingView
+            behavior={Platform.OS === "android" ? "padding" : "height"}
+            className='flex-1'
+      >
+        <View>
         <ClientForm
-          mode="create"
-          onSuccess={handleSuccess}
-          onCancel={handleCancel}
-        >
-        </ClientForm>
-      </View>
+            mode={(mode as "create" | "edit") || "create"}
+            initialData={parsedClient}
+            onSuccess={handleSuccess}
+            onCancel={() =>router.back}
+          />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

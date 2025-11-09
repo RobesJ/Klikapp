@@ -1,6 +1,3 @@
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
 interface Client {
@@ -22,37 +19,21 @@ interface Object {
     note: string | null;
 }
 
-interface ObjectCardProps {
-    object: Object,
-    onPress? : () => void
+interface Chimney {
+    id: string;
+    type: string;
+    labelling: string | null;
 }
 
-export default function ObjectCard({ object, onPress } : ObjectCardProps) {
-    const router = useRouter();
+interface ObjectCardProps {
+    object: Object;
+    client: Client;
+    chimneys: Chimney[]
+    onPress? : () => void;
+}
 
-    const [client, setClient] = useState<Client>();
-
-    useEffect(() => {
-        fetchClient();
-      }, []);
-
-    async function fetchClient() {
-        try{
-            const {data,  error} = await supabase
-                .from("clients")
-                .select("*")
-                .eq("id", object.client_id)
-                .single();
-
-            if (error) throw error;
-            
-            setClient(data);
-        }
-        catch (error : any) {
-            console.error("Chyba:", error.message);
-        }
-    }
-
+export default function ObjectCard({ object, client, chimneys, onPress } : ObjectCardProps) {
+   
     const handlePress = () => {
         if (onPress){
             onPress();
@@ -81,6 +62,18 @@ export default function ObjectCard({ object, onPress } : ObjectCardProps) {
                     </Text>
                 </View>
             }
+
+            {chimneys.length > 0 && (
+                <View className="flex-row items-center mb-2">
+                    {chimneys.map((chimney) => (
+                        <Text key={chimney.id}>
+                            {chimney.type}
+                            {chimney.labelling}
+                        </Text>
+                    ))}
+                </View>
+            )}
+            
             {object.appliance &&
                 <View className="flex-row items-center mb-2">
                     <Text>
@@ -96,7 +89,6 @@ export default function ObjectCard({ object, onPress } : ObjectCardProps) {
                     </Text>
                 </View>
             }
-
 
             {object.note &&
                 <View className="mt-2 text-xs">

@@ -2,50 +2,26 @@ import { useRouter } from "expo-router";
 import { Text, TouchableOpacity, View } from "react-native";
 
 interface Client {
-    id: string,
-    name: string, 
-    email: string,
-    phone: string,
-    address: string,
-    type: string,
-    notes: string
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+    type: string | null;
+    notes: string | null;
 }
 
-interface ClientCardProps {
-    client: Client,
-    onPress? : () => void
+interface ClientCardDetailsProps{
+    client: Client
 }
 
-export default function ClientCard({ client, onPress } : ClientCardProps) {
+export default function ClientDetails({client} : ClientCardDetailsProps) {
     const router = useRouter();
 
-    const handlePress = () => {
-        if (onPress){
-            onPress();
-        }
-    };
-   
     return (
-        <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handlePress}
-            className="rounded-2xl mb-3 border border-gray-800 p-3"
-        >
-            <View className="flex-row items-center justify-between mb-2">
-                <View className="flex-1">
-                <Text className="text-lg font-bold">
-                    {client.name}
-                </Text> 
-                </View>
+        <View className="flex-1">
 
-                <View className="">
-                    <Text>
-                        {client.type}
-                    </Text>
-                </View>
-            </View>
-
-            {client.email &&
+          {client.email &&
                 <View className="flex-row items-center mb-2">
                     <Text className="mr-2 text-sm">📧</Text>
                     <Text>
@@ -80,6 +56,24 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
                 </View>
             }
 
-        </TouchableOpacity>
-    )
+            <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => router.push({
+                    pathname: "/addObjectScreen",
+                    params: { mode: "create", preselectedClient: JSON.stringify(client)}
+                  })}>
+                    <Text>Pridat objekt</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => router.push({
+                    pathname: "/addProjectScreen",
+                    params: { mode: "create", preselectedClient: JSON.stringify(client)}
+                  })}>
+                    <Text>Pridat projekt</Text>
+            </TouchableOpacity>
+
+        </View>
+    );
 }

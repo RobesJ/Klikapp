@@ -16,8 +16,8 @@ interface Object {
     id?: string;
     client_id?: string,
     address: string | null;
-    placement: string | null,
-    appliance: string | null,
+    placement: string | null;
+    appliance: string | null;
     note: string | null;
 }
 
@@ -37,21 +37,27 @@ interface Chimney {
     labelling: string | null;
 }
 
-interface ObjectFormProps{
-    mode: "create" | "edit";
-    initialData?: Object;
-    onSuccess?: (object: Object) => void;
-    onCancel?: () => void;
+interface ObjectWithRelations {
+    object: Object;
+    client: Client;
+    chimneys: Chimney[];
 }
 
-export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : ObjectFormProps) {
+interface ObjectFormProps{
+    mode: "create" | "edit";
+    initialData?: ObjectWithRelations;
+    onSuccess?: (object: Object) => void;
+    preselectedClient?: Client;
+}
+
+export default function ObjectForm({ mode, initialData, onSuccess, preselectedClient} : ObjectFormProps) {
 
     const [formData, setFormData] = useState<Object>({
-        client_id: initialData?.client_id || '',
-        address: initialData?.address || '',
-        placement: initialData?.placement || '',
-        appliance: initialData?.appliance || '',
-        note: initialData?.note || '',
+        client_id: initialData?.object.client_id || '',
+        address: initialData?.object.address || '',
+        placement: initialData?.object.placement || '',
+        appliance: initialData?.object.appliance || '',
+        note: initialData?.object.note || '',
     });
 
     const [loading, setLoading] = useState(false);
@@ -64,32 +70,40 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [timerId, setTimerId] = useState<number>();
 
-    const [chimneys, setChimneys] = useState<Chimney[]>([]);
-    const [loadingChimneys, setLoadingChimneys] = useState(false);
     const [searchQueryChimney, setSearchQueryChimney] = useState('');
     const [showChimneyModal, setShowChimneyModal] = useState(false);
     const [selectedChimneys, setSelectedChimneys] = useState<Chimney[]>([]);
-    const [timerId2, setTimerId2] = useState<number>();
+    const [allChimneyTypes, setAllChimneyTypes] = useState<Chimney[]>([]);
+    const [filteredChimneyTypes, setFilteredChimneyTypes] = useState<Chimney[]>([]);
+   
 
     useEffect(() => {
+        fetchChimneyTypes();
         if (initialData){
             setFormData({
-                client_id: initialData?.client_id || '',
-                address: initialData?.address || '',
-                placement: initialData?.placement || '',
-                appliance: initialData?.appliance || '',
-                note: initialData?.note || '',
+                client_id: initialData?.object.client_id || '',
+                address: initialData?.object.address || '',
+                placement: initialData?.object.placement || '',
+                appliance: initialData?.object.appliance || '',
+                note: initialData?.object.note || '',
             });
 
-            if (initialData.client_id){
-                fetchClient(initialData.client_id);
+            if (initialData.client){
+                setSelectedClient(initialData.client);
             }
 
-            if (initialData.id){
-                fetchChimney(initialData.id);
+            if (preselectedClient){
+                setSelectedClient(preselectedClient);
+            }
+            if (initialData.chimneys){
+                setSelectedChimneys(initialData.chimneys);
             }
         }
-    }, [initialData]);
+        else if (preselectedClient){
+            setSelectedClient(preselectedClient);
+            setFormData(prev => ({...prev, client_id: preselectedClient.id}));
+        }
+    }, [initialData, preselectedClient]);
     
     const handleChange = (field: keyof Object, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
@@ -102,66 +116,28 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
         }
     };
 
-    async function fetchClient(clientId: string) {
+    async function fetchChimneyTypes() {
         try{
             const {data, error} = await supabase
-                .from("clients")
-                .select("*")
-                .eq("id", clientId)
-                .single();
-
-            if (error) throw error;
-            if (data){
-                setSelectedClient(data);
-                setSearchQuery(data.name)
-            }
-        }
-        catch (error: any){
-            console.error("Error fetching client: ", error);
-        }
-    }
-
-    async function fetchChimney(objectId: string) {
-        try{
-            const {data, error} = await supabase
-                .from("chimneys")
-                .select(`
-                    chimney_type_id,
-                    chimney_types (
-                        id,
-                        type,
-                        labelling
-                    )
-                `)
-                .eq("object_id", objectId);
+                .from("chimney_types")
+                .select('*')
+                .order("type");
 
             if (error) throw error;
             if (data) {
-                // Fix: Handle the nested structure properly
-                const chimneyTypeList = data
-                    .map(item => {
-                        // chimney_types could be null or an object
-                        const chimneyType = item.chimney_types as any;
-                        
-                        // Return null if chimney_types is null
-                        if (!chimneyType) return null;
-                        
-                        // Return the chimney type object
-                        return {
-                            id: chimneyType.id,
-                            type: chimneyType.type,
-                            labelling: chimneyType.labelling
-                        } as Chimney;
-                    })
-                    .filter((item): item is Chimney => item !== null); // Filter out nulls and assert type
-    
-                setSelectedChimneys(chimneyTypeList);
+                setAllChimneyTypes(data);
+                setFilteredChimneyTypes(data);
             }
         }
         catch (error: any){
-            console.error("Error fetching client: ", error);
+            console.error("Error fetching chimneys: ", error);
         }
     }
+    const clientIsPreselected = () : boolean => {
+        if (preselectedClient)
+            return true;
+        return false;
+    };
 
     const handleSearchClient = (text: string) => {
         setSearchQuery(text);
@@ -186,7 +162,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
             const { data, error } = await supabase
                 .from("clients")
                 .select("*")
-                .or(`name.ilike.%${query}%`)
+                .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
                 .order("name")
                 .limit(20);
 
@@ -220,41 +196,18 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
     const handleSearchChimney = (text: string) => {
         setSearchQueryChimney(text);
         
-        if(timerId2) {
-            clearTimeout(timerId2);
+        if (text.trim().length === 0){
+            setFilteredChimneyTypes(allChimneyTypes);
         }
-        const timer2 = window.setTimeout(() => {
-            searchChimney(searchQueryChimney);
-        }, 300);
-
-        setTimerId2(timer2);
+        else{
+            const filteredChimneyTypes = allChimneyTypes.filter(chimney =>
+                chimney.type.toLowerCase().includes(text.toLowerCase()) ||
+                (chimney.labelling && chimney.labelling.toLowerCase().includes(text.toLowerCase()) )
+            );
+            setFilteredChimneyTypes(filteredChimneyTypes);
+        }
+    
     };
-
-    async function searchChimney(query: string) {
-        if (query.trim().length < 2){
-            setChimneys([]);
-            return;
-        }
-        setLoadingChimneys(true);
-        try{
-            const { data, error } = await supabase
-                .from("chimney_types")
-                .select("*")
-                .or(`type.ilike.%${query}%,labelling.ilike.%${query}%`)
-                .order("type")
-                .limit(20);
-
-            if (error) throw error;
-            setChimneys(data || []);
-        } 
-        catch(error: any){
-            console.error("Chyba: ", error.message);
-            setChimneys([]);
-        }
-        finally{
-            setLoadingChimneys(false);
-        }
-    }
 
     const handleToggleChimney = (chimney: Chimney) => {
         setSelectedChimneys(prev => {
@@ -281,11 +234,16 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
         setSelectedChimneys(prev => prev.filter(c => c.id !== chimneyId));
     };
 
+    const handleAddChimney = () =>{
+        setFilteredChimneyTypes(allChimneyTypes);
+        setShowChimneyModal(true);
+    }
+
     const handleSubmit = async () => {
         setLoading(true);
         try{
             let objectId: string;
-
+    
             if (mode === "create"){
                 const {data: objectData, error: objectError} = await supabase
                 .from('objects')
@@ -295,58 +253,64 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                 
                 if (objectError) throw objectError;
                 objectId = objectData.id;
-
-                const chimneyRelations = selectedChimneys.map(chimney => ({
-                    object_id: objectId,
-                    chimney_type_id: chimney.id,
-                }));
-
-                const { error: chimneysError } = await supabase
-                    .from('chimneys')
-                    .insert(chimneyRelations);
-
-                if (chimneysError) throw chimneysError;
-
-                Alert.alert('Success', 'Client created successfully!');
+    
+                // Only insert if there are chimneys selected
+                if (selectedChimneys.length > 0) {
+                    const chimneyRelations = selectedChimneys.map(chimney => ({
+                        object_id: objectId,
+                        chimney_type_id: chimney.id,
+                    }));
+    
+                    const { error: chimneysError } = await supabase
+                        .from('chimneys')
+                        .insert(chimneyRelations);
+    
+                    if (chimneysError) throw chimneysError;
+                }
+    
+                Alert.alert('Success', 'Objekt bol vytvorený!');
                 onSuccess?.(objectData);
             }
             else { 
                 const {data: objectData, error: objectError} = await supabase
                 .from('objects')
                 .update(formData)
-                .eq('id', initialData?.id)
+                .eq('id', initialData?.object.id)
                 .select()
                 .single()
-
+    
                 if (objectError) throw objectError;
                 objectId = objectData.id;
-
+    
+                // Delete ALL existing chimneys for this object
                 const { error: deleteError } = await supabase
                     .from('chimneys')
                     .delete()
                     .eq('object_id', objectId);
-
+    
                 if (deleteError) throw deleteError;
-
-                // Create new chimney relations
-                const chimneyRelations = selectedChimneys.map(chimney => ({
-                    object_id: objectId,
-                    chimney_type_id: chimney.id
-                }));
-
-                const { error: chimneysError } = await supabase
-                    .from('chimneys')
-                    .insert(chimneyRelations);
-
-                if (chimneysError) throw chimneysError;
-
+    
+                // Insert new chimneys ONLY if there are any selected
+                if (selectedChimneys.length > 0) {
+                    const chimneyRelations = selectedChimneys.map(chimney => ({
+                        object_id: objectId,
+                        chimney_type_id: chimney.id
+                    }));
+    
+                    const { error: chimneysError } = await supabase
+                        .from('chimneys')
+                        .insert(chimneyRelations);
+    
+                    if (chimneysError) throw chimneysError;
+                }
+    
                 Alert.alert('Úspech', 'Objekt bol upravený!');
                 onSuccess?.(objectData);
             }
         }
         catch (error: any){
-            console.error("Error saving client: ", error);
-            Alert.alert('Error', error.message || "Failed to save client's data");
+            console.error("Error saving object: ", error);
+            Alert.alert('Error', error.message || "Failed to save object's data");
         }
         finally{
             setLoading(false);
@@ -367,9 +331,10 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                 {/* client input*/}
                 <View className="mb-3">
                     <Text className="mb-1 ml-1 font-medium">Klient</Text>
-                    <View className="border border-gray-400 rounded-lg p-3">
+                    <View className="border-2 border-gray-300 rounded-xl p-4 bg-white">
                         <TouchableOpacity
                             onPress={() => setShowClientModal(true)}
+                            disabled={clientIsPreselected()}
                             >
                             <Text className="color-slate-500">
                                 {selectedClient ? selectedClient.name : "Vyberte klienta..."}
@@ -384,7 +349,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                     <TextInput
                     placeholder="Adresa objektu"
                     value={formData.address || ''}
-                     className="border border-gray-400 rounded-lg p-3"
+                     className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("address", value)}
                     />
                 </View>
@@ -425,7 +390,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                     )}
                     {/* Add Chimney Button */}
                     <TouchableOpacity
-                        onPress={() => setShowChimneyModal(true)}
+                        onPress={() => handleAddChimney()}
                         className={`border-2 ${errors.chimneys ? 'border-red-400' : 'border-gray-300'} bg-white rounded-xl p-4`}
                     >
                         <Text className="text-blue-600 font-semibold text-center">
@@ -445,7 +410,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                     <TextInput
                     placeholder="Email"
                     value={formData.placement || ''}
-                    className="border border-gray-400 rounded-lg p-3"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("placement", value)}
                     ></TextInput>
                 </View>
@@ -456,7 +421,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                     <TextInput
                     placeholder="Telefonne cislo"
                     value={formData.appliance || ''}
-                    className="border border-gray-400 rounded-lg p-3"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("appliance", value)}
                     ></TextInput>
                 </View>
@@ -467,7 +432,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                     <TextInput
                     placeholder="Poznamka"
                     value={formData.note || ''}
-                    className="border border-gray-400 rounded-lg p-3"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("note", value)}
                     ></TextInput>
                 </View>
@@ -557,10 +522,10 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                         )}
                     </View>
                 </View>
-            </Modal>
-
-             {/* Chimney Selection Modal */}
-             <Modal
+        </Modal>
+        
+            {/* Chimney Selection Modal */}
+            <Modal
                 visible={showChimneyModal}
                 animationType="slide"
                 transparent={true}
@@ -584,30 +549,21 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                                 </TouchableOpacity>
                             </View>
                             <TextInput
-                                placeholder="Hľadať komín..."
+                                placeholder="Hľadať komín (ISO hodnota, typ...)..."
                                 value={searchQueryChimney}
                                 onChangeText={handleSearchChimney}
                                 className="bg-gray-100 rounded-xl p-4"
-                                autoFocus
                             />
                         </View>
 
-                        {loadingChimneys ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">Vyhľadávám...</Text>
-                            </View>
-                        ) : searchQueryChimney.length < 2 ? (
+                        {filteredChimneyTypes.length === 0 ? (
                             <View className="flex-1 items-center justify-center">
                                 <Text className="text-6xl mb-4">🔍</Text>
-                                <Text className="text-gray-500">Zadajte aspoň 2 znaky</Text>
-                            </View>
-                        ) : chimneys.length === 0 ? (
-                            <View className="flex-1 items-center justify-center">
                                 <Text className="text-gray-500">Žiadne komíny nenájdené</Text>
                             </View>
                         ) : (
                             <FlatList
-                                data={chimneys}
+                                data={filteredChimneyTypes}
                                 keyExtractor={(item) => item.id}
                                 renderItem={({ item }) => {
                                     const selected = isChimneySelected(item.id);
@@ -641,7 +597,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, onCancel} : O
                     </View>
                 </View>
             </Modal>
-
         </KeyboardAvoidingView>
     )
 }

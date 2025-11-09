@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 interface Client {
     id?: string;
@@ -32,6 +32,7 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
 
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [selectedType, setSelectedType] = useState('');
 
     useEffect(() => {
         if (initialData){
@@ -43,6 +44,10 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                 type: initialData?.type || "",
                 notes: initialData?.notes || '',
             });
+            
+            if(initialData.type != null){
+                setSelectedType(initialData.type);
+            }
         }
     }, [initialData]);
     
@@ -57,7 +62,38 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
         }
     };
 
+    const validate =() : boolean => {
+        const newErrors : Record<string, string> = {};
+
+        if(!formData.name){
+            newErrors.name = "Meno je povinna polozka!";
+        }
+
+        if(!formData.email){
+            newErrors.email = "Email je povinna polozka!";
+        }
+
+        if(!formData.address){
+            newErrors.address = "Adresa je povinna polozka!";
+        }
+
+        if(!formData.phone){
+            newErrors.phone = "Telefonne cislo je povinna polozka!";
+        }
+
+        if(!formData.type){
+            newErrors.type = "Typ klienta je povinna polozka!";
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    }
+
     const handleSubmit = async () => {
+        
+        if(!validate()){
+            return;
+        }
+
         setLoading(true);
         try{
             if (mode === "create"){
@@ -93,8 +129,13 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
         }
     };
 
+    const handleSelectedType = (type: string) => {
+        setSelectedType(type);
+        setFormData(prev => ({...prev, type: type}))
+    };
+
+
     return (
-        <KeyboardAvoidingView>
         <ScrollView>
             <View className="flex-1 items-center p-20">
                 <Text className="font-bold text-4xl">
@@ -107,57 +148,97 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                     <TextInput
                     placeholder="Meno a priezvisko / Nazov firmy"
                     value={formData.name}
-                     className="border border-gray-400 rounded-lg p-3"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("name", value)}
+                    autoCapitalize="words"
                     />
+                    {errors.name && (
+                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                            {errors.name}
+                        </Text>
+                    )}
                 </View>
                 <View className="mb-3">
                     <Text className="mb-1 ml-1">Email klienta</Text>
                     <TextInput
                     placeholder="Email"
                     value={formData.email || ''}
-                    className="border border-gray-400 rounded-lg p-3"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("email", value)}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
                     ></TextInput>
+                    {errors.email && (
+                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                            {errors.email}
+                        </Text>
+                    )}
                 </View>
                 <View className="mb-3">
                     <Text className="mb-1 ml-1">Telefonne cislo</Text>
                     <TextInput
                     placeholder="Telefonne cislo"
                     value={formData.phone || ''}
-                    className="border border-gray-400 rounded-lg p-3"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("phone", value)}
+                    keyboardType="phone-pad"
                     ></TextInput>
-
+                    {errors.phone && (
+                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                            {errors.phone}
+                        </Text>
+                    )}
                 </View>
+
                 <View className="mb-3">
                     <Text className="mb-1 ml-1">Adresa</Text>
                     <TextInput
                     placeholder="Adresa"
                     value={formData.address || ''}
-                    className="border border-gray-400 rounded-lg p-3"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("address", value)}
                     ></TextInput>
+                    {errors.address && (
+                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                            {errors.address}
+                        </Text>
+                    )}
                 </View>
+
                 <View className="mb-3">
                     <Text className="mb-1 ml-1">Typ klienta</Text>
-                    <TextInput
-                    placeholder="Typ klienta"
-                    value={formData.type || ''}
-                    className="border border-gray-400 rounded-lg p-3"
-                    onChangeText={(value) => handleChange("type", value)}
-                    ></TextInput>
+                    <View className="flex-row">
+                        <TouchableOpacity
+                            onPress={() => handleSelectedType("Fyzicka osoba")}
+                            className={`border-2 ${selectedType === "Fyzicka osoba" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-white"} rounded-xl p-4 mr-3 w-36 items-center`}
+                        >
+                            <Text  className={`${selectedType === "Fyzicka osoba" ? "font-semibold" : "font-normal"}`}>Fyzicka osoba</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            className={`border-2 ${selectedType === "Pravnicka osoba" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-white"} rounded-xl p-4 w-36 items-center`}
+                            onPress={() => handleSelectedType("Pravnicka osoba")}
+                        >
+                            <Text  className={`${selectedType === "Pravnicka osoba" ? "font-semibold" : "font-normal"}`}>Pravnicka osoba</Text>
+                        </TouchableOpacity>  
+                    </View>
+                    {errors.type && (
+                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                            {errors.type}
+                        </Text>
+                    )}
                 </View>
+
                 <View className="mb-3">
                     <Text className="mb-1 ml-1">Poznamka</Text>
                     <TextInput
                     placeholder="Poznamka"
                     value={formData.notes|| ''}
-                    className="border border-gray-400 rounded-lg p-3"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                     onChangeText={(value) => handleChange("notes", value)}
                     ></TextInput>
                 </View>
             </View>
+
             <View className="flex-1 mt-16 border bg-slate-600 rounded-2xl items-center py-5 mx-24">
                 <TouchableOpacity
                     onPress={handleSubmit}
@@ -168,6 +249,5 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                 </TouchableOpacity>
             </View>
         </ScrollView>
-        </KeyboardAvoidingView>
     )
 }
