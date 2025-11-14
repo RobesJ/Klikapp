@@ -1,51 +1,6 @@
+import { Client, Project, User } from "@/types/generics";
+import { ObjectWithRelations } from "@/types/projectSpecific";
 import { Text, TouchableOpacity, View } from "react-native";
-
-interface Client {
-    id: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    type: string | null;
-    notes: string | null;
-}
-
-interface Project {
-    id: string;
-    client_id?: string;
-    type: string | null;
-    state: string | null;
-    scheduled_date: string | null;
-    start_date: string | null;
-    completion_date: string | null;
-    notes: string | null;
-}
-
-interface User {
-    id: string;
-    name: string;
-    email: string | null;
-}
-
-interface Object {
-    id: string;
-    client_id?: string,
-    address: string | null;
-    placement: string | null,
-    appliance: string | null,
-    note: string | null;
-}
-
-interface Chimney {
-    id: string;
-    type: string | null;
-    labelling: string | null;
-}
-
-interface ObjectWithRelations {
-    object: Object;
-    chimneys: Chimney[];
-}
 
 interface ProjectCardProps {
     project: Project;
@@ -69,40 +24,46 @@ export default function ProjectCard({ project, client, users, objects, onPress }
             onPress={handlePress}
             className="rounded-2xl mb-3 border border-gray-800 p-3"
         >
-            <View className="flex-row items-center justify-between mb-2">
-                <View className="flex-1">
-                <Text className="text-lg font-bold">
+            <View className="flex-row items-center justify-between mb-2">   
+                <Text className="text-2xl font-semibold">
                     {project.type}
-                </Text> 
-                </View>
+                </Text>
+
+                {project.state &&
+                    <Text>
+                        {project.state}
+                    </Text>
+                } 
 
             </View>
 
             {client?.name &&
                 <View className="flex-row items-center mb-2">
+                    <Text className="mr-2">
+                        Klient:
+                    </Text>
                     <Text>
                         {client?.name}
                     </Text>
                 </View>
             }
-            {project.state &&
-                <View className="flex-row items-center mb-2">
-                    <Text>
-                        {project.state}
-                    </Text>
-                </View>
-            }
 
-            {project.scheduled_date &&
+            {project.scheduled_date && (
                  <View className="flex-row items-center mb-2">
+                    <Text className="mr-2">
+                        Planovany zaciatok:
+                    </Text>
                     <Text>
                         {project.scheduled_date}
                     </Text>
                 </View>
-            }
+            )}
 
             {project.start_date &&
-                <View className="mt-2 text-xs">
+                <View className="flex-row items-center mb-2">
+                    <Text className="mr-2">
+                        Zaciatok projektu:
+                    </Text>
                     <Text>
                         {project.start_date}
                     </Text>
@@ -110,7 +71,10 @@ export default function ProjectCard({ project, client, users, objects, onPress }
             }
 
             {project.completion_date &&
-                <View className="mt-2 text-xs">
+                <View className="flex-row items-center mb-2">
+                    <Text className="mr-2">
+                        Ukoncenie projektu:
+                    </Text>
                     <Text>
                         {project.completion_date}
                     </Text>
@@ -118,7 +82,10 @@ export default function ProjectCard({ project, client, users, objects, onPress }
             }
 
             {users && users.length > 0 && (
-                <View className="mt-2 text-xs">
+                <View className="flex-row items-center mb-2">
+                    <Text className="mr-2">
+                        Priradeny pouzivatelia:
+                    </Text>
                     {users.map((user) => (
                         <Text key={user.id}>
                             {user.name}
@@ -126,20 +93,33 @@ export default function ProjectCard({ project, client, users, objects, onPress }
                     ))}
                 </View>
             )}
-
+            
             {objects && objects.length > 0 && (
-                <View className="mt-2 text-xs">
-                    {objects.map((object) => (
-                        <Text key={object.object.id}>
-                            {object.object.appliance}{' '}{object.object.placement}{' '}{object.object.address}
+                <View className="flex-row justify-end mb-2">
+                        <Text>
+                            {(objects.length == 1) ? 
+                                (
+                                    `${objects.length} priradeny objekt`
+                                ):(
+                                    (objects.length >= 2 &&  objects.length <= 4) ?
+                                    (
+                                        `${objects.length} priradene objekty`
+                                    ):(
+                                        `${objects.length} priradenych objektov`
+                                    )
+                                )
+                            }
                         </Text>
-                    ))}
                 </View>
             )}
-            {project.notes &&
-                <View className="mt-2 text-xs">
+            
+            {project.note &&
+                <View className="flex-row items-center">
+                     <Text className="mr-2">
+                        Poznamka:
+                    </Text>
                     <Text>
-                        {project.notes}
+                        {project.note}
                     </Text>
                 </View>
             }

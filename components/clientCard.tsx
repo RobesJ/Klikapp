@@ -1,14 +1,5 @@
+import { Client } from "@/types/generics";
 import { Text, TouchableOpacity, View } from "react-native";
-
-interface Client {
-    id?: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    type: string | null;
-    notes: string | null;
-  }
 
 interface ClientCardProps {
     client: Client,
@@ -36,13 +27,30 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
                 </Text> 
                 </View>
 
-                <View className="">
+            </View>
+
+            {client.projectsCount !== undefined && (
+        <View className="flex-row items-center mb-2">
+          <Text>
+            {client.projectsCount} projektov
+          </Text>
+        </View>
+      )}
+
+      {client.objectsCount !== undefined && (
+        <View>
+          <Text>
+            {client.objectsCount} objektov
+          </Text>
+        </View>
+      )}
+            {/*
+
+            <View className="">
                     <Text>
                         {client.type}
                     </Text>
                 </View>
-            </View>
-
             {client.email &&
                 <View className="flex-row items-center mb-2">
                     <Text className="mr-2 text-sm">📧</Text>
@@ -70,14 +78,14 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
                 </View>
             }
 
-            {client.notes &&
+            {client.note &&
                 <View className="mt-2 text-xs">
                     <Text>
-                        {client.address}
+                        {client.note}
                     </Text>
                 </View>
             }
-
+            */}
         </TouchableOpacity>
         
     )

@@ -1,189 +1,41 @@
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/projectCard';
-import { supabase } from '@/lib/supabase';
+import { useProjectStore } from '@/store/projectStore';
+import { ProjectWithRelations } from "@/types/projectSpecific";
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface Project {
-  id: string;
-  client_id?: string;
-  type: string | null;
-  state: string | null;
-  scheduled_date: string | null;
-  start_date: string | null;
-  completion_date: string | null;
-  notes: string | null;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string | null;
-}
-
-interface Client {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  type: string | null;
-  notes: string | null;
-}
-
-interface Object {
-  id: string;
-  client_id?: string;
-  address: string | null;
-  placement: string | null;
-  appliance: string | null;
-  note: string | null;
-}
-
-interface Chimney {
-  id: string;
-  type: string | null;
-  labelling: string | null;
-}
-
-interface ObjectWithRelations {
-  object: Object;
-  chimneys: Chimney[];
-}
-interface ProjectWithRelations {
-  project: Project;
-  client: Client;
-  users: User[];
-  objects: ObjectWithRelations[];
-}
 
 export default function Projects() {
-  const [projects, setProjects] = useState<ProjectWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithRelations | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const {
+    filteredProjects,
+    backgroundLoading,
+    fetchProjects,
+    filters,
+    setFilters,
+    clearFilters
+  } = useProjectStore();
 
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
-      fetchProjects();
+      fetchProjects(50);
     }, [])
   );
+  
 
-  async function fetchProjects() {
-    try {
-        const {data: projectsData, error: projectError } = await supabase
-          .from("projects")
-          .select(`
-            *,
-            clients (*)
-          `);
-
-        if (projectError) throw projectError;
-
-        const projectWithRelations: ProjectWithRelations[] = await Promise.all(
-          projectsData.map(async (projectItem: any) => {
-            // Fetch assigned users
-            const { data: usersData, error: usersError } = await supabase
-              .from("project_assignments")
-              .select(`
-                user_profiles (
-                  id,
-                  name,
-                  email
-                )
-              `)
-              .eq("project_id", projectItem.id);
-              
-            if (usersError) throw usersError;
-
-            // Fetch assigned objects
-            const {data: objectsData, error: objectsError} = await supabase
-                .from("project_objects")
-                .select(`
-                  objects (
-                    id,
-                    client_id,
-                    address,
-                    placement,
-                    appliance,
-                    note
-                  )
-                `)
-                .eq("project_id", projectItem.id);
-                
-            if (objectsError) throw objectsError;
-
-            const users: User[] =
-              usersData?.map((item: any) => item.user_profiles).filter(Boolean) ?? [];
-            
-            const objectIds = objectsData?.map((item: any) => item.objects?.id).filter(Boolean) ?? [];
-
-            // Fetch chimneys for all objects at once
-            let objectsWithChimneys: ObjectWithRelations[] = [];
-            
-            if (objectIds.length > 0) {
-              const { data: chimneysData, error: chimneysError } = await supabase
-                .from("chimneys")
-                .select(`
-                  object_id,
-                  chimney_types (
-                    id,
-                    type,
-                    labelling
-                  )
-                `)
-                .in("object_id", objectIds);
-
-              if (chimneysError) throw chimneysError;
-
-              // Group chimneys by object_id
-              const chimneysByObject: Record<string, Chimney[]> = {};
-              chimneysData?.forEach((item: any) => {
-                if (!chimneysByObject[item.object_id]) {
-                  chimneysByObject[item.object_id] = [];
-                }
-                if (item.chimney_types) {
-                  chimneysByObject[item.object_id].push({
-                    id: item.chimney_types.id,
-                    type: item.chimney_types.type,
-                    labelling: item.chimney_types.labelling
-                  });
-                }
-              });
-
-              // Combine objects with their chimneys
-              objectsWithChimneys = objectsData
-                ?.map((item: any) => {
-                  if (!item.objects) return null;
-                  return {
-                    object: item.objects,
-                    chimneys: chimneysByObject[item.objects.id] || []
-                  };
-                })
-                .filter((item): item is ObjectWithRelations => item !== null) ?? [];
-            }
-
-            return {
-              project: { ...projectItem },
-              client: projectItem.clients,
-              users,
-              objects: objectsWithChimneys,
-            };
-          })
-        );
-        
-        setProjects(projectWithRelations);
-    } catch (error: any){
-      console.error("Error fetching projects: ", error.message)
-    } finally{
-      setLoading(false);
-    }
-  }
+  const handleRefresh = () => {
+    fetchProjects(50);
+  };
 
   const handleModalVisibility = (projectData: ProjectWithRelations, value: boolean) => {
     setSelectedProject(projectData);
@@ -192,26 +44,44 @@ export default function Projects() {
 
   return (
     <SafeAreaView className="flex-1">
-      <View className="flex-row items-start mt-4 ml-6 mb-6">
-        <Text className="font-bold text-4xl">Projekty</Text>
+      <View className="flex-2 mt-4 px-6 mb-8">
+        <View className="flex-row justify-between">
+          <Text className="font-bold text-4xl">Projekty</Text>
+          <Text className="text-xl text-green-500">ONLINE</Text>
+        </View>
+        <View className='flex-2 w-full mt-4'> 
+          <TextInput 
+            className='border-2 rounded-xl border-gray-500 py-4 px-4'
+            placeholder='Vyhladajte klienta...'
+          />
+        
+        </View>
       </View>
-      <ScrollView className="px-5 mb-24">
-      {loading ?
-          ( <Text>Loading...</Text>)
-          : (
-            projects.map(projectData => (
-                <ProjectCard 
-                  key={projectData.project.id} 
-                  project={projectData.project}
-                  client={projectData.client}
-                  users={projectData.users}
-                  objects={projectData.objects}
-                  onPress={()=>handleModalVisibility(projectData, true)}
-                />
-              ))
-            )
+      
+      <FlatList
+        data={filteredProjects}
+        keyExtractor={(item) => item.project.id}
+        renderItem={({item}) =>(
+          <ProjectCard
+              project={item.project}
+              client={item.client}
+              users={item.users}
+              objects={item.objects}
+              onPress={() => handleModalVisibility(item, true)}
+          />
+        )}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+        refreshing={backgroundLoading}
+        onRefresh={handleRefresh}
+        ListEmptyComponent={
+          backgroundLoading ? (
+            <Text className="text-center text-gray-500 mt-10">Načítavam...</Text>
+          ) : (
+            <Text className="text-center text-gray-500 mt-10">Žiadne projekty</Text>
+          )
         }
-      </ScrollView>
+      />
+      
       <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => {router.push({
@@ -240,6 +110,7 @@ export default function Projects() {
         +
       </Text>
       </TouchableOpacity>
+
       <Modal
         visible={showDetails}
         transparent={true}
@@ -261,7 +132,8 @@ export default function Projects() {
                         pathname: "/addProjectScreen",
                         params: { 
                           project: JSON.stringify(selectedProject), 
-                          mode: "edit" 
+                          mode: "edit", 
+                          preselectedClient: JSON.stringify(selectedProject?.client)
                         }
                       });
                     }}

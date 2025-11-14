@@ -1,16 +1,8 @@
 import { supabase } from "@/lib/supabase";
+import { Client } from "@/types/generics";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-interface Client {
-    id?: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    type: string | null;
-    notes: string | null;
-}
 
 interface ClientFormProps{
     mode: "create" | "edit";
@@ -21,19 +13,27 @@ interface ClientFormProps{
 
 export default function ClientForm({ mode, initialData, onSuccess, onCancel} : ClientFormProps) {
 
-    const [formData, setFormData] = useState<Client>({
+    const [formData, setFormData] = useState<Omit<Client, "id"> & {id?: string}>({
         name: initialData?.name || '',
         email: initialData?.email || '',
         phone: initialData?.phone || '',
         address: initialData?.address || '',
+        city: initialData?.city || '',
+        streetNumber: initialData?.streetNumber || '',
+        country: initialData?.country || '',
         type: initialData?.type || "",
-        notes: initialData?.notes || '',
+        note: initialData?.note || '',
     });
 
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [selectedType, setSelectedType] = useState('');
 
+    const [addressSearch, setAddressSearch] = useState('');
+    const [addressSuggestions, setAddressSuggestions] =  useState<any[]>([]);
+    const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+    const [searchingAddress, setSearchingAddress] = useState(false);
+    const API_KEY = process.env.EXPO_PUBLIC_MAPS_API_KEY;
     useEffect(() => {
         if (initialData){
             setFormData({
@@ -41,8 +41,11 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                 email: initialData?.email || '',
                 phone: initialData?.phone || '',
                 address: initialData?.address || '',
+                city: initialData?.city || '',
+                streetNumber: initialData?.streetNumber || '',
+                country: initialData?.country || '',
                 type: initialData?.type || "",
-                notes: initialData?.notes || '',
+                note: initialData?.note || '',
             });
             
             if(initialData.type != null){
@@ -51,7 +54,7 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
         }
     }, [initialData]);
     
-    const handleChange = (field: keyof Client, value: string) => {
+    const handleChange = (field: keyof Omit<Client,"id">, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
         if(errors[field]){
             setErrors(prev => {
@@ -67,10 +70,6 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
 
         if(!formData.name){
             newErrors.name = "Meno je povinna polozka!";
-        }
-
-        if(!formData.email){
-            newErrors.email = "Email je povinna polozka!";
         }
 
         if(!formData.address){
@@ -113,7 +112,7 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                 .update(formData)
                 .eq('id', initialData?.id)
                 .select()
-                .single()
+                .single();
 
                 if (error) throw error;
                 Alert.alert('Success', 'Client updated successfully!');
@@ -134,6 +133,101 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
         setFormData(prev => ({...prev, type: type}))
     };
 
+    const searchGoogleAddress = async (text: string) => {
+        handleChange("address", text);
+        setAddressSearch(text);
+
+        if (text.length < 3) {
+            setAddressSuggestions([]);
+            setShowAddressSuggestions(false);
+            return;
+        }
+
+        setSearchingAddress(true);
+        try{
+        
+            const response = await fetch(
+               `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${API_KEY}&components=country:sk&language=sk`
+            );
+
+            const data = await response.json();
+            //console.log(data);
+            if (data.predictions) {
+                setAddressSuggestions(data.predictions);
+                setShowAddressSuggestions(true);
+            }
+        }
+        catch (error: any){
+            console.error('Address search error:', error);
+        }
+        finally{
+            setSearchingAddress(false);
+        }
+    };
+
+    const selectAddress = async (suggestion: any) => {
+        const fullAddress = suggestion.description;
+        handleChange("address", fullAddress);
+        setAddressSearch(fullAddress);
+        setShowAddressSuggestions(false);
+        
+        try {
+            const response = await fetch(
+                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${suggestion.place_id}&key=${API_KEY}&language=sk`
+            );
+            const data = await response.json();
+            
+            if (data.result && data.result.address_components) {
+                const components = parseAddressComponents(data.result.address_components);
+                console.log('Structured address:', components);
+                
+                // Update formData with structured data
+                setFormData(prev => ({
+                    ...prev,
+                    address: fullAddress,
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching place details:', error);
+        }
+    };
+
+    function parseAddressComponents(components: any[]) {
+        let street: string | null = null;
+        let number: string | null = null;
+
+        const address: {
+            streetNumber: string | null;
+        } = {
+            streetNumber: null
+        };
+    
+        components.forEach((component: any) => {
+            const types = component.types;
+            
+            if (types.includes('route')) {
+                street = component.long_name;
+            }
+            if (types.includes('street_number')) {
+                number = component.long_name;
+            }
+            if (types.includes('sublocality')) {
+                handleChange("city",component.long_name)
+            }
+            if (types.includes('country')) {
+                handleChange("country",component.long_name)
+            }
+        });
+        
+        if (street && number) {
+            handleChange("streetNumber",`${street} ${number}`);
+        } else if (street) {
+            handleChange("streetNumber",street);
+        } else if (number) {
+            handleChange("streetNumber",number);
+        }
+        return address;
+    };
 
     return (
         <ScrollView>
@@ -190,19 +284,39 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                     )}
                 </View>
 
+                {/* address input*/}               
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1">Adresa</Text>
-                    <TextInput
-                    placeholder="Adresa"
-                    value={formData.address || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("address", value)}
-                    ></TextInput>
-                    {errors.address && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.address}
-                        </Text>
-                    )}
+                    <Text className="mb-1 ml-1 font-medium">Adresa objektu</Text>
+                    <View>
+                        <TextInput
+                            placeholder="Začnite písať adresu..."
+                            value={addressSearch || formData.address || ''}
+                            onChangeText={searchGoogleAddress}
+                            className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                        />
+
+                        {searchingAddress && (
+                            <View className="absolute right-4 top-4">
+                                <Text className="text-gray-400">🔍</Text>
+                            </View>
+                        )}
+
+                        {showAddressSuggestions && addressSuggestions.length > 0 && (
+                            <View className="border-2 border-gray-300 rounded-xl mt-2 bg-white max-h-60">
+                                <ScrollView>
+                                    {addressSuggestions.map((item) => (
+                                        <TouchableOpacity
+                                            key={item.place_id}
+                                            onPress={() => selectAddress(item)}
+                                            className="p-4 border-b border-gray-100"
+                                        >
+                                            <Text className="text-base">{item.description}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
+                    </View>
                 </View>
 
                 <View className="mb-3">
@@ -232,9 +346,9 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                     <Text className="mb-1 ml-1">Poznamka</Text>
                     <TextInput
                     placeholder="Poznamka"
-                    value={formData.notes|| ''}
+                    value={formData.note || ''}
                     className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("notes", value)}
+                    onChangeText={(value) => handleChange("note", value)}
                     ></TextInput>
                 </View>
             </View>

@@ -1,17 +1,23 @@
 import ObjectForm from '@/components/forms/objectForm';
+import { useObjectStore } from '@/store/objectStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
 export default function AddObjectScreen() {
   const router = useRouter();
   const { mode, object, preselectedClient } = useLocalSearchParams();
-
+  const { addObject, updateObject } = useObjectStore();
   const parsedObject = object ? JSON.parse(object as string) : undefined;
   const parsedClient = preselectedClient ? JSON.parse(preselectedClient as string) : undefined;
 
-  const handleSuccess = (object: any) => {
+  const handleSuccess = (objectData: any) => {
+    if (mode === "create"){
+      addObject(objectData);
+    }
+    else{
+      updateObject(objectData.id, objectData);
+    }
     router.back();
   };
   

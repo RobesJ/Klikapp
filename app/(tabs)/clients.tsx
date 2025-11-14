@@ -1,77 +1,83 @@
 import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/clientCard";
+import { useClientStore } from "@/store/clientStore";
+import { Client } from "@/types/generics";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from 'react';
-import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { supabase } from '../../lib/supabase.js';
-
-interface Client {
-  id?: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  type: string | null;
-  notes: string | null;
-}
 
 export default function Clients() {
-  const [clients, setClients] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+ 
   const [showDetails, setShowDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const {
+    filteredClients,
+    loading,
+    fetchClients,
+    filters,
+    setFilters,
+    clearFilters
+
+  } = useClientStore();
 
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
-      fetchClients();
+      fetchClients(100);
     }, [])
   );
-
-  async function fetchClients() {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*');
-      
-      if (error) throw error;
-      
-      setClients(data);
-    } catch (error : any) {
-      console.error('Error fetching clients:', error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  
+  
   const handleModalVisibility = (client: Client, value: boolean) => {
     setShowDetails(value);
     setSelectedClient(client);
-  }
+  };
+
+  const handleRefresh = () => {
+    fetchClients(50);
+  };
 
   return (
     <SafeAreaView className="flex-1">
-       <View className="flex-row items-start mt-4 ml-6 mb-6">
-        <Text className="font-bold text-4xl">Klienti</Text>
+      {/* header */}
+      <View className="flex-2 mt-4 px-6 mb-8">
+        <View className="flex-row justify-between">
+          <Text className="font-bold text-4xl">Klienti</Text>
+          <Text className="text-xl text-green-500">ONLINE</Text>
+        </View>
+        <View className='flex-2 w-full mt-4'> 
+          <TextInput 
+            className='border-2 rounded-xl border-gray-500 py-4 px-4'
+            placeholder='Vyhladajte klienta...'
+          />
+        </View>
       </View>
-      <ScrollView className="px-5 mb-24">
-
-        {loading ? (
-          <Text className="mt-5">Nacitavanie...</Text>
-        ) : (
-          clients.map(client => (
-            <ClientCard 
-              key={client.id} 
-              client={client}
-              onPress={() => handleModalVisibility(client, true)}
-            />
-          ))
+      
+      <FlatList
+        data={filteredClients}
+        keyExtractor={(item) => item.id}
+        renderItem={({item}) =>(
+          <ClientCard
+              client={item}
+              onPress={() => handleModalVisibility(item, true)}
+          />
         )}
-      </ScrollView>
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+        refreshing={loading}
+        onRefresh={handleRefresh}
+        ListEmptyComponent={
+          loading ? (
+            <Text className="text-center text-gray-500 mt-10">Načítavam...</Text>
+          ) : (
+            <Text className="text-center text-gray-500 mt-10">Žiadne projekty</Text>
+          )
+        }
+      />
       <TouchableOpacity
         onPress={() => router.push({
           pathname: "/addClientScreen",
@@ -100,25 +106,34 @@ export default function Clients() {
       <Modal
         visible={showDetails}
         transparent={true}
+        animationType="fade"
+        onRequestClose={()=> setShowDetails(false)}
         >
-          <View
-            className="flex-1 w-3/4 bg-slate-400 rounded-2xl m-16"
-          >
-            {/* header */}
-            <View className="px-4 py-6 border-b border-gray-200">
+          <View className="flex-1 bg-black/50 justify-center items-center">
+            <View className="w-3/4 bg-white rounded-2xl overflow-hidden">
+              {/* header */}
+              <View className="px-4 py-6 border-b border-gray-200">
               <View className="flex-row items-center justify-between">
-                <Text className="text-3xl font-bold">{selectedClient && selectedClient.name}</Text>
-                  <View className="flex-row">
+                <Text className="text-xl font-bold">Detaily klienta</Text>
+
+                  <View className="flex-row gap-2">
                     <TouchableOpacity
-                        onPress={() => router.push({
+                        onPress={() => {
+                          setShowDetails(false);
+                          router.push({
                           pathname: "/addClientScreen",
-                          params: { client: JSON.stringify(selectedClient), mode: "edit" }
-                        })}
+                          params: { 
+                            client: JSON.stringify(selectedClient),
+                            mode: "edit" 
+                          }
+                        });
+                      }}
                         activeOpacity={0.8}
-                        className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center mr-2"
+                        className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
                     >
                         <Text className="text-gray-600">✏️</Text>
                     </TouchableOpacity>
+
                     <TouchableOpacity
                         onPress={() => setShowDetails(false)}
                         className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
@@ -128,9 +143,12 @@ export default function Clients() {
                   </View>
               </View>
           </View> 
-          {selectedClient && (
-            <ClientDetails client={selectedClient} />
-          )}
+          <ScrollView className="max-h-96 p-4">
+            {selectedClient && (
+              <ClientDetails client={selectedClient} />
+            )}
+          </ScrollView>
+        </View>
         </View>
       </Modal>
     </SafeAreaView>

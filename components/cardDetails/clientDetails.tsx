@@ -1,15 +1,6 @@
+import { Client } from "@/types/generics";
 import { useRouter } from "expo-router";
 import { Text, TouchableOpacity, View } from "react-native";
-
-interface Client {
-    id: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    type: string | null;
-    notes: string | null;
-}
 
 interface ClientCardDetailsProps{
     client: Client
@@ -48,10 +39,10 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
                 </View>
             }
 
-            {client.notes &&
+            {client.note &&
                 <View className="mt-2 text-xs">
                     <Text>
-                        {client.address}
+                        {client.note}
                     </Text>
                 </View>
             }

@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { Client, Project, User } from "@/types/generics";
+import { ObjectWithRelations, ProjectWithRelations } from "@/types/projectSpecific";
 import { useEffect, useState } from "react";
 import {
     Alert,
@@ -13,80 +15,36 @@ import {
 } from "react-native";
 import ModernDatePicker from "../modernDatePicker";
 
-interface Project {
-    id?: string;
-    client_id?: string;
-    type: string | null;
-    state: string | null;
-    scheduled_date: string | null;
-    start_date: string | null;
-    completion_date: string | null;
-    notes: string | null;
-}
-
-interface Client {
-    id: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    type: string | null;
-    notes: string | null;
-}
-
-interface User {
-    id: string;
-    name: string;
-    email: string;
-}
-
-interface Object {
-    id: string;
-    client_id?: string,
-    address: string | null;
-    placement: string | null;
-    appliance: string | null;
-    note: string | null;
-  }
-
-interface ProjectWithRelations {
-    project: Project;
-    client: Client;
-    users: User[];
-    objects: Object[];
-}
-
 interface ProjectFormProps{
     mode: "create" | "edit";
     initialData?: ProjectWithRelations;
-    onSuccess?: (project: Project) => void;
+    onSuccess?: (project: ProjectWithRelations) => void;
     preselectedClient?: Client;
 }
 
 export default function ProjectForm({ mode, initialData, onSuccess, preselectedClient} : ProjectFormProps) {
 
-    const [formData, setFormData] = useState<Project>({
-        client_id: initialData?.client.id || '',
-        type: initialData?.project.type || '',
-        state: initialData?.project.state || '',
-        scheduled_date: initialData?.project.scheduled_date || '',
-        start_date: initialData?.project.start_date || '',
-        completion_date: initialData?.project.completion_date || '',
-        notes: initialData?.project.notes || '',
-    });
+    const [formData, setFormData] =  useState<Omit<Project, 'id'> & { id?: string }>({
+        client_id: initialData?.client.id ?? "",
+        type: initialData?.project.type ?? "",
+        state: initialData?.project.state ?? "",
+        scheduled_date: initialData?.project.scheduled_date ?? "",
+        start_date: initialData?.project.start_date ?? "",
+        completion_date: initialData?.project.completion_date ?? "",
+        note: initialData?.project.note ?? "",
+      });
 
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const [clients, setClients] = useState<Client[]>([]);
+    const [clientSuggestions, setClientSuggestions] = useState<Client[]>([]);
     const [loadingClients, setLoadingClients] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showClientModal, setShowClientModal] = useState(false);
-    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+    const [selectedClient, setSelectedClient] = useState<Client | null>(initialData?.client ?? null);
     const [timerId, setTimerId] = useState<number>();
 
-    const [selectedType, setSelectedType] = useState("");
-    const [selectedState, setSelectedState] = useState("");
+    const [selectedType, setSelectedType] = useState(initialData?.project.type ?? "");
+    const [selectedState, setSelectedState] = useState(initialData?.project.state ?? "");
     const [scheduledDate, setScheduledDate] = useState<Date | null>(null);
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [completionDate, setCompletionDate] = useState<Date | null>(null);
@@ -94,39 +52,29 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [searchQueryUser, setSearchQueryUser] = useState('');
-    const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+    const [selectedUsers, setSelectedUsers] = useState<User[]>(initialData?.users ?? [] );
     const [timerId2, setTimerId2] = useState<number>();
     const [showUserModal, setShowUserModal] = useState(false);
 
-    const [assignedObjects, setAssignedObjects] = useState<Object[]>([]);
+    const [assignedObjects, setAssignedObjects] = useState<ObjectWithRelations[]>([]);
     const [loadingObjects, setLoadingObjects] = useState(false);
     const [searchQueryObject, setSearchQueryObject] = useState('');
-    const [selectedObjects, setSelectedObjects] = useState<Object[]>([]);
+    const [selectedObjects, setSelectedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
     const [timerId3, setTimerId3] = useState<number>();
     const [showObjectModal, setShowObjectModal] = useState(false);
 
     useEffect(() => {
         if (initialData){
             setFormData({
-                client_id: initialData?.client.id || '',
-                type: initialData?.project.type || '',
-                state: initialData?.project.state || '',
-                scheduled_date: initialData?.project.scheduled_date || '',
-                start_date: initialData?.project.start_date || '',
-                completion_date: initialData?.project.completion_date || '',
-                notes: initialData?.project.notes || '',
-            });
-
-            if (initialData.client){
-                setSelectedClient(initialData.client);
-            }
-            if (initialData.project.type){
-                setSelectedType(initialData.project.type);
-            }
-
-            if (initialData.project.state){
-                setSelectedState(initialData.project.state);
-            }
+                client_id: initialData?.client.id ?? "",
+                type: initialData?.project.type ?? "",
+                state: initialData?.project.state ?? "",
+                scheduled_date: initialData?.project.scheduled_date ?? "",
+                start_date: initialData?.project.start_date ?? "",
+                completion_date: initialData?.project.completion_date ?? "",
+                note: initialData?.project.note ?? "",
+              });
+          
             if (initialData.project.scheduled_date){
                 const parsedDate = new Date(initialData.project.scheduled_date);
                 setScheduledDate(parsedDate);
@@ -141,11 +89,9 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             }
             if (initialData.users && initialData.users.length > 0){
                 setAssignedUsers(initialData.users);
-                setSelectedUsers(initialData.users)
             }
             if (initialData.objects && initialData.objects.length > 0){
                 setAssignedObjects(initialData.objects);
-                setSelectedObjects(initialData.objects)
             }
         }
         else if (preselectedClient){
@@ -154,7 +100,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
     }, [initialData, preselectedClient]);
     
-    const handleChange = (field: keyof Project, value: string) => {
+    const handleChange = (field: keyof Omit<Project, 'id'>, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
         if(errors[field]){
             setErrors(prev => {
@@ -164,7 +110,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             });
         }
     };
-
     
     const handleSearchClient = (text: string) => {
         setSearchQuery(text);
@@ -181,7 +126,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
     async function searchClient(query: string) {
         if (query.trim().length < 2){
-            setClients([]);
+            setClientSuggestions([]);
             return;
         }
         setLoadingClients(true);
@@ -194,11 +139,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 .limit(20);
 
             if (error) throw error;
-            setClients(data || []);
+            setClientSuggestions(data || []);
         } 
         catch(error: any){
             console.error("Chyba: ", error.message);
-            setClients([]);
+            setClientSuggestions([]);
         }
         finally{
             setLoadingClients(false);
@@ -208,7 +153,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const handleSelectedClient = (client: Client) => {
         setSelectedClient(client);
         setSearchQuery(client.name);
-        setShowClientModal(false);
+        setClientSuggestions([]);
         setFormData(prev => ({ ...prev, client_id: client.id}));
 
         if (errors.client_id){
@@ -265,30 +210,65 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 
                 if (projectError) throw projectError;
                 projectID = projectData.id;
+                
+                if(selectedUsers.length > 0){
+                    const usersProjectRelations = selectedUsers.map(user => ({
+                        project_id: projectID,
+                        user_id: user.id,
+                    }));
 
-                const usersProjectRelations = selectedUsers.map(user => ({
-                    project_id: projectID,
-                    user_id: user.id,
-                }));
-
-                const {error: usersError } = await supabase
+                    const {error: usersError } = await supabase
                     .from("project_assignments")
                     .insert(usersProjectRelations);
 
-                if (usersError) throw usersError;
+                    if (usersError) throw usersError;
+                }
+                
+                if(selectedObjects.length > 0){
+                    const objectProjectRelations = selectedObjects.map(object => ({
+                        project_id: projectID,
+                        object_id: object.object.id
+                    }));
 
-                const objectProjectRelations = selectedObjects.map(object => ({
-                    project_id: projectID,
-                    object_id: object.id,
-                }));
+                    const {error: objectError } = await supabase
+                        .from("project_objects")
+                        .insert(objectProjectRelations);
 
-                const {error: objectError } = await supabase
-                    .from("project_objects")
-                    .insert(objectProjectRelations);
-
-                if (objectError) throw objectError;
+                    if (objectError) throw objectError;
+                }
                 Alert.alert('Uspech', 'Projekt bol vytvoreny!');
-                onSuccess?.(projectData);
+
+                const { data: completeProject, error: fetchError } = await supabase
+                    .from("projects")
+                    .select(`
+                        *,
+                        clients(*),
+                        project_assignments (
+                            user_profiles (id, name, email)
+                        ),
+                        project_objects(
+                            objects(
+                                id,
+                                client_id,
+                                address,
+                                city,
+                                streetNumber,
+                                country,
+                                chimneys(
+                                    id,
+                                    chimney_types (id, type, labelling),
+                                    placement,
+                                    appliance,
+                                    note
+                                )
+                            )
+                        )
+                    `)
+                    .eq("id", projectID)
+                    .single();
+                
+                if (fetchError) throw fetchError;
+                onSuccess?.(completeProject);
             }
             else { 
                 const {data: projectData, error: projectError} = await supabase
@@ -313,35 +293,71 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                     .eq("project_id", projectID);
                 if (deleteObjectError ) throw deleteObjectError ;
 
-                const usersProjectRelations = selectedUsers.map(user => ({
-                    project_id: projectID,
-                    user_id: user.id,
-                }));
-
-                const {error: usersError } = await supabase
-                    .from("project_assignments")
-                    .insert(usersProjectRelations);
-
-                if (usersError) throw usersError;
-
-                const objectsProjectRelations = selectedObjects.map(object => ({
-                    project_id: projectID,
-                    object_id: object.id,
-                }));
-
-                const {error: objectsError } = await supabase
-                    .from("project_objects")
-                    .insert(objectsProjectRelations);
-
-                if (objectsError) throw objectsError;
-
+                if(selectedUsers.length > 0){
+                    const usersProjectRelations = selectedUsers.map(user => ({
+                        project_id: projectID,
+                        user_id: user.id,
+                    }));
+    
+                    const {error: usersError } = await supabase
+                        .from("project_assignments")
+                        .insert(usersProjectRelations);
+    
+                    if (usersError) throw usersError;
+                }
+               
+                if(selectedObjects.length > 0){
+                    const objectsProjectRelations = selectedObjects.map(object => ({
+                        project_id: projectID,
+                        object_id: object.object.id,
+                    }));
+    
+                    const {error: objectsError } = await supabase
+                        .from("project_objects")
+                        .insert(objectsProjectRelations);
+    
+                    if (objectsError) throw objectsError;
+                }
+                
                 Alert.alert('Úspech', 'Projekt bol upravený!');
-                onSuccess?.(projectData);
+
+                const { data: completeProject, error: fetchError } = await supabase
+                    .from("projects")
+                    .select(`
+                        *,
+                        clients(*),
+                        project_assignments (
+                            user_profiles (id, name, email)
+                        ),
+                        project_objects(
+                            objects(
+                                id,
+                                client_id,
+                                address,
+                                city,
+                                streetNumber,
+                                country,
+                                chimneys(
+                                    id,
+                                    chimney_types (id, type, labelling),
+                                    placement,
+                                    appliance,
+                                    note
+                                )
+                            )
+                        )
+                    `)
+                    .eq("id", projectID)
+                    .single();
+                
+                if (fetchError) throw fetchError;
+
+                onSuccess?.(completeProject);
             }
         }
         catch (error: any){
-            console.error("Chyba pri ukladani projektu: ", error);
-            Alert.alert('Chyba', error.message || "Nastal problem pri ukladani projektu");
+            console.error("Chyba pri ukladaní projektu: ", error);
+            Alert.alert('Chyba', error.message || "Nastal problém pri ukladaní projektu");
         }
         finally{
             setLoading(false);
@@ -465,7 +481,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 .from("objects")
                 .select("*")
                 .eq("client_id", formData.client_id)
-                .or(`address.ilike.%${query}%,appliance.ilike.%${query}%`)
+                .or(`address.ilike.%${query}%`)
                 .limit(20);
 
             if (error) throw error;
@@ -480,14 +496,14 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
     }
 
-    const handleToggleObject = (object: Object) => {
+    const handleToggleObject = (object: ObjectWithRelations) => {
         setSelectedObjects(prev => {
             // Check if already selected
-            const isSelected = prev.some(c => c.id === object.id);
+            const isSelected = prev.some(c => c.object.id === object.object.id);
             
             if (isSelected) {
                 // Remove it
-                return prev.filter(c => c.id !== object.id);
+                return prev.filter(c => c.object.id !== object.object.id);
             } else {
                 // Add it
                 return [...prev, object];
@@ -496,11 +512,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     };
 
     const isObjectSelected = (objectId: string): boolean => {
-        return selectedObjects.some(c => c.id === objectId);
+        return selectedObjects.some(c => c.object.id === objectId);
     };
 
     const handleRemoveObject = (objectId: string) => {
-        setSelectedObjects(prev => prev.filter(c => c.id !== objectId));
+        setSelectedObjects(prev => prev.filter(c => c.object.id !== objectId));
     };
 
     return (
@@ -517,23 +533,46 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 {/* Client field*/}
                 <View className="mb-3">
                     <Text className="mb-1 ml-1 font-medium">Klient</Text>
-                    <View className="border-2 border-gray-300 rounded-xl p-4 bg-white">
-                        <TouchableOpacity
-                            onPress={() => setShowClientModal(true)}
-                            activeOpacity={0.8}
-                            disabled={clientIsPreselected()}
-                            >
-                            <Text className={`${selectedClient ? "color-slate-800": "color-slate-500"}`}>
-                                {selectedClient ? selectedClient.name : "Vyberte klienta..."}
+                    <View>
+                        
+                        {clientIsPreselected() &&
+                            <Text
+                                className="border-2 border-gray-300 rounded-xl p-4 bg-white">
+                                {selectedClient?.name}
                             </Text>
-                        </TouchableOpacity>
+                        }
+                        {!clientIsPreselected() && (
+                            <TextInput
+                            placeholder="Začnite písať meno klienta..."
+                            value={searchQuery}
+                            onChangeText={handleSearchClient}
+                            className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                            />
+                        )}
+                        
+                        {loadingClients && (!clientIsPreselected()) && (
+                            <View className="absolute right-4 top-4">
+                                <Text className="text-gray-400">🔍</Text>
+                            </View>
+                        )}
+
+                        {clientSuggestions && (!clientIsPreselected()) && clientSuggestions.length > 0 && (
+                            <View className="border-2 border-gray-300 rounded-xl mt-2 bg-white max-h-60">
+                                <ScrollView>
+                                    {clientSuggestions.map((item) => (
+                                        <TouchableOpacity
+                                            key={item.id}
+                                            onPress={() => handleSelectedClient(item)}
+                                            className="p-4 border-b border-gray-100"
+                                        >
+                                            <Text className="text-base">{item.name}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
                     </View>
-                    {errors.client_id && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.client_id}
-                        </Text>
-                    )}
-                </View>
+                </View> 
 
                 {/* State field*/}
                 <View className="mb-3">
@@ -662,9 +701,9 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                     <Text className="mb-1 ml-1 font-medium">Poznámka</Text>
                     <TextInput
                     placeholder="Poznamka"
-                    value={formData.notes || ''}
+                    value={formData.note || ''}
                     className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("notes", value)}
+                    onChangeText={(value) => handleChange("note", value)}
                     ></TextInput>
                 </View>
 
@@ -725,16 +764,16 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         <View className="mb-3">
                             {selectedObjects.map((object) => (
                                 <View 
-                                    key={object.id}
+                                    key={object.object.id}
                                     className="flex-row items-center justify-between bg-blue-50 rounded-xl p-3 mb-2"
                                 >
                                     <View className="flex-1">
                                         <Text className="font-semibold text-blue-900">
-                                            {object.address}
+                                            {object.object.address}
                                         </Text>
                                     </View>
                                     <TouchableOpacity
-                                        onPress={() => handleRemoveObject(object.id)}
+                                        onPress={() => handleRemoveObject(object.object.id)}
                                         className="w-8 h-8 bg-red-100 rounded-full items-center justify-center ml-2"
                                     >
                                         <Text className="text-red-600 font-bold">✕</Text>
@@ -773,80 +812,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             </View>
         </ScrollView>
 
-        {/* client modal window, searchbar for clients */}
-        <Modal
-                visible={showClientModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowClientModal(false)}
-            >
-                <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-white rounded-t-3xl h-3/4">
-                        {/* Header */}
-                        <View className="p-6 border-b border-gray-200">
-                            <View className="flex-row items-center justify-between mb-4">
-                                <Text className="text-xl font-bold">Vyberte klienta</Text>
-                                <TouchableOpacity
-                                    onPress={() => setShowClientModal(false)}
-                                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
-                                >
-                                    <Text className="text-gray-600">✕</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* Search Input */}
-                            <TextInput
-                                placeholder="Hľadať klienta..."
-                                value={searchQuery}
-                                onChangeText={handleSearchClient}
-                                className="bg-gray-100 rounded-xl p-4"
-                                autoFocus
-                            />
-                        </View>
-
-                        {/* Results List */}
-                        {loadingClients ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">Vyhľadávám...</Text>
-                            </View>
-                        ) : searchQuery.length < 2 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-6xl mb-4">🔍</Text>
-                                <Text className="text-gray-500">
-                                    Zadajte aspoň 2 znaky
-                                </Text>
-                            </View>
-                        ) : clients.length === 0 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">
-                                    Žiadni klienti nenájdení
-                                </Text>
-                            </View>
-                        ) : (
-                            <FlatList
-                                data={clients}
-                                keyExtractor={(item) => item.id ?? Math.random().toString()}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        onPress={() => handleSelectedClient(item)}
-                                        className="px-6 py-4 border-b border-gray-100"
-                                    >
-                                        <Text className="text-base font-semibold text-gray-900">
-                                            {item.name}
-                                        </Text>
-                                        {item.phone && (
-                                            <Text className="text-sm text-gray-500 mt-1">
-                                                📱 {item.phone}
-                                            </Text>
-                                        )}
-                                    </TouchableOpacity>
-                                )}
-                            />
-                        )}
-                    </View>
-                </View>
-            </Modal>
-
+        
             {/* User Selection Modal */}
             <Modal
                 visible={showUserModal}
@@ -979,9 +945,9 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         ) : (
                             <FlatList
                                 data={assignedObjects}
-                                keyExtractor={(item) => item.id}
+                                keyExtractor={(item) => item.object.id}
                                 renderItem={({ item }) => {
-                                    const selected = isObjectSelected(item.id);
+                                    const selected = isObjectSelected(item.object.id);
                                     return (
                                         <TouchableOpacity
                                             onPress={() => handleToggleObject(item)}
@@ -989,12 +955,10 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                                         >
                                             <View className="flex-row items-center justify-between">
                                                 <View className="flex-1">
-                                                    <Text className="text-base font-semibold text-gray-900">
-                                                        {item.appliance}
-                                                    </Text>
-                                                    {item.address && (
+                                                    
+                                                    {item.object.address && (
                                                         <Text className="text-sm text-gray-500 mt-1">
-                                                            {item.address}
+                                                            {item.object.address}
                                                         </Text>
                                                     )}
                                                 </View>

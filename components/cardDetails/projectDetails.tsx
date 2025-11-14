@@ -1,57 +1,12 @@
+import { Client, Project, User } from "@/types/generics";
+import { ObjectWithRelations } from "@/types/projectSpecific";
 import { Text, View } from "react-native";
-
-interface Project {
-    id: string;
-    client_id?: string;
-    type: string | null;
-    state: string | null;
-    scheduled_date: string | null;
-    start_date: string | null;
-    completion_date: string | null;
-    notes: string | null;
-}
-
-interface User {
-    id: string;
-    name: string;
-    email: string | null;
-}
-
-interface Client {
-    id: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    type: string | null;
-    notes: string | null;
-}
-
-interface Object {
-    id: string;
-    client_id?: string,
-    address: string | null;
-    placement: string | null,
-    appliance: string | null,
-    note: string | null;
-}
-
-interface Chimney {
-    id: string;
-    type: string | null;
-    labelling: string | null;
-}
-
-interface ObjectWithRelations {
-    object: Object;
-    chimneys: Chimney[];
-}
 
 interface ProjectCardDetailsProps{
     project: Project;
     client: Client;
-    assignedUsers: User[] | null;
-    objects: ObjectWithRelations[] | null;
+    assignedUsers: User[];
+    objects: ObjectWithRelations[];
 }
 
 export default function ProjectDetails({ project, client, assignedUsers, objects } : ProjectCardDetailsProps) {
@@ -115,10 +70,10 @@ export default function ProjectDetails({ project, client, assignedUsers, objects
                     }
                 </View>
             }
-            {project.notes &&
+            {project.note &&
                 <View className="mt-2 text-xs">
                     <Text>
-                        {project.notes}
+                        {project.note}
                     </Text>
                 </View>
             }

@@ -12,70 +12,127 @@ import {
     View
 } from "react-native";
 
-interface Object {
-    id?: string;
-    client_id?: string,
-    address: string | null;
-    placement: string | null;
-    appliance: string | null;
-    note: string | null;
-}
-
-interface Client {
-    id?: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    type: string | null;
-    notes: string | null;
-}
-
-interface Chimney {
-    id: string;
-    type: string;
-    labelling: string | null;
-}
-
-interface ObjectWithRelations {
-    object: Object;
-    client: Client;
-    chimneys: Chimney[];
-}
+import { Client } from "@/types/generics";
+import { ChimneyInput, ChimneyType, Object, ObjectWithRelations } from "@/types/objectSpecific";
 
 interface ObjectFormProps{
     mode: "create" | "edit";
     initialData?: ObjectWithRelations;
-    onSuccess?: (object: Object) => void;
+    onSuccess?: (object: any) => void;
     preselectedClient?: Client;
 }
 
 export default function ObjectForm({ mode, initialData, onSuccess, preselectedClient} : ObjectFormProps) {
 
-    const [formData, setFormData] = useState<Object>({
+    const [formData, setFormData] = useState<Omit<Object, "id"> & {id?: string}>({
         client_id: initialData?.object.client_id || '',
         address: initialData?.object.address || '',
-        placement: initialData?.object.placement || '',
-        appliance: initialData?.object.appliance || '',
-        note: initialData?.object.note || '',
+        streetNumber: initialData?.object.streetNumber || '',
+        city: initialData?.object.city || '',
+        country: initialData?.object.country || ''
     });
 
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const [clients, setClients] = useState<Client[]>([]);
+    const [clientSuggestions, setClientSuggetions] = useState<Client[]>([]);
     const [loadingClients, setLoadingClients] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showClientModal, setShowClientModal] = useState(false);
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [timerId, setTimerId] = useState<number>();
 
     const [searchQueryChimney, setSearchQueryChimney] = useState('');
     const [showChimneyModal, setShowChimneyModal] = useState(false);
-    const [selectedChimneys, setSelectedChimneys] = useState<Chimney[]>([]);
-    const [allChimneyTypes, setAllChimneyTypes] = useState<Chimney[]>([]);
-    const [filteredChimneyTypes, setFilteredChimneyTypes] = useState<Chimney[]>([]);
-   
+    const [showChimneyDetailsModal, setShowChimneyDetailsModal] = useState(false);
+    const [selectedChimneys, setSelectedChimneys] = useState<ChimneyInput[]>([]);
+    const [allChimneyTypes, setAllChimneyTypes] = useState<ChimneyType[]>([]);
+    const [filteredChimneyTypes, setFilteredChimneyTypes] = useState<ChimneyType[]>([]);
+    const [editingChimney, setEditingChimney] = useState<ChimneyInput | null>(null);
+    const [editingChimneyIndex, setEditingChimneyIndex] = useState<number | null>(null);
+    
+    const [addressSearch, setAddressSearch] = useState('');
+    const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+    const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+    const [searchingAddress, setSearchingAddress] = useState(false);
+    const API_KEY = process.env.EXPO_PUBLIC_MAPS_API_KEY;
+    
+    const searchGoogleAddress = async (text: string) => {
+        setAddressSearch(text);
+        handleChange("address", text);
+
+        if (text.length < 3) {
+            setAddressSuggestions([]);
+            setShowAddressSuggestions(false);
+            return;
+        }
+
+        setSearchingAddress(true);
+        try {
+            const response = await fetch(
+                `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${API_KEY}&components=country:sk&language=sk`
+            );
+            const data = await response.json();
+
+            if (data.predictions) {
+                setAddressSuggestions(data.predictions);
+                setShowAddressSuggestions(true);
+            }
+        } catch (error) {
+            console.error('Address search error:', error);
+        } finally {
+            setSearchingAddress(false);
+        }
+    };
+
+    const selectAddress = async (suggestion: any) => {
+        const fullAddress = suggestion.description;
+        handleChange("address", fullAddress);
+        setAddressSearch(fullAddress);
+        setShowAddressSuggestions(false);
+        
+        try {
+            const response = await fetch(
+                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${suggestion.place_id}&key=${API_KEY}&language=sk`
+            );
+            const data = await response.json();
+            
+            if (data.result && data.result.address_components) {
+               parseAddressComponents(data.result.address_components);
+            }
+        } catch (error) {
+            console.error('Error fetching place details:', error);
+        }
+    };
+
+    function parseAddressComponents(components: any[]) {
+        let street: string | null = null;
+        let number: string | null = null;
+    
+        components.forEach((component: any) => {
+            const types = component.types;
+            
+            if (types.includes('route')) {
+                street = component.long_name;
+            }
+            if (types.includes('street_number')) {
+                number = component.long_name;
+            }
+            if (types.includes('sublocality')) {
+                handleChange("city",component.long_name)
+            }
+            if (types.includes('country')) {
+                handleChange("country",component.long_name)
+            }
+        });
+        
+        if (street && number) {
+            handleChange("streetNumber",`${street} ${number}`);
+        } else if (street) {
+            handleChange("streetNumber",street);
+        } else if (number) {
+            handleChange("streetNumber",number);
+        }
+    };
 
     useEffect(() => {
         fetchChimneyTypes();
@@ -83,9 +140,9 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             setFormData({
                 client_id: initialData?.object.client_id || '',
                 address: initialData?.object.address || '',
-                placement: initialData?.object.placement || '',
-                appliance: initialData?.object.appliance || '',
-                note: initialData?.object.note || '',
+                streetNumber: initialData?.object.streetNumber || '',
+                city: initialData?.object.city || '',
+                country: initialData?.object.country || ''
             });
 
             if (initialData.client){
@@ -105,7 +162,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         }
     }, [initialData, preselectedClient]);
     
-    const handleChange = (field: keyof Object, value: string) => {
+    const handleChange = (field: keyof Omit<Object, "id">, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
         if(errors[field]){
             setErrors(prev => {
@@ -133,6 +190,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             console.error("Error fetching chimneys: ", error);
         }
     }
+
     const clientIsPreselected = () : boolean => {
         if (preselectedClient)
             return true;
@@ -154,7 +212,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
 
     async function searchClient(query: string) {
         if (query.trim().length < 2){
-            setClients([]);
+            setClientSuggetions([]);
             return;
         }
         setLoadingClients(true);
@@ -167,11 +225,11 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 .limit(20);
 
             if (error) throw error;
-            setClients(data || []);
+            setClientSuggetions(data || []);
         } 
         catch(error: any){
             console.error("Chyba: ", error.message);
-            setClients([]);
+            setClientSuggetions([]);
         }
         finally{
             setLoadingClients(false);
@@ -181,7 +239,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     const handleSelectedClient = (client: Client) => {
         setSelectedClient(client);
         setSearchQuery(client.name);
-        setShowClientModal(false);
+        setClientSuggetions([]);
         setFormData(prev => ({ ...prev, client_id: client.id}));
 
         if (errors.client_id){
@@ -206,36 +264,52 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             );
             setFilteredChimneyTypes(filteredChimneyTypes);
         }
-    
     };
 
-    const handleToggleChimney = (chimney: Chimney) => {
-        setSelectedChimneys(prev => {
-            // Check if already selected
-            const isSelected = prev.some(c => c.id === chimney.id);
-            
-            if (isSelected) {
-                // Remove it
-                return prev.filter(c => c.id !== chimney.id);
-            } else {
-                // Add it
-                return [...prev, chimney];
-            }
+    const handleSelectChimneyType = (chimneyType: ChimneyType) => {
+        setEditingChimney({
+            chimney_type_id: chimneyType.id,
+            placement: '',
+            appliance: '',
+            note: '',
+            chimney_type: chimneyType
         });
+        setEditingChimneyIndex(null);
+        setShowChimneyModal(false);
+        setShowChimneyDetailsModal(true);
     };
 
-    // Check if a chimney is selected
-    const isChimneySelected = (chimneyId: string): boolean => {
-        return selectedChimneys.some(c => c.id === chimneyId);
+    const handleEditChimney = (chimney: ChimneyInput, index: number) => {
+        setEditingChimney(chimney);
+        setEditingChimneyIndex(index);
+        setShowChimneyDetailsModal(true);
     };
 
-    // Remove a selected chimney
-    const handleRemoveChimney = (chimneyId: string) => {
-        setSelectedChimneys(prev => prev.filter(c => c.id !== chimneyId));
+    const handleSaveChimneyDetails = () => {
+        if (!editingChimney) return;
+
+        if (editingChimneyIndex !== null) {
+            // Update existing chimney
+            setSelectedChimneys(prev => 
+                prev.map((c, i) => i === editingChimneyIndex ? editingChimney : c)
+            );
+        } else {
+            // Add new chimney
+            setSelectedChimneys(prev => [...prev, editingChimney]);
+        }
+
+        setShowChimneyDetailsModal(false);
+        setEditingChimney(null);
+        setEditingChimneyIndex(null);
     };
 
-    const handleAddChimney = () =>{
+    const handleRemoveChimney = (index: number) => {
+        setSelectedChimneys(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleAddChimney = () => {
         setFilteredChimneyTypes(allChimneyTypes);
+        setSearchQueryChimney('');
         setShowChimneyModal(true);
     }
 
@@ -254,22 +328,51 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 if (objectError) throw objectError;
                 objectId = objectData.id;
     
-                // Only insert if there are chimneys selected
+                // Insert chimneys with all fields
                 if (selectedChimneys.length > 0) {
-                    const chimneyRelations = selectedChimneys.map(chimney => ({
+                    const chimneyData = selectedChimneys.map(chimney => ({
                         object_id: objectId,
-                        chimney_type_id: chimney.id,
+                        chimney_type_id: chimney.chimney_type_id,
+                        placement: chimney.placement,
+                        appliance: chimney.appliance,
+                        note: chimney.note
                     }));
     
                     const { error: chimneysError } = await supabase
                         .from('chimneys')
-                        .insert(chimneyRelations);
+                        .insert(chimneyData);
     
                     if (chimneysError) throw chimneysError;
                 }
     
                 Alert.alert('Success', 'Objekt bol vytvorený!');
-                onSuccess?.(objectData);
+                
+                // Fetch complete object with relations for store update
+                const { data: completeObject, error: fetchError } = await supabase
+                    .from('objects')
+                    .select(`
+                        *,
+                        clients (*),
+                        chimneys (
+                            id,
+                            object_id,
+                            chimney_type_id,
+                            placement,
+                            appliance,
+                            note,
+                            chimney_types (
+                                id,
+                                type,
+                                labelling
+                            )
+                        )
+                    `)
+                    .eq('id', objectId)
+                    .single();
+                
+                if (fetchError) throw fetchError;
+                
+                onSuccess?.(completeObject);
             }
             else { 
                 const {data: objectData, error: objectError} = await supabase
@@ -290,22 +393,51 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     
                 if (deleteError) throw deleteError;
     
-                // Insert new chimneys ONLY if there are any selected
+                // Insert new chimneys with all fields
                 if (selectedChimneys.length > 0) {
-                    const chimneyRelations = selectedChimneys.map(chimney => ({
+                    const chimneyData = selectedChimneys.map(chimney => ({
                         object_id: objectId,
-                        chimney_type_id: chimney.id
+                        chimney_type_id: chimney.chimney_type_id,
+                        placement: chimney.placement,
+                        appliance: chimney.appliance,
+                        note: chimney.note
                     }));
     
                     const { error: chimneysError } = await supabase
                         .from('chimneys')
-                        .insert(chimneyRelations);
+                        .insert(chimneyData);
     
                     if (chimneysError) throw chimneysError;
                 }
     
                 Alert.alert('Úspech', 'Objekt bol upravený!');
-                onSuccess?.(objectData);
+                
+                // Fetch complete object with relations for store update
+                const { data: completeObject, error: fetchError } = await supabase
+                    .from('objects')
+                    .select(`
+                        *,
+                        clients (*),
+                        chimneys (
+                            id,
+                            object_id,
+                            chimney_type_id,
+                            placement,
+                            appliance,
+                            note,
+                            chimney_types (
+                                id,
+                                type,
+                                labelling
+                            )
+                        )
+                    `)
+                    .eq('id', objectId)
+                    .single();
+                
+                if (fetchError) throw fetchError;
+                
+                onSuccess?.(completeObject);
             }
         }
         catch (error: any){
@@ -328,116 +460,158 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             </View>
             {/* form */}
             <View className="flex-1 justify-center px-10">
+                
                 {/* client input*/}
                 <View className="mb-3">
                     <Text className="mb-1 ml-1 font-medium">Klient</Text>
-                    <View className="border-2 border-gray-300 rounded-xl p-4 bg-white">
-                        <TouchableOpacity
-                            onPress={() => setShowClientModal(true)}
-                            disabled={clientIsPreselected()}
-                            >
-                            <Text className="color-slate-500">
-                                {selectedClient ? selectedClient.name : "Vyberte klienta..."}
+                    <View>
+                        
+                        {clientIsPreselected() &&
+                            <Text
+                                className="border-2 border-gray-300 rounded-xl p-4 bg-white">
+                                {selectedClient?.name}
                             </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                        }
+                        {!clientIsPreselected() && (
+                            <TextInput
+                            placeholder="Začnite písať meno klienta..."
+                            value={searchQuery}
+                            onChangeText={handleSearchClient}
+                            className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                            />
+                        )}
+                        
+                        {loadingClients && (!clientIsPreselected()) && (
+                            <View className="absolute right-4 top-4">
+                                <Text className="text-gray-400">🔍</Text>
+                            </View>
+                        )}
 
-                {/* address input*/}
+                        {clientSuggestions && (!clientIsPreselected()) && clientSuggestions.length > 0 && (
+                            <View className="border-2 border-gray-300 rounded-xl mt-2 bg-white max-h-60">
+                                <ScrollView>
+                                    {clientSuggestions.map((item) => (
+                                        <TouchableOpacity
+                                            key={item.id}
+                                            onPress={() => handleSelectedClient(item)}
+                                            className="p-4 border-b border-gray-100"
+                                        >
+                                            <Text className="text-base">{item.name}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
+                    </View>
+                </View> 
+
+                {/* address input*/}               
                 <View className="mb-3">
                     <Text className="mb-1 ml-1 font-medium">Adresa objektu</Text>
-                    <TextInput
-                    placeholder="Adresa objektu"
-                    value={formData.address || ''}
-                     className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("address", value)}
-                    />
+                    <View>
+                        <TextInput
+                            placeholder="Začnite písať adresu..."
+                            value={addressSearch || formData.address || ''}
+                            onChangeText={searchGoogleAddress}
+                            className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                        />
+
+                        {searchingAddress && (
+                            <View className="absolute right-4 top-4">
+                                <Text className="text-gray-400">🔍</Text>
+                            </View>
+                        )}
+
+                        {showAddressSuggestions && addressSuggestions.length > 0 && (
+                            <View className="border-2 border-gray-300 rounded-xl mt-2 bg-white max-h-60">
+                                <ScrollView>
+                                    {addressSuggestions.map((item) => (
+                                        <TouchableOpacity
+                                            key={item.place_id}
+                                            onPress={() => selectAddress(item)}
+                                            className="p-4 border-b border-gray-100"
+                                        >
+                                            <Text className="text-base">{item.description}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
+                    </View>
                 </View>
 
                 {/* Chimneys Field */}
                 <View className="mb-4">
                     <Text className="mb-2 ml-1 font-semibold text-gray-700">
-                        Komíny <Text className="text-red-500">*</Text>
+                        Komíny
                     </Text>
                     
                     {/* Selected Chimneys Display */}
                     {selectedChimneys.length > 0 && (
                         <View className="mb-3">
-                            {selectedChimneys.map((chimney) => (
+                            {selectedChimneys.map((chimney, index) => (
                                 <View 
-                                    key={chimney.id}
-                                    className="flex-row items-center justify-between bg-blue-50 rounded-xl p-3 mb-2"
+                                    key={index}
+                                    className="bg-blue-50 rounded-xl p-3 mb-2"
                                 >
-                                    <View className="flex-1">
-                                        <Text className="font-semibold text-blue-900">
-                                            {chimney.type}
-                                        </Text>
-                                        {chimney.labelling && (
-                                            <Text className="text-sm text-blue-700">
-                                                {chimney.labelling}
+                                    <View className="flex-row items-start justify-between">
+                                        <View className="flex-1">
+                                            <Text className="font-semibold text-blue-900">
+                                                {chimney.chimney_type?.type || 'Unknown Type'}
                                             </Text>
-                                        )}
+                                            {chimney.chimney_type?.labelling && (
+                                                <Text className="text-sm text-blue-700">
+                                                    {chimney.chimney_type.labelling}
+                                                </Text>
+                                            )}
+                                            {chimney.placement && (
+                                                <Text className="text-sm text-gray-600 mt-1">
+                                                    📍 {chimney.placement}
+                                                </Text>
+                                            )}
+                                            {chimney.appliance && (
+                                                <Text className="text-sm text-gray-600">
+                                                    🔥 {chimney.appliance}
+                                                </Text>
+                                            )}
+                                            {chimney.note && (
+                                                <Text className="text-sm text-gray-600">
+                                                    📝 {chimney.note}
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <View className="flex-row">
+                                            <TouchableOpacity
+                                                onPress={() => handleEditChimney(chimney, index)}
+                                                className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center ml-2"
+                                            >
+                                                <Text className="text-blue-600 font-bold">✏️</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => handleRemoveChimney(index)}
+                                                className="w-8 h-8 bg-red-100 rounded-full items-center justify-center ml-2"
+                                            >
+                                                <Text className="text-red-600 font-bold">✕</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
-                                    <TouchableOpacity
-                                        onPress={() => handleRemoveChimney(chimney.id)}
-                                        className="w-8 h-8 bg-red-100 rounded-full items-center justify-center ml-2"
-                                    >
-                                        <Text className="text-red-600 font-bold">✕</Text>
-                                    </TouchableOpacity>
                                 </View>
                             ))}
                         </View>
                     )}
+                    
                     {/* Add Chimney Button */}
                     <TouchableOpacity
                         onPress={() => handleAddChimney()}
-                        className={`border-2 ${errors.chimneys ? 'border-red-400' : 'border-gray-300'} bg-white rounded-xl p-4`}
+                        className="border-2 border-gray-300 bg-white rounded-xl p-4"
                     >
                         <Text className="text-blue-600 font-semibold text-center">
                             + Pridať komín
                         </Text>
                     </TouchableOpacity>
-                    {errors.chimneys && (
-                        <Text className="text-red-500 text-xs mt-1 ml-1">
-                            {errors.chimneys}
-                        </Text>
-                    )}
-                </View>
-
-                {/* placement input*/}
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Umiestnenie spotrebiča</Text>
-                    <TextInput
-                    placeholder="Email"
-                    value={formData.placement || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("placement", value)}
-                    ></TextInput>
-                </View>
-
-                {/* appliance input*/}
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Druh spotrebiča</Text>
-                    <TextInput
-                    placeholder="Telefonne cislo"
-                    value={formData.appliance || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("appliance", value)}
-                    ></TextInput>
-                </View>
-
-                {/* note input*/}
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Poznámka</Text>
-                    <TextInput
-                    placeholder="Poznamka"
-                    value={formData.note || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("note", value)}
-                    ></TextInput>
                 </View>
             </View>
-
+            
             {/* submit button */}
             <View className="flex-1 mt-16 border bg-slate-600 rounded-2xl items-center py-5 mx-24">
                 <TouchableOpacity
@@ -450,153 +624,142 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             </View>
         </ScrollView>
 
-        {/* client modal window, searchbar for clients */}
+        {/* Chimney Type Selection Modal */}
         <Modal
-                visible={showClientModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowClientModal(false)}
-            >
-                <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-white rounded-t-3xl h-3/4">
-                        {/* Header */}
-                        <View className="p-6 border-b border-gray-200">
-                            <View className="flex-row items-center justify-between mb-4">
-                                <Text className="text-xl font-bold">Vyberte klienta</Text>
-                                <TouchableOpacity
-                                    onPress={() => setShowClientModal(false)}
-                                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
-                                >
-                                    <Text className="text-gray-600">✕</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* Search Input */}
-                            <TextInput
-                                placeholder="Hľadať klienta..."
-                                value={searchQuery}
-                                onChangeText={handleSearchClient}
-                                className="bg-gray-100 rounded-xl p-4"
-                                autoFocus
-                            />
+            visible={showChimneyModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowChimneyModal(false)}
+        >
+            <View className="flex-1 bg-black/50 justify-end">
+                <View className="bg-white rounded-t-3xl h-3/4">
+                    <View className="p-6 border-b border-gray-200">
+                        <View className="flex-row items-center justify-between mb-4">
+                            <Text className="text-xl font-bold">Vyberte typ komína</Text>
+                            <TouchableOpacity
+                                onPress={() => setShowChimneyModal(false)}
+                                className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                            >
+                                <Text className="text-gray-600">✕</Text>
+                            </TouchableOpacity>
                         </View>
-
-                        {/* Results List */}
-                        {loadingClients ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">Vyhľadávám...</Text>
-                            </View>
-                        ) : searchQuery.length < 2 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-6xl mb-4">🔍</Text>
-                                <Text className="text-gray-500">
-                                    Zadajte aspoň 2 znaky
-                                </Text>
-                            </View>
-                        ) : clients.length === 0 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">
-                                    Žiadni klienti nenájdení
-                                </Text>
-                            </View>
-                        ) : (
-                            <FlatList
-                                data={clients}
-                                keyExtractor={(item) => item.id ?? Math.random().toString()}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        onPress={() => handleSelectedClient(item)}
-                                        className="px-6 py-4 border-b border-gray-100"
-                                    >
-                                        <Text className="text-base font-semibold text-gray-900">
-                                            {item.name}
-                                        </Text>
-                                        {item.phone && (
-                                            <Text className="text-sm text-gray-500 mt-1">
-                                                📱 {item.phone}
-                                            </Text>
-                                        )}
-                                    </TouchableOpacity>
-                                )}
-                            />
-                        )}
+                        <TextInput
+                            placeholder="Hľadať komín (ISO hodnota, typ...)..."
+                            value={searchQueryChimney}
+                            onChangeText={handleSearchChimney}
+                            className="bg-gray-100 rounded-xl p-4"
+                        />
                     </View>
-                </View>
-        </Modal>
-        
-            {/* Chimney Selection Modal */}
-            <Modal
-                visible={showChimneyModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowChimneyModal(false)}
-            >
-                <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-white rounded-t-3xl h-3/4">
-                        <View className="p-6 border-b border-gray-200">
-                            <View className="flex-row items-center justify-between mb-4">
-                                <View className="flex-1">
-                                    <Text className="text-xl font-bold">Vyberte komíny</Text>
-                                    <Text className="text-sm text-gray-500">
-                                        {selectedChimneys.length} vybraných
+
+                    {filteredChimneyTypes.length === 0 ? (
+                        <View className="flex-1 items-center justify-center">
+                            <Text className="text-6xl mb-4">🔍</Text>
+                            <Text className="text-gray-500">Žiadne komíny nenájdené</Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={filteredChimneyTypes}
+                            keyExtractor={(item) => item.id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    onPress={() => handleSelectChimneyType(item)}
+                                    className="px-6 py-4 border-b border-gray-100"
+                                >
+                                    <Text className="text-base font-semibold text-gray-900">
+                                        {item.type}
                                     </Text>
-                                </View>
-                                <TouchableOpacity
-                                    onPress={() => setShowChimneyModal(false)}
-                                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
-                                >
-                                    <Text className="text-gray-600">✓</Text>
+                                    {item.labelling && (
+                                        <Text className="text-sm text-gray-500 mt-1">
+                                            {item.labelling}
+                                        </Text>
+                                    )}
                                 </TouchableOpacity>
+                            )}
+                        />
+                    )}
+                </View>
+            </View>
+        </Modal>
+
+        {/* Chimney Details Modal */}
+        <Modal
+            visible={showChimneyDetailsModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowChimneyDetailsModal(false)}
+        >
+            <View className="flex-1 bg-black/50 justify-end">
+                <View className="bg-white rounded-t-3xl">
+                    <View className="p-6 border-b border-gray-200">
+                        <View className="flex-row items-center justify-between">
+                            <Text className="text-xl font-bold">Detail komína</Text>
+                            <TouchableOpacity
+                                onPress={() => setShowChimneyDetailsModal(false)}
+                                className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                            >
+                                <Text className="text-gray-600">✕</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <ScrollView className="p-6">
+                        {/* Chimney Type (read-only) */}
+                        <View className="mb-4">
+                            <Text className="mb-2 ml-1 font-semibold text-gray-700">Typ komína</Text>
+                            <View className="bg-gray-100 rounded-xl p-4">
+                                <Text className="font-semibold">{editingChimney?.chimney_type?.type}</Text>
+                                {editingChimney?.chimney_type?.labelling && (
+                                    <Text className="text-sm text-gray-600">{editingChimney.chimney_type.labelling}</Text>
+                                )}
                             </View>
+                        </View>
+
+                        {/* Placement */}
+                        <View className="mb-4">
+                            <Text className="mb-2 ml-1 font-semibold text-gray-700">Umiestnenie spotrebiča</Text>
                             <TextInput
-                                placeholder="Hľadať komín (ISO hodnota, typ...)..."
-                                value={searchQueryChimney}
-                                onChangeText={handleSearchChimney}
-                                className="bg-gray-100 rounded-xl p-4"
+                                placeholder="Napr. Kuchyňa, Obývačka..."
+                                value={editingChimney?.placement || ''}
+                                onChangeText={(text) => setEditingChimney(prev => prev ? {...prev, placement: text} : null)}
+                                className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                             />
                         </View>
 
-                        {filteredChimneyTypes.length === 0 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-6xl mb-4">🔍</Text>
-                                <Text className="text-gray-500">Žiadne komíny nenájdené</Text>
-                            </View>
-                        ) : (
-                            <FlatList
-                                data={filteredChimneyTypes}
-                                keyExtractor={(item) => item.id}
-                                renderItem={({ item }) => {
-                                    const selected = isChimneySelected(item.id);
-                                    return (
-                                        <TouchableOpacity
-                                            onPress={() => handleToggleChimney(item)}
-                                            className={`px-6 py-4 border-b border-gray-100 ${selected ? 'bg-blue-50' : ''}`}
-                                        >
-                                            <View className="flex-row items-center justify-between">
-                                                <View className="flex-1">
-                                                    <Text className="text-base font-semibold text-gray-900">
-                                                        {item.type}
-                                                    </Text>
-                                                    {item.labelling && (
-                                                        <Text className="text-sm text-gray-500 mt-1">
-                                                            {item.labelling}
-                                                        </Text>
-                                                    )}
-                                                </View>
-                                                {selected && (
-                                                    <View className="w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
-                                                        <Text className="text-white text-xs">✓</Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                }}
+                        {/* Appliance */}
+                        <View className="mb-4">
+                            <Text className="mb-2 ml-1 font-semibold text-gray-700">Druh spotrebiča</Text>
+                            <TextInput
+                                placeholder="Napr. Plynový kotol, Krb..."
+                                value={editingChimney?.appliance || ''}
+                                onChangeText={(text) => setEditingChimney(prev => prev ? {...prev, appliance: text} : null)}
+                                className="border-2 border-gray-300 rounded-xl p-4 bg-white"
                             />
-                        )}
-                    </View>
+                        </View>
+
+                        {/* Note */}
+                        <View className="mb-4">
+                            <Text className="mb-2 ml-1 font-semibold text-gray-700">Poznámka</Text>
+                            <TextInput
+                                placeholder="Dodatočné informácie..."
+                                value={editingChimney?.note || ''}
+                                onChangeText={(text) => setEditingChimney(prev => prev ? {...prev, note: text} : null)}
+                                className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                                multiline
+                                numberOfLines={3}
+                            />
+                        </View>
+
+                        {/* Save Button */}
+                        <TouchableOpacity
+                            onPress={handleSaveChimneyDetails}
+                            className="bg-blue-600 rounded-xl p-4 items-center"
+                        >
+                            <Text className="text-white font-bold text-lg">Uložiť komín</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
                 </View>
-            </Modal>
+            </View>
+        </Modal>
         </KeyboardAvoidingView>
     )
 }
