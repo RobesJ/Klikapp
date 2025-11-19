@@ -1,27 +1,26 @@
 import ClientDetails from "@/components/cardDetails/clientDetails";
-import ClientCard from "@/components/clientCard";
+import ClientCard from "@/components/cards/clientCard";
 import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from 'react';
-import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Clients() {
  
   const [showDetails, setShowDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
   const {
     filteredClients,
     loading,
     fetchClients,
-    filters,
     setFilters,
-    clearFilters
-
+    deleteClient
   } = useClientStore();
 
   const router = useRouter();
@@ -42,6 +41,11 @@ export default function Clients() {
     fetchClients(50);
   };
 
+  const handleSearch = (text: string ) => {
+    setSearchText(text);
+    setFilters({ searchQuery: text});
+  };
+
   return (
     <SafeAreaView className="flex-1">
       {/* header */}
@@ -50,10 +54,13 @@ export default function Clients() {
           <Text className="font-bold text-4xl">Klienti</Text>
           <Text className="text-xl text-green-500">ONLINE</Text>
         </View>
-        <View className='flex-2 w-full mt-4'> 
-          <TextInput 
-            className='border-2 rounded-xl border-gray-500 py-4 px-4'
+        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-2 mt-4">
+          <Ionicons name="search" size={20} color="gray" />
+          <TextInput
+            className="flex-1 ml-2"
             placeholder='Vyhladajte klienta...'
+            value={searchText}
+            onChangeText={handleSearch}
           />
         </View>
       </View>
@@ -86,12 +93,12 @@ export default function Clients() {
         activeOpacity={0.8}
         style={{
           position: 'absolute',
-          bottom: 130,
-          right: 24,
+          bottom: 110,
+          right: 28,
           width: 64,
           height: 64,
           borderRadius: 32,
-          backgroundColor: '#000000',
+          backgroundColor: '#777777',
           alignItems: 'center',
           justifyContent: 'center',
           shadowColor: '#000',
@@ -114,7 +121,7 @@ export default function Clients() {
               {/* header */}
               <View className="px-4 py-6 border-b border-gray-200">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold">Detaily klienta</Text>
+                <Text className="text-xl font-bold">{selectedClient?.name}</Text>
 
                   <View className="flex-row gap-2">
                     <TouchableOpacity
@@ -133,6 +140,27 @@ export default function Clients() {
                     >
                         <Text className="text-gray-600">✏️</Text>
                     </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                    onPress={() => {
+                      if(selectedClient){
+                        try{
+                          deleteClient(selectedClient?.id);
+                          setShowDetails(false);
+
+                        }
+                        catch (error){
+                          console.error("Delete failed:", error);
+                        }
+                        Alert.alert("Klient bol uspesne odstraneny");
+                        setSelectedClient(null);
+                      }
+                    }}
+                    activeOpacity={0.8}
+                    className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center"
+                  >
+                    <Text className="text-blue-600 font-bold">🗑</Text>
+                  </TouchableOpacity>
 
                     <TouchableOpacity
                         onPress={() => setShowDetails(false)}
@@ -143,7 +171,7 @@ export default function Clients() {
                   </View>
               </View>
           </View> 
-          <ScrollView className="max-h-96 p-4">
+          <ScrollView className="max-h-screen-safe-offset-12 p-4">
             {selectedClient && (
               <ClientDetails client={selectedClient} />
             )}

@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { Chimney, ObjectWithRelations } from '@/types/objectSpecific';
 import { create } from 'zustand';
-
+import { useClientStore } from './clientStore';
+import { useProjectStore } from './projectStore';
 
 interface ObjectFilters {
   city: string | null;
@@ -47,7 +48,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   error: null,
 
   fetchObjects: async (limit = 100) => {
-    const { objects, lastFetch, initial_loading, loading } = get();
+    const { objects, lastFetch,  loading } = get();
     const now = Date.now();
 
     if (objects.length > 0 && (now - lastFetch) < CACHE_DURATION) {
@@ -151,13 +152,18 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   },
   
   addObject: (object) => {
+    if (!object || !object.object || !object.object.id || !object.client){
+      console.log("Invalid object structure:", object);
+      return;
+    }
+
     set((state) => ({
       objects: [object, ...state.objects]
     }));
     get().applyFilters();
   },
 
-  updateObject: (id, updatedObject) => {
+  updateObject: (id: string, updatedObject) => {
     set((state) => ({
       objects: state.objects.map(o => 
         o.object.id === id ? updatedObject : o
@@ -166,10 +172,33 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     get().applyFilters();
   },
 
-  deleteObject: (id) => {
+  deleteObject: async (id: string) => {
+    const previousObjects = get().objects;
     set((state) => ({
       objects: state.objects.filter(o => o.object.id !== id)
     }));
     get().applyFilters();
+
+    try{
+      const { data, error } = await supabase
+        .from("objects")
+        .delete()
+        .eq("id", id)
+        .select();
+
+      if(error) throw error;
+      if(data){
+        console.log("Deleted object with id:", id);
+      }
+
+      useClientStore.getState().lastFetch = 0;
+      useProjectStore.getState().lastFetch = 0;
+    }
+    catch(error){
+      console.error("Chyba pri mazani objektu:", error);
+      set({objects:previousObjects});
+      get().applyFilters();
+      throw error;
+    }
   },
 }));

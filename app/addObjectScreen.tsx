@@ -12,11 +12,12 @@ export default function AddObjectScreen() {
   const parsedClient = preselectedClient ? JSON.parse(preselectedClient as string) : undefined;
 
   const handleSuccess = (objectData: any) => {
+
     if (mode === "create"){
       addObject(objectData);
     }
     else{
-      updateObject(objectData.id, objectData);
+      updateObject(objectData.object.id, objectData);
     }
     router.back();
   };

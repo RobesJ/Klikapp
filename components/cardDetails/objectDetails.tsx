@@ -14,54 +14,24 @@ export default function ObjectDetails({ object, chimneys, client } : ObjectCardD
             {client &&
                 <View className="flex-row items-center mb-2">
                     <Text>
-                        {client.name}
+                        {client.name} 
                     </Text>
                 </View>
             }
-            
-            {object.address &&
-                <View className="flex-row items-center mb-2">
-                    <Text>
-                        {object.address}
-                    </Text>
-                </View>
-            }
-            {/*
             {chimneys.length > 0 && (
-                <View className="flex-row items-center mb-2">
-                    {chimneys.map((chimney) => (
-                        <Text key={chimney.id}>
-                            {chimney.type}
-                            {chimney.labelling}
-                        </Text>
-                    ))}
-                </View>
+                chimneys.map(ch => (
+                    <View
+                        key={ch.id}
+                    >
+                        <Text> {ch.appliance}</Text>
+                        <Text> {ch.placement}</Text>
+                        <Text> {ch.chimney_type?.labelling}</Text>
+                        <Text> {ch.chimney_type?.type}</Text>
+                        <Text> {ch.note} </Text>
+                    </View>
+                ))
             )}
             
-            {object.placement &&
-                 <View className="flex-row items-center mb-2">
-                    <Text>
-                        {object.placement}
-                    </Text>
-                </View>
-            }
-
-            {object.appliance &&
-                <View className="flex-row items-center">
-                    <Text>
-                        {object.appliance}
-                    </Text>
-                </View>
-            }
-
-            {object.note &&
-                <View className="mt-2 text-xs">
-                    <Text>
-                        {object.note}
-                    </Text>
-                </View>
-            }
-            */}
         </View>
     );
 }

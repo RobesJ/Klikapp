@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { Client } from '@/types/generics';
 import { create } from 'zustand';
+import { useObjectStore } from './objectStore';
+import { useProjectStore } from './projectStore';
 
 interface ClientFilters {
   searchQuery: string;
@@ -90,7 +92,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     }
   },
 
-
   setFilters: (newFilters) => {
     set((state) => ({
       filters: { ...state.filters, ...newFilters }
@@ -98,7 +99,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     get().applyFilters();
   },
 
-  
   clearFilters: () => {
     set({ filters: initialFilters });
     get().applyFilters();
@@ -113,7 +113,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       const query = filters.searchQuery.toLowerCase();
       filtered = filtered.filter(client => 
         client.name.toLowerCase().includes(query) ||
-        client.city?.toLowerCase().includes(query)
+        client.phone?.includes(query)
       );
     }
 
@@ -128,7 +128,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     get().applyFilters();
   },
 
-  
   updateClient: (id, updatedClient) => {
     set((state) => ({
       clients: state.clients.map(client => 
@@ -138,10 +137,33 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     get().applyFilters();
   },
 
-  deleteClient: (id: string) => {
+  deleteClient: async (id: string) => {
+    const previousClients = get().clients;
     set((state) => ({
       clients: state.clients.filter(client => client.id !== id)
-    }));
+    }));    
     get().applyFilters();
-  },
+    
+    try{
+      const { data, error} = await supabase
+        .from("clients")
+        .delete()
+        .eq("id", id)
+        .select();
+
+      if (error) throw error;
+      if (data){
+        console.log("Client was deleted successfuly");
+      }
+
+      useProjectStore.getState().lastFetch = 0;
+      useObjectStore.getState().lastFetch = 0;
+    }
+    catch(error){
+      console.error("error deleting client:",error);
+      set({clients: previousClients});
+      get().applyFilters();
+      throw error;
+    } 
+  }
 }));

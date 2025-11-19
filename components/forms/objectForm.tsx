@@ -55,6 +55,16 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
     const [searchingAddress, setSearchingAddress] = useState(false);
     const API_KEY = process.env.EXPO_PUBLIC_MAPS_API_KEY;
+
+    const [chimneyFormData, setChimneyTypeFormData] = useState<{
+        type: string;
+        labelling: string;
+    }>({
+        type: '',
+        labelling: ''
+    });
+    const [showChimneyTypeModal, setshowChimneyTypeModal] = useState(false);
+
     
     const searchGoogleAddress = async (text: string) => {
         setAddressSearch(text);
@@ -370,9 +380,22 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     .eq('id', objectId)
                     .single();
                 
+                const transformedObject = {
+                    object: {
+                      id: completeObject.id,
+                      client_id: completeObject.client_id,
+                      address: completeObject.address,
+                      streetNumber: completeObject.streetNumber,
+                      city: completeObject.city,
+                      country: completeObject.country
+                    },
+                    client: completeObject.clients,  // Rename 'clients' to 'client'
+                    chimneys: completeObject.chimneys || []
+                };
+
                 if (fetchError) throw fetchError;
                 
-                onSuccess?.(completeObject);
+                onSuccess?.(transformedObject);
             }
             else { 
                 const {data: objectData, error: objectError} = await supabase
@@ -434,10 +457,21 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     `)
                     .eq('id', objectId)
                     .single();
-                
+                const transformedObject = {
+                    object: {
+                      id: completeObject.id,
+                      client_id: completeObject.client_id,
+                      address: completeObject.address,
+                      streetNumber: completeObject.streetNumber,
+                      city: completeObject.city,
+                      country: completeObject.country
+                    },
+                    client: completeObject.clients,  // Rename 'clients' to 'client'
+                    chimneys: completeObject.chimneys || []
+                };
                 if (fetchError) throw fetchError;
                 
-                onSuccess?.(completeObject);
+                onSuccess?.(transformedObject);
             }
         }
         catch (error: any){
@@ -447,6 +481,46 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         finally{
             setLoading(false);
         }
+    };
+
+    const handleSubmitNewChimneyType = async () => {
+
+        if (!chimneyFormData.type.trim()) {
+            Alert.alert("Chyba", "Typ komina je povinny!");
+            return;
+        }
+        if (!chimneyFormData.labelling.trim()) {
+            Alert.alert("Chyba", "Oznacenie komina je povinne!");
+            return;
+        }
+        setLoading(true);
+        try{
+            const {data: chimneyTypeData, error: chimneyTypeError } = await supabase
+                .from("chimney_types")
+                .insert([chimneyFormData])
+                .select()
+                .single();
+            
+            if (chimneyTypeError) throw chimneyTypeError;
+            Alert.alert('Success', 'Novy typ komina bol vytvorený!');
+
+            // append new chimney type to all types and clear form
+            setAllChimneyTypes(prev => [...prev, chimneyTypeData]);
+            setFilteredChimneyTypes(prev => [...prev, chimneyTypeData]);
+            setChimneyTypeFormData({ type: '', labelling: ''});
+            setshowChimneyTypeModal(false);
+        }
+        catch (error: any){
+            console.error("Error saving object: ", error);
+            Alert.alert('Error', error.message || "Failed to save object's data");
+        }
+        finally{
+            setLoading(false);
+        }
+    };
+
+    const handleChimneyTypeChange = (field: "type" | "labelling", value: string) => {
+        setChimneyTypeFormData(prev => ({...prev, [field]: value}));
     };
 
     return (
@@ -637,6 +711,14 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                         <View className="flex-row items-center justify-between mb-4">
                             <Text className="text-xl font-bold">Vyberte typ komína</Text>
                             <TouchableOpacity
+                                onPress={()=>setshowChimneyTypeModal(true)}
+                                className="rounded-2xl bg-slate-500 p-4"
+                            >
+                                <Text className="text-white font-semibold">
+                                    Vytvorit novy typ komina
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
                                 onPress={() => setShowChimneyModal(false)}
                                 className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
                             >
@@ -680,6 +762,69 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 </View>
             </View>
         </Modal>
+        
+        {/* Chimney Type Creating Form Modal */}
+        <Modal
+            visible={showChimneyTypeModal}
+            animationType="fade"
+            transparent={true}
+            onRequestClose={() => setshowChimneyTypeModal(false)}
+        >
+            <View className="flex-1 bg-black/50 justify-center items-center">
+            <View className="w-3/4 bg-white rounded-2xl overflow-hidden">
+                    <View className="p-6 border-b border-gray-200">
+                        <View className="flex-row items-center justify-between">
+                            <Text className="text-xl font-bold">Vytvorte typ komína</Text>
+                           
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setshowChimneyTypeModal(false);
+                                    setChimneyTypeFormData({ type: '', labelling: ''});
+                                }}
+                                className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                            >
+                                <Text className="text-gray-600">✕</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    
+                    <View className="p-4">
+
+                        {/* Type field*/}
+                        <Text className="font-semibold mb-1">
+                            Typ
+                        </Text>
+                        <TextInput
+                            placeholder="Napiste typ komina"
+                            value={chimneyFormData.type}
+                            onChangeText={(text) => handleChimneyTypeChange("type", text)}
+                            className="border-2 border-gray-300 rounded-xl p-4 mb-4"
+                        />
+
+                        {/* Labelling field*/}
+                        <Text className="font-semibold mb-1">
+                            Oznacenie
+                        </Text>
+                        <TextInput
+                            placeholder="Napiste oznacenie komina"
+                            value={chimneyFormData.labelling}
+                            onChangeText={(text) => handleChimneyTypeChange("labelling", text)}
+                            className="border-2 border-gray-300 rounded-xl p-4 mb-6"
+                            />
+
+                        <TouchableOpacity
+                            onPress={handleSubmitNewChimneyType}
+                            disabled={loading}
+                            className="py-4 rounded-2xl items-center bg-blue-700 mx-8 mb-4">
+                            <Text className="text-white font-bold">
+                                {loading ? "Ukladam.." : "Vytvorit"}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    
+                </View>
+            </View>
+        </Modal>
+
 
         {/* Chimney Details Modal */}
         <Modal
