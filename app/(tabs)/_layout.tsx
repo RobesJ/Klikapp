@@ -7,12 +7,12 @@ import { icons } from "../../constants/icons"
 const TabIcon = ({focused, icon, title} : any) => {
     if (focused){
         return (
-            <View className="flex flex-row w-full flex-1 min-w-[114px] min-h-16 mt-3 justify-center items-center rounded-full overflow-hidden bg-accent color-secondary">
+            <View className="w-full overflow-hidden flex-1 min-w-[124px] min-h-16 mt-3 justify-center items-center rounded-full bg-accent color-secondary">
                 <Image
                     source={icon}
                     tintColor="#000000"
                     className="size-5"/>
-                <Text className="font-semibold text-base ml-2">{title}</Text>
+                <Text className="font-semibold text-base">{title}</Text>
             </View>
         )
     }
@@ -52,7 +52,6 @@ const _Layout = () => {
                 tabBarStyle: {
                     backgroundColor: "#223042",
                     borderRadius: 50,
-                    marginHorizontal: 30,
                     marginBottom: 36,
                     height:52,
                     position: 'absolute',
@@ -114,6 +113,21 @@ const _Layout = () => {
                             focused ={focused}
                             icon={icons.projectsIcon}
                             title="PROJEKTY"
+                        />   
+                    )
+                }}
+            />
+
+            <Tabs.Screen
+                name="planning"
+                options={{
+                    title: "Planovanie",
+                    headerShown: false,
+                    tabBarIcon: ({focused}) => (
+                        <TabIcon 
+                            focused ={focused}
+                            icon={icons.planningIcon}
+                            title="PLANOVANIE"
                         />   
                     )
                 }}

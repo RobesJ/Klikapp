@@ -1,11 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import { Client, Project, User } from "@/types/generics";
-import { ObjectWithRelations, ProjectWithRelations } from "@/types/projectSpecific";
+import { Chimney, ObjectWithRelations, ProjectWithRelations } from "@/types/projectSpecific";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
     Alert,
     FlatList,
-    KeyboardAvoidingView,
     Modal,
     ScrollView,
     Text,
@@ -14,6 +15,7 @@ import {
     View
 } from "react-native";
 import ModernDatePicker from "../modernDatePicker";
+
 
 interface ProjectFormProps{
     mode: "create" | "edit";
@@ -26,11 +28,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
     const [formData, setFormData] =  useState<Omit<Project, 'id'> & { id?: string }>({
         client_id: initialData?.client.id ?? "",
-        type: initialData?.project.type ?? "",
+        type: initialData?.project.type ?? "Nový",
         state: initialData?.project.state ?? "",
-        scheduled_date: initialData?.project.scheduled_date ?? "",
-        start_date: initialData?.project.start_date ?? "",
-        completion_date: initialData?.project.completion_date ?? "",
+        scheduled_date: initialData?.project.scheduled_date ?? null,
+        start_date: initialData?.project.start_date ?? null,
+        completion_date: initialData?.project.completion_date ?? null,
         note: initialData?.project.note ?? "",
       });
 
@@ -58,20 +60,19 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
     const [assignedObjects, setAssignedObjects] = useState<ObjectWithRelations[]>([]);
     const [loadingObjects, setLoadingObjects] = useState(false);
-    const [searchQueryObject, setSearchQueryObject] = useState('');
     const [selectedObjects, setSelectedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
-    const [timerId3, setTimerId3] = useState<number>();
     const [showObjectModal, setShowObjectModal] = useState(false);
-
+    const router = useRouter();
+    
     useEffect(() => {
         if (initialData){
             setFormData({
                 client_id: initialData?.client.id ?? "",
-                type: initialData?.project.type ?? "",
+                type: initialData?.project.type ?? "Nový",
                 state: initialData?.project.state ?? "",
-                scheduled_date: initialData?.project.scheduled_date ?? "",
-                start_date: initialData?.project.start_date ?? "",
-                completion_date: initialData?.project.completion_date ?? "",
+                scheduled_date: initialData?.project.scheduled_date ?? null,
+                start_date: initialData?.project.start_date ?? null,
+                completion_date: initialData?.project.completion_date ?? null,
                 note: initialData?.project.note ?? "",
               });
           
@@ -98,6 +99,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             setSelectedClient(preselectedClient);
             setFormData(prev => ({...prev, client_id: preselectedClient.id}));
         }
+        setSelectedState("Nový");
     }, [initialData, preselectedClient]);
     
     const handleChange = (field: keyof Omit<Project, 'id'>, value: string) => {
@@ -177,7 +179,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         if (!formData.client_id){
             newErrors.client_id = "Klient je povinny udaj!";
         }
-        if (!formData.scheduled_date || !formData.start_date ){
+        if (!formData.scheduled_date && !formData.start_date ){
             newErrors.dates = "Pre ulozenie je potrebne zadat planovany datum alebo datum zacatia projektu!";
         }
         
@@ -200,11 +202,18 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
         setLoading(true);
         try {
+
+            const cleanedFormData = {
+                ...formData,
+                scheduled_date: formData.scheduled_date || null,
+                start_date: formData.start_date || null,
+                completion_date: formData.completion_date || null
+            }
             let projectID : string; 
             if (mode === "create"){
                 const {data: projectData, error: projectError} = await supabase
                 .from('projects')
-                .insert([formData])
+                .insert([cleanedFormData])
                 .select()
                 .single();
                 
@@ -273,7 +282,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             else { 
                 const {data: projectData, error: projectError} = await supabase
                 .from('projects')
-                .update(formData)
+                .update(cleanedFormData)
                 .eq('id', initialData?.project.id)
                 .select()
                 .single()
@@ -450,25 +459,8 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         setSelectedUsers(prev => prev.filter(c => c.id !== userId));
     };
 
-    const handleSearchObject = (text: string) => {
-        setSearchQueryObject(text);
-        
-        if(timerId3) {
-            clearTimeout(timerId3);
-        }
-        const timer = window.setTimeout(() => {
-            searchObject(text);
-        }, 300);
 
-        setTimerId3(timer);
-    };
-
-    async function searchObject(query: string) {
-        if (query.trim().length < 2){
-            setAssignedObjects([]);
-            return;
-        }
-
+    async function getAssignedObjects() {
         if(!formData.client_id) {
             Alert.alert("Upozernenie", "Najprv vyberte klienta");
             setAssignedObjects([]);
@@ -478,15 +470,50 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         setLoadingObjects(true);
         try{
             const { data, error } = await supabase
-                .from("objects")
-                .select("*")
-                .eq("client_id", formData.client_id)
-                .or(`address.ilike.%${query}%`)
-                .limit(20);
+            .from("objects")
+            .select(`
+                id,
+                client_id,
+                address,
+                city,
+                streetNumber,
+                country,
+                chimneys(
+                    id,
+                    chimney_types (id, type, labelling),
+                    placement,
+                    appliance,
+                    note
+                )
+            `)
+            .eq("client_id", formData.client_id)
+            .limit(30);
 
-            if (error) throw error;
-            setAssignedObjects(data || []);
-        } 
+        if (error) throw error;
+        
+        if(selectedClient){
+            const transformedData = (data || []).map(obj => {
+                const chimneys: Chimney[] = obj.chimneys
+                  ?.map((c: any) => ({
+                  id: c.id,
+                  type: c.chimney_types?.type || null,
+                  labelling: c.chimney_type?.labelling || null,
+                  appliance: c.appliance,
+                  placement: c.placement,
+                  note: c.note
+              }))
+              .filter(Boolean) || [];
+              
+              return ({
+                  object: obj,
+                  chimneys: chimneys,
+                  client: selectedClient
+              })
+          });
+          setAssignedObjects(transformedData);
+        }
+        
+    } 
         catch(error: any){
             console.error("Chyba: ", error.message);
             setAssignedObjects([]);
@@ -520,33 +547,45 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     };
 
     return (
-        <KeyboardAvoidingView>
-        <ScrollView>
+        <View>
+        
             {/* header */}
-            <View className="flex-1 items-center p-20">
-                <Text className="font-bold text-4xl">
+            <View className="mb-32 relative">
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="absolute top-4 left-6 w-10 h-10 items-center justify-center"
+                >
+                  <MaterialIcons name="arrow-back" size={24} color="#d6d3d1" />
+                </TouchableOpacity>
+                <View className="absolute top-4 left-0 right-0 items-center justify-center">
+                    <Text className="font-bold text-4xl text-dark-text_color">
                     {mode === "create" ? "Vytvoriť projekt" : "Upraviť projekt"}
-                </Text>
+                    </Text>
+                </View>
             </View>
+        
             {/* form */}
+            <ScrollView >
             <View className="flex-1 justify-center px-10">
+
                 {/* Client field*/}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Klient</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Text>
                     <View>
                         
                         {clientIsPreselected() &&
                             <Text
-                                className="border-2 border-gray-300 rounded-xl p-4 bg-white">
+                                className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold">
                                 {selectedClient?.name}
                             </Text>
                         }
                         {!clientIsPreselected() && (
                             <TextInput
                             placeholder="Začnite písať meno klienta..."
+                            placeholderTextColor="#424242"
                             value={searchQuery}
                             onChangeText={handleSearchClient}
-                            className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                            className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold"
                             />
                         )}
                         
@@ -576,26 +615,45 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                 {/* State field*/}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Stav projektu</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Stav projektu</Text>
                     <View className="flex-row">
                     <TouchableOpacity
-                        className={`border-2 ${selectedState === "Aktívny" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl p-4 w-24 items-center mr-2`}
+                        className={`border-2 ${selectedState === "Nový" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center mr-2`}
+                        onPress={()=> handleSelectedState("Nový")}
+                    >
+                        <Text>Nový</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        className={`border-2 ${selectedState === "Aktívny" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center mr-2`}
                         onPress={()=> handleSelectedState("Aktívny")}
                     >
                         <Text>Aktívny</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        className={`border-2 ${selectedState === "Ukončený" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl p-4 w-24 items-center mr-2`}
+                        className={`border-2 ${selectedState === "Prebieha" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center mr-2`}
+                        onPress={()=> handleSelectedState("Prebieha")}
+                    >
+                        <Text>Prebieha</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        className={`border-2 ${selectedState === "Pozastavený" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center mr-2`}
+                        onPress={()=> handleSelectedState("Pozastavený")}
+                    >
+                        <Text>Pozastavený</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        className={`border-2 ${selectedState === "Ukončený" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
                         onPress={()=> handleSelectedState("Ukončený")}
                     >
                         <Text>Ukončený</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        className={`border-2 ${selectedState === "Prebieha" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl p-4 w-24 items-center`}
-                        onPress={()=> handleSelectedState("Prebieha")}
+                        className={`border-2 ${selectedState === "Zrušený" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
+                        onPress={()=> handleSelectedState("Zrušený")}
                     >
-                        <Text>Prebieha</Text>
+                        <Text>Zrušený</Text>
                     </TouchableOpacity>
+                    
                     </View>
                     {errors.state && (
                         <Text className='text-red-500 font-semibold ml-2 mt-1'>
@@ -605,31 +663,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 </View>
 
                 {/* Type field*/}
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Typ projektu</Text>
+                <View className="mb-3 ">
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Typ projektu</Text>
                     <View className="flex-row">
                         <TouchableOpacity
-                            className={`border-2 ${selectedType === "Čistenie" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl p-4 w-1/4 items-center`}
-                            onPress={() => handleSelectedType("Čistenie")}
-                        >
-                            <Text
-                                className={`${selectedType === "Čistenie" ? "font-semibold" : "font-normal"}`}
-                            >
-                                Čistenie
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            className={`border-2 ${selectedType === "Revízia" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-white"} rounded-xl p-4 w-1/4 items-center`}
-                            onPress={() => handleSelectedType("Revízia")}
-                        >
-                            <Text
-                                className={`${selectedType === "Revízia" ? "font-semibold" : "font-normal"}`}
-                            >
-                                Revízia
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            className={`border-2 ${selectedType === "Obhliadka" ? "border-gray-900 bg-green-500" : "border-gray-300 bg-white"} rounded-xl p-4 w-1/4 items-center`}
+                            className={`border-2 ${selectedType === "Obhliadka" ? "border-gray-900 bg-green-500" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
                             onPress={() => handleSelectedType("Obhliadka")}
                         >
                             <Text
@@ -638,14 +676,35 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                                 Obhliadka
                             </Text>
                         </TouchableOpacity>
+                        <TouchableOpacity
+                            className={`border-2 ${selectedType === "Revízia" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
+                            onPress={() => handleSelectedType("Revízia")}
+                        >
+                            <Text
+                                className={`${selectedType === "Revízia" ? "font-semibold" : "font-normal"}`}
+                            >
+                                Revízia
+                            </Text>
+                        </TouchableOpacity>
+                    
                         <TouchableOpacity 
-                            className={`border-2 ${selectedType === "Montáž" ? "border-gray-900 bg-blue-400" : "border-gray-300 bg-white"} rounded-xl p-4 w-1/4 items-center`}
+                            className={`border-2 ${selectedType === "Montáž" ? "border-gray-900 bg-blue-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
                             onPress={() => handleSelectedType("Montáž")}
                         >
                             <Text
                                 className={`${selectedType === "Montáž" ? "font-semibold" : "font-normal"}`}
                             >
-                                    Montáž
+                                Montáž
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            className={`border-2 ${selectedType === "Čistenie" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
+                            onPress={() => handleSelectedType("Čistenie")}
+                        >
+                            <Text
+                                className={`${selectedType === "Čistenie" ? "font-semibold" : "font-normal"}`}
+                            >
+                                Čistenie
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -657,8 +716,8 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 </View>
 
                 {/* Scheduled project start field */}
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Plánovaný deň začatia projektu</Text>
+                <View className="mb-3 ">
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Plánovaný deň začatia</Text>
                     <ModernDatePicker
                         value={scheduledDate}
                         onChange={handleScheduledDate}
@@ -673,7 +732,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                 {/* Project start field */}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Deň začatia projektu</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Deň začatia</Text>
                     <ModernDatePicker
                         value={startDate}
                         onChange={handleStartdDate}
@@ -688,7 +747,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                 {/* Project completion field*/}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Deň ukončenia projektu</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Deň ukončenia</Text>
                     <ModernDatePicker
                         value={completionDate}
                         onChange={handleCompletionDate}
@@ -698,18 +757,19 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                 {/* note input*/}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Poznámka</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Poznámka</Text>
                     <TextInput
-                    placeholder="Poznamka"
-                    value={formData.note || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("note", value)}
+                      placeholder="Poznámka"
+                      placeholderTextColor="#424242"
+                      value={formData.note || ''}
+                      className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold"
+                      onChangeText={(value) => handleChange("note", value)}
                     ></TextInput>
                 </View>
 
                 {/* Users Field */}
                 <View className="mb-3">
-                    <Text className="mb-2 ml-1 font-semibold text-gray-700">
+                    <Text className="mb-2 ml-1 font-semibold text-dark-text_color">
                         Priradený používatelia <Text className="text-red-500">*</Text>
                     </Text>
                     
@@ -739,9 +799,9 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                     {/* Assign User Button */}
                     <TouchableOpacity
                         onPress={() => setShowUserModal(true)}
-                        className={`border-2 ${errors.users ? 'border-red-400' : 'border-gray-300'} bg-white rounded-xl p-4`}
+                        className={`border-2 ${errors.users ? 'border-red-400' : 'border-gray-300'} bg-neutral-700 rounded-xl p-4`}
                     >
-                        <Text className="text-blue-600 font-semibold text-center">
+                        <Text className="text-white font-semibold text-center">
                             + Priradiť používateľa
                         </Text>
                     </TouchableOpacity>
@@ -755,8 +815,8 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                 {/* Objects Field */}
                 <View className="mb-3">
-                    <Text className="mb-2 ml-1 font-semibold text-gray-700">
-                        Priradene objekty <Text className="text-red-500">*</Text>
+                    <Text className="mb-2 ml-1 font-semibold text-dark-text_color">
+                        Priradené objekty <Text className="text-red-500">*</Text>
                     </Text>
                     
                     {/* Selected Chimneys Display */}
@@ -782,31 +842,32 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                             ))}
                         </View>
                     )}
-                    {/* Assign User Button */}
+
+                    {/* Assign Object Button */}
                     <TouchableOpacity
-                        onPress={() => setShowObjectModal(true)}
-                        className={`border-2 ${errors.objects ? 'border-red-400' : 'border-gray-300'} bg-white rounded-xl p-4`}
+                        onPress={() => {
+                            getAssignedObjects();
+                            setShowObjectModal(true);
+                        }}
+                        className={`border-2 ${errors.objects ? 'border-red-400' : 'border-gray-300'} bg-neutral-700 rounded-xl p-4`}
                     >
-                        <Text className="text-blue-600 font-semibold text-center">
+                        <Text className="text-white font-semibold text-center">
                             + Priradiť objekt
                         </Text>
                     </TouchableOpacity>
-                    {errors.objects && (
-                        <Text className="text-red-500 text-xs mt-1 ml-1">
-                            {errors.objects}
-                        </Text>
-                    )}
+                    
                 </View>
             </View>
 
             
             {/* submit button */}
-            <View className="flex-1 mt-16 border bg-slate-600 rounded-2xl items-center py-5 mx-24">
+            <View className="flex-1 mt-16 border bg-blue-600 rounded-2xl items-center py-5 mx-24">
                 <TouchableOpacity
+                    activeOpacity={0.8}
                     onPress={handleSubmit}
                     disabled={loading}>
                     <Text className="color-primary font-bold">
-                        {mode === "create" ? "Vytvoriť projekt" : "Upraviť projekt"}
+                        {mode === "create" ? (loading ? "Vytvaram..." : "Vytvoriť projekt") : (loading ? "Upravujem..." : "Upraviť projekt")}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -920,23 +981,12 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                                     <Text className="text-gray-600">✓</Text>
                                 </TouchableOpacity>
                             </View>
-                            <TextInput
-                                placeholder="Vyhľadať objekt..."
-                                value={searchQueryObject}
-                                onChangeText={handleSearchObject}
-                                className="bg-gray-100 rounded-xl p-4"
-                                autoFocus
-                            />
                         </View>
 
-                        {loadingObjects ? (
+                        {loadingObjects ? 
+                        (
                             <View className="flex-1 items-center justify-center">
                                 <Text className="text-gray-500">Vyhľadávám...</Text>
-                            </View>
-                        ) : searchQueryObject.length < 2 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-6xl mb-4">🔍</Text>
-                                <Text className="text-gray-500">Zadajte aspoň 2 znaky</Text>
                             </View>
                         ) : assignedObjects.length === 0 ? (
                             <View className="flex-1 items-center justify-center">
@@ -976,6 +1026,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                     </View>
                 </View>
             </Modal>
-        </KeyboardAvoidingView>
+        </View>
     )
 }

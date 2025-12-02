@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import {
     Alert,
     FlatList,
-    KeyboardAvoidingView,
     Modal,
     ScrollView,
     Text,
@@ -14,6 +13,9 @@ import {
 
 import { Client } from "@/types/generics";
 import { ChimneyInput, ChimneyType, Object, ObjectWithRelations } from "@/types/objectSpecific";
+import { EvilIcons, MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+
 
 interface ObjectFormProps{
     mode: "create" | "edit";
@@ -55,7 +57,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
     const [searchingAddress, setSearchingAddress] = useState(false);
     const API_KEY = process.env.EXPO_PUBLIC_MAPS_API_KEY;
-
     const [chimneyFormData, setChimneyTypeFormData] = useState<{
         type: string;
         labelling: string;
@@ -64,7 +65,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         labelling: ''
     });
     const [showChimneyTypeModal, setshowChimneyTypeModal] = useState(false);
-
+    const router = useRouter();
     
     const searchGoogleAddress = async (text: string) => {
         setAddressSearch(text);
@@ -93,6 +94,25 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             setSearchingAddress(false);
         }
     };
+
+    const selectClientAddress = async (preselectedClient: Client) => {
+        if(preselectedClient.address){
+            const fullAddress = preselectedClient.address;
+            handleChange("address", fullAddress);
+            setAddressSearch(fullAddress);
+
+            if (preselectedClient.streetNumber) {
+                handleChange("streetNumber",preselectedClient.streetNumber);
+            }
+            if (preselectedClient.city) {
+                handleChange("city",preselectedClient.city);
+            } 
+            if (preselectedClient.country) {
+                handleChange("country",preselectedClient.country);
+            }
+        }
+        
+    }
 
     const selectAddress = async (suggestion: any) => {
         const fullAddress = suggestion.description;
@@ -524,34 +544,48 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     };
 
     return (
-        <KeyboardAvoidingView>
-        <ScrollView>
+        <View className="flex-1">
+            
             {/* header */}
-            <View className="flex-1 items-center p-20">
-                <Text className="font-bold text-4xl">
-                    {mode === "create" ? "Vytvoriť objekt" : "Upraviť objekt"}
-                </Text>
+            <View className="mb-32 relative">
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="absolute top-4 left-6 w-10 h-10 items-center justify-center"
+                >
+                  <MaterialIcons name="arrow-back" size={24} color="#d6d3d1" />
+                </TouchableOpacity>
+                <View className="absolute top-4 left-0 right-0 items-center justify-center">
+                    <Text className="font-bold text-4xl text-dark-text_color">
+                        {mode === "create" ? "Vytvoriť objekt" : "Upraviť objekt"}
+                    </Text>
+                </View>
             </View>
-            {/* form */}
+
+            <ScrollView 
+              className="flex-1"
+              contentContainerStyle={{paddingBottom: 100}}
+            >
+            {/* Form */}
             <View className="flex-1 justify-center px-10">
                 
-                {/* client input*/}
+                {/* Client Field*/}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Klient</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Text>
                     <View>
                         
                         {clientIsPreselected() &&
                             <Text
-                                className="border-2 border-gray-300 rounded-xl p-4 bg-white">
+                                className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold">
                                 {selectedClient?.name}
                             </Text>
                         }
                         {!clientIsPreselected() && (
                             <TextInput
-                            placeholder="Začnite písať meno klienta..."
-                            value={searchQuery}
-                            onChangeText={handleSearchClient}
-                            className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                                placeholder="Začnite písať meno klienta..."
+                                placeholderTextColor="#424242"
+                                value={searchQuery}
+                                onChangeText={handleSearchClient}
+                                className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold"
                             />
                         )}
                         
@@ -579,16 +613,27 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     </View>
                 </View> 
 
-                {/* address input*/}               
+                {/* Address field*/}               
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Adresa objektu</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Adresa</Text>
                     <View>
                         <TextInput
                             placeholder="Začnite písať adresu..."
+                            placeholderTextColor="#424242"
                             value={addressSearch || formData.address || ''}
                             onChangeText={searchGoogleAddress}
-                            className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                            className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold"
                         />
+
+                        {preselectedClient && !searchingAddress && !formData.address && (
+                            <TouchableOpacity className="ml-2 mt-2"
+                            onPress={() => selectClientAddress(preselectedClient)}
+                            >
+                                <Text className="text-dark-text_color text-xs">
+                                    Použiť adresu klienta ako adresu objektu?
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
                         {searchingAddress && (
                             <View className="absolute right-4 top-4">
@@ -616,7 +661,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
 
                 {/* Chimneys Field */}
                 <View className="mb-4">
-                    <Text className="mb-2 ml-1 font-semibold text-gray-700">
+                    <Text className="mb-2 ml-1 font-semibold text-dark-text_color">
                         Komíny
                     </Text>
                     
@@ -677,26 +722,31 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     {/* Add Chimney Button */}
                     <TouchableOpacity
                         onPress={() => handleAddChimney()}
-                        className="border-2 border-gray-300 bg-white rounded-xl p-4"
+                        className="border-2 border-gray-300 bg-neutral-700 rounded-xl p-4"
                     >
-                        <Text className="text-blue-600 font-semibold text-center">
+                        <Text className="text-white font-semibold text-center">
                             + Pridať komín
                         </Text>
                     </TouchableOpacity>
                 </View>
             </View>
-            
+            </ScrollView>
+
             {/* submit button */}
-            <View className="flex-1 mt-16 border bg-slate-600 rounded-2xl items-center py-5 mx-24">
+            <View className="absolute bottom-0 left-0 right-0 px-6 pb-12 pt-4 items-center justify-center z-10">
                 <TouchableOpacity
-                    onPress={handleSubmit}
-                    disabled={loading}>
+                  onPress={handleSubmit}
+                  disabled={loading}
+                  className="bg-blue-600 rounded-2xl items-center py-5 px-12"
+                >
                     <Text className="color-primary font-bold">
-                        {mode === "create" ? "Vytvoriť objekt" : "Upraviť objekt"}
+                        {mode === "create" 
+                            ? (loading ? "Vytvaram..." : "Vytvoriť objekt") 
+                            : (loading ? "Upravujem..." : "Upraviť objekt")
+                        }
                     </Text>
                 </TouchableOpacity>
             </View>
-        </ScrollView>
 
         {/* Chimney Type Selection Modal */}
         <Modal
@@ -706,31 +756,32 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             onRequestClose={() => setShowChimneyModal(false)}
         >
             <View className="flex-1 bg-black/50 justify-end">
-                <View className="bg-white rounded-t-3xl h-3/4">
+                <View className="bg-black rounded-t-3xl h-3/4">
+                <View className="bg-dark-bg rounded-t-3xl h-3/4">
+                    {/* header */}
                     <View className="p-6 border-b border-gray-200">
+                        
                         <View className="flex-row items-center justify-between mb-4">
-                            <Text className="text-xl font-bold">Vyberte typ komína</Text>
-                            <TouchableOpacity
-                                onPress={()=>setshowChimneyTypeModal(true)}
-                                className="rounded-2xl bg-slate-500 p-4"
-                            >
-                                <Text className="text-white font-semibold">
-                                    Vytvorit novy typ komina
-                                </Text>
-                            </TouchableOpacity>
+                            <Text className="text-xl text-dark-text_color font-bold">Vyberte typ komína</Text>
+            
                             <TouchableOpacity
                                 onPress={() => setShowChimneyModal(false)}
-                                className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                                className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                             >
-                                <Text className="text-gray-600">✕</Text>
+                                <EvilIcons name="close" size={24} color="white" />
                             </TouchableOpacity>
                         </View>
-                        <TextInput
-                            placeholder="Hľadať komín (ISO hodnota, typ...)..."
+                        
+                        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1">
+                          <EvilIcons name="search" size={20} color="gray" />
+                          <TextInput
+                            className="flex-1 ml-2 text-dark-text_color"
+                            placeholder="Hľadať komín (typ, označenie)"
+                            placeholderTextColor="#9CA3AF"
                             value={searchQueryChimney}
                             onChangeText={handleSearchChimney}
-                            className="bg-gray-100 rounded-xl p-4"
-                        />
+                          />
+                        </View>
                     </View>
 
                     {filteredChimneyTypes.length === 0 ? (
@@ -739,6 +790,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                             <Text className="text-gray-500">Žiadne komíny nenájdené</Text>
                         </View>
                     ) : (
+
                         <FlatList
                             data={filteredChimneyTypes}
                             keyExtractor={(item) => item.id}
@@ -747,7 +799,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                     onPress={() => handleSelectChimneyType(item)}
                                     className="px-6 py-4 border-b border-gray-100"
                                 >
-                                    <Text className="text-base font-semibold text-gray-900">
+                                    <Text className="text-base font-semibold text-dark-text_color">
                                         {item.type}
                                     </Text>
                                     {item.labelling && (
@@ -759,7 +811,20 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                             )}
                         />
                     )}
+                    
                 </View>
+                    
+                </View>
+            </View>
+            <View className="absolule bottom-0 left-0 right-0 bg-dark-bg items-center justify-center">
+                <TouchableOpacity
+                    onPress={()=>setshowChimneyTypeModal(true)}
+                    className="rounded-2xl bg-slate-500 p-4 mb-10"
+                >
+                    <Text className="text-white font-semibold">
+                        Vytvoriť nový typ komína
+                    </Text>
+                </TouchableOpacity>
             </View>
         </Modal>
         
@@ -813,11 +878,13 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                             />
 
                         <TouchableOpacity
+                            activeOpacity={0.8}
                             onPress={handleSubmitNewChimneyType}
                             disabled={loading}
                             className="py-4 rounded-2xl items-center bg-blue-700 mx-8 mb-4">
                             <Text className="text-white font-bold">
-                                {loading ? "Ukladam.." : "Vytvorit"}</Text>
+                                {mode === "create" ? (loading ? "Vytvoriť objekt" : "Vytvaram...") : (loading ? "Upraviť objekt" : "Upravujem...")}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                     
@@ -905,6 +972,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 </View>
             </View>
         </Modal>
-        </KeyboardAvoidingView>
+        </View>
     )
 }

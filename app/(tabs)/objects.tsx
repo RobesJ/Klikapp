@@ -3,11 +3,11 @@ import ObjectCard from '@/components/cards/objectCard';
 import { useObjectStore } from '@/store/objectStore';
 import { Client } from '@/types/generics';
 import { ObjectWithRelations } from '@/types/objectSpecific';
-import { Ionicons } from '@expo/vector-icons';
+import { EvilIcons, Feather } from '@expo/vector-icons';
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Modal, ScrollView, SectionList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Objects() {
@@ -69,51 +69,56 @@ export default function Objects() {
   }, [filteredObjects]);
   
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1 bg-dark-bg">
 
       {/* Header */}
       <View className="flex-2 mt-4 px-6 mb-8">
         <View className="flex-row justify-between">
-          <Text className="font-bold text-4xl">Objekty</Text>
+          <Text className="font-bold text-4xl text-dark-text_color">Objekty</Text>
           <Text className="text-xl text-green-500">ONLINE</Text>
         </View>
-        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-2 mt-4">
-          <Ionicons name="search" size={20} color="gray" />
+        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4">
+          <EvilIcons name="search" size={20} color="gray" />
           <TextInput
             className="flex-1 ml-2"
             placeholder='Vyhladajte klienta...'
+            placeholderTextColor="#9CA3AF"
             value={searchText}
             onChangeText={handleSearchText}
           />
         </View>
       </View>
 
-      <SectionList
-          sections={objectsGroupedByClient.map(group => ({
-            title: group.client.name,
-            clientID: group.client.id,
-            data: group.objects
-          }))}
-          
-          keyExtractor={(item) => item.object.id}
-          renderItem={({item})=> (
-            
-            <ObjectCard
-              object={item.object}
-              chimneys={item.chimneys}
-              client={item.client}
-              onPress={() => handleModalVisibility(item, true)}
-            />
-          )}
-          renderSectionHeader={({section}) =>
-            <Text className="px-4 py-2 mt-4 mb-2 font-bold text-lg bg-gray-200">
-              {section.title} ({section.data.length})
-            </Text>
-          }
-          contentContainerStyle={{paddingBottom:100, paddingHorizontal:20}}
-          >
-      </SectionList>
-     
+      <FlatList
+        data={objectsGroupedByClient}
+        keyExtractor={(group) => group.client.id}
+        renderItem={({ item: group }) => (
+          <View className="mb-3 bg-dark-card-bg border rounded-2xl border-dark-card-border_color">
+            {/* Section Header */}
+            <View className="rounded-t-xl px-4 py-2">
+              <Text className="font-bold text-lg text-dark-text_color">
+                {group.client.name} ({group.objects.length})
+              </Text>
+            </View>
+
+            {/* Objects List */}
+            <View className="mt-2 px-2">
+              {group.objects.map((item) => (
+                <View key={item.object.id} className="mb-3">
+                  <ObjectCard
+                    object={item.object}
+                    chimneys={item.chimneys}
+                    client={item.client}
+                    onPress={() => handleModalVisibility(item, true)}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
+      />
+
       <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => router.push({
@@ -142,6 +147,7 @@ export default function Objects() {
         +
       </Text>
       </TouchableOpacity>
+
       <Modal
         visible={showDetails}
         transparent={true}
@@ -149,17 +155,23 @@ export default function Objects() {
         onRequestClose={() => setShowDetails(false)}
       >
         <View className="flex-1 bg-black/50 justify-center items-center">
-          <View className="w-3/4 bg-white rounded-2xl overflow-hidden">
+          <View className="w-3/4 bg-dark-bg rounded-2xl overflow-hidden">
             {/* Header */}
             <View className="px-4 py-6 border-b border-gray-200">
               <View className="flex-row items-center justify-between">
                 {selectedObject?.object.city ? (
                   <View className='flex-1'>
-                  <Text className="text-xl font-bold">{selectedObject.object.streetNumber}</Text>
-                  <Text className="text-xl font-bold">{selectedObject.object.city}</Text>
+                    <Text className="text-xl font-bold text-dark-text_color">
+                      {selectedObject.object.streetNumber}
+                    </Text>
+                    <Text className="text-xl font-bold text-dark-text_color">
+                      {selectedObject.object.city}
+                    </Text>
                   </View>
                 ): (
-                  <Text className="text-xl font-bold">{selectedObject?.object.address}</Text>
+                  <Text className="text-xl font-bold text-dark-text_color">
+                    {selectedObject?.object.address}
+                  </Text>
                 )}
                 
                 {/* Object detail card action buttons*/}
@@ -177,9 +189,9 @@ export default function Objects() {
                       });
                     }}
                     activeOpacity={0.8}
-                    className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center"
+                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                   >
-                    <Text className="text-blue-600 font-bold">✏️</Text>
+                    <Feather name="edit-2" size={16} color="white" />
                   </TouchableOpacity>
                   
                   <TouchableOpacity
@@ -198,16 +210,16 @@ export default function Objects() {
                       }
                     }}
                     activeOpacity={0.8}
-                    className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center"
+                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                   >
-                    <Text className="text-blue-600 font-bold">🗑</Text>
+                    <EvilIcons name="trash" size={24} color="white" />
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={() => setShowDetails(false)}
-                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                   >
-                    <Text className="text-gray-600 font-bold">✕</Text>
+                    <EvilIcons name="close" size={24} color="white" />
                   </TouchableOpacity>
                 </View>
               </View>

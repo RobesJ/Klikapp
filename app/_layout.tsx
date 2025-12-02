@@ -12,22 +12,50 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="addClientScreen"
-          options={{ headerTransparent: true,
-                     headerTitle: ''
-                  }}
+          options={{   
+            headerShown: false
+            /*title: "Vytvoriť klienta",
+            headerTitleAlign: 'center',
+            headerStyle: { backgroundColor: '#0c1026f0' },
+            headerTintColor: '#d6d3d1',
+            headerTitleStyle: {
+              fontSize: 28,
+              fontWeight: 'semibold'
+            }
+              */
+        }}
         />
         <Stack.Screen
           name="addObjectScreen"
-          options={{ headerTransparent: true,
-                     headerTitle: ''
-                  }}
+          options={{   
+            headerShown: false
+            /*title: "Vytvoriť klienta",
+            headerTitleAlign: 'center',
+            headerStyle: { backgroundColor: '#0c1026f0' },
+            headerTintColor: '#d6d3d1',
+            headerTitleStyle: {
+              fontSize: 28,
+              fontWeight: 'semibold'
+            }
+              */
+        }}
         />
-        <Stack.Screen
+        <Stack.Screen 
           name="addProjectScreen"
-          options={{ headerTransparent: true,
-                     headerTitle: ''
-                  }}
+          options={{   
+            headerShown: false
+            /*title: "Vytvoriť klienta",
+            headerTitleAlign: 'center',
+            headerStyle: { backgroundColor: '#0c1026f0' },
+            headerTintColor: '#d6d3d1',
+            headerTitleStyle: {
+              fontSize: 28,
+              fontWeight: 'semibold'
+            }
+              */
+        }}
         />
+
         <Stack.Screen
           name="(auth)/login"
           options={{ headerShown: false }}
@@ -36,7 +64,14 @@ export default function RootLayout() {
           name="(auth)/register"
           options={{ headerShown: false }}
         />
-
+        <Stack.Screen 
+          name="(auth)/forgot-pwd" 
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="(auth)/reset-pwd" 
+          options={{ headerShown: false }}
+        />
       </Stack>
     </AuthProvider>
   );

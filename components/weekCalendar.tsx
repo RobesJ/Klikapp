@@ -1,15 +1,24 @@
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import { sk } from "date-fns/locale";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 interface WeekCalendarProps {
     selectedDay: Date;
     onDateSelect: (date: Date) => void;
+    initialWeekStart?: Date;
 }
 
-export default function WeekCalendar({selectedDay, onDateSelect}: WeekCalendarProps) {
-    const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1}));
+export default function WeekCalendar({selectedDay, onDateSelect, initialWeekStart}: WeekCalendarProps) {
+    const [currentWeekStart, setCurrentWeekStart] = useState(
+        initialWeekStart 
+        ?  startOfWeek(initialWeekStart, { weekStartsOn: 1})
+        :  startOfWeek(selectedDay, { weekStartsOn: 1})
+    );
+
+    useEffect(() => {
+        setCurrentWeekStart(startOfWeek(selectedDay, { weekStartsOn: 1 }));
+    }, [selectedDay]);
 
     const weekDays = Array.from({ length: 7}, (_, i) => addDays(currentWeekStart,i));
 
@@ -34,22 +43,22 @@ export default function WeekCalendar({selectedDay, onDateSelect}: WeekCalendarPr
                 <TouchableOpacity
                     onPress={goToPreviousWeek}
                 >
-                    <Text className="font-bold text-3xl">←</Text>
+                    <Text className="font-bold text-3xl text-dark-text_color">←</Text>
                 </TouchableOpacity>
                 
                 <View className="items-center">
-                    <Text className="text-lg font-bold">
+                    <Text className="text-lg font-bold  text-dark-text_color">
                         {format(currentWeekStart, "LLLL yyyy", {locale: sk})}
                     </Text>
                     <TouchableOpacity onPress={goToToday} className="mt-1">
-                        <Text className="text-xl">Dnes</Text>
+                        <Text className="text-xl text-dark-text_color">Dnes</Text>
                     </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
                     onPress={goToNextWeek}
                 >
-                    <Text className="font-bold text-3xl">→</Text>
+                    <Text className="font-bold text-3xl text-dark-text_color">→</Text>
                 </TouchableOpacity>
             </View>
 

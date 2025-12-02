@@ -1,12 +1,14 @@
 import { supabase } from '@/lib/supabase';
 import { User } from "@/types/generics";
 import { Chimney, ObjectWithRelations, ProjectWithRelations } from '@/types/projectSpecific';
+import { addDays, format } from 'date-fns';
 import { create } from 'zustand';
 import { useClientStore } from './clientStore';
 
 interface ProjectFilters {
   type: string[];
   state: string[];
+  users: string[];
   dateFrom: string | null;
   dateTo: string | null;
   searchQuery: string;
@@ -15,7 +17,10 @@ interface ProjectFilters {
 interface ProjectStore {
   projects: ProjectWithRelations[];
   filteredProjects: ProjectWithRelations[];
+  assignedProjects: ProjectWithRelations[];
+  unassignedProjects: ProjectWithRelations[];
   filters: ProjectFilters;
+  availableUsers: User[];
 
   filterCache: Map<string, {
     data: ProjectWithRelations[];
@@ -36,6 +41,11 @@ interface ProjectStore {
   fetchProjects: (limit: number) => Promise<void>;
   fetchUserProjects: (userId: string, limit: number) => Promise<void>;
   fetchActiveProjects: (limit: number) => void;
+  fetchAvailableUsers: () => Promise<void>; // New function to fetch users
+  fetchAssignedProjects: (date: Date) => Promise<void>;
+  fetchUnassignedProjects: (date: Date) => Promise<void>;
+  assignProjectToDate: (projectId: string, date: Date) => Promise<void>;
+  unassignProject: (projectId: string) => Promise<void>;
   setFilters: (filters: Partial<ProjectFilters>) => void;
   clearFilters: () => void;
   addProject: (project: ProjectWithRelations) => void;
@@ -47,11 +57,13 @@ interface ProjectStore {
   removeFilter: (filterType: "type"  | "state", value: string) => void,
   toggleTypeFilter: (type: string) => void;
   toggleStateFilter: (state: string) => void;
+  toggleUserFilter: (userId: string) => void; // New toggle for user filter
 }
 
 const initialFilters: ProjectFilters = {
   type: [],
   state: [],
+  users: [],
   dateFrom: null,
   dateTo: null,
   searchQuery: '',
@@ -61,6 +73,7 @@ function getFilterKey(filters: ProjectFilters): string {
   return JSON.stringify({
     type: filters.type.sort(),
     state: filters.state.sort(),
+    users: filters.users.sort(),
     dateFrom: filters.dateFrom,
     dateTo: filters.dateTo,
     searchQuery: filters.searchQuery
@@ -73,7 +86,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Initial state
   projects: [],
   filteredProjects: [],
+  assignedProjects: [],
+  unassignedProjects: [],
   filters: initialFilters,
+  availableUsers: [],
 
   hasMore: true,
   currentPage: 0,
@@ -85,6 +101,169 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   lastFetch: 0,
   error: null,
   filterCache: new Map(),
+
+  fetchAvailableUsers: async() =>{
+    try{
+      const {data, error} = await supabase
+        .from("user_profiles")
+        .select("id, name, email")
+        .order("name", {ascending: true});
+      
+      if(error) throw error;
+
+      set({availableUsers: data || []});
+    }
+    catch(error: any){
+      console.error("Error fetching users:", error);
+    }
+  },
+
+  fetchAssignedProjects: async(date: Date) => {
+    set({backgroundLoading: true});
+    try{
+      const dateString = format(date, "yyyy-MM-dd");
+
+      const {data, error} = await supabase
+        .from("projects")
+        .select(`
+          *,
+          clients (*),
+          project_assignments (
+            user_profiles (id, name, email)
+          ),
+          project_objects (
+            objects (
+              id,
+              client_id,
+              address,
+              city, 
+              streetNumber,
+              country,
+              chimneys (
+                id,
+                chimney_types (id, type, labelling),
+                placement,
+                appliance,
+                note
+              )
+            )
+          )
+        `)
+        .in("state", ["Naplánovaný", "Aktívny"])
+        .eq("start_date", dateString)
+        .order("created_at", {ascending: false});
+  
+      if(error) throw error;
+
+      const transformedProjects = transformProjects(data || []);
+
+      set({
+        assignedProjects: transformedProjects,
+        backgroundLoading: false
+      });
+    }
+    catch(error: any){
+      console.error("Error fetching assigned projects:", error);
+      set({backgroundLoading: false, error: error.message});
+    }
+  },
+
+  fetchUnassignedProjects: async(date: Date) => {
+    set({backgroundLoading: true});
+    try{
+      const dateString = format(date, "yyyy-MM-dd");
+      const futureDate = format(addDays(date, 30), "yyyy-MM-dd");
+
+      const {data, error} = await supabase
+        .from("projects")
+        .select(`
+          *,
+          clients (*),
+          project_assignments (
+            user_profiles (id, name, email)
+          ),
+          project_objects (
+            objects (
+              id,
+              client_id,
+              address,
+              city, 
+              streetNumber,
+              country,
+              chimneys (
+                id,
+                chimney_types (id, type, labelling),
+                placement,
+                appliance,
+                note
+              )
+            )
+          )
+        `)
+        .eq("state", "Nový")
+        .or(`scheduled_date.lte.${dateString},and(scheduled_date.gte.${dateString},scheduled_date.lte.${futureDate})`)
+        .order('scheduled_date', { ascending: true });
+
+  
+      if(error) throw error;
+
+      const transformedProjects = transformProjects(data || []);
+
+      set({
+        unassignedProjects: transformedProjects,
+        backgroundLoading: false
+      });
+    }
+    catch(error: any){
+      console.error("Error fetching unassigned projects:", error);
+      set({backgroundLoading: false, error: error.message});
+    }
+  },
+
+  assignProjectToDate: async(projectId: string, date: Date) => {
+    try{
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const {error} = await supabase
+        .from("projects")
+        .update({
+          state: "Naplánovaný",
+          start_date: dateStr
+        })
+        .eq("id", projectId);
+
+      if(error) throw error;
+
+      await get().fetchAssignedProjects(date);
+      await get().fetchUnassignedProjects(date);
+
+      get().invalidateFilterCache();
+    }
+    catch(error: any){
+      console.error("Error assigning project to date:", error);
+      throw error;
+    }
+  },
+
+  unassignProject: async(projectId: string) => {
+    try{
+      
+      const {error} = await supabase
+        .from("projects")
+        .update({
+          state: "Nový",
+          start_date: null
+        })
+        .eq("id", projectId);
+
+      if(error) throw error;
+
+      get().invalidateFilterCache();
+    }
+    catch(error: any){
+      console.error("Error assigning project to date:", error);
+      throw error;
+    }
+  },
 
   fetchActiveProjects: async(limit) => {
     set({initialLoading: true});
@@ -281,7 +460,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       if (error) throw error;
   
       let transformed = transformProjects(data || []);
-  
+      
+      if(filters.users.length > 0){
+        transformed = transformed.filter(p => 
+          p.users.some(user => filters.users.includes(user.id))
+        );
+      }
+
       // Client-side search filtering
       if (filters.searchQuery) {
         const searchLower = filters.searchQuery.toLowerCase();
@@ -385,6 +570,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
       let transformed = transformProjects(data);
 
+      if (filters.users.length > 0) {
+        transformed = transformed.filter(p =>
+          p.users.some(user => filters.users.includes(user.id))
+        );
+      }
+
       if (filters.searchQuery && transformed.length > 0){
         const searchLower = filters.searchQuery.toLowerCase();
         transformed = transformed.filter(p =>
@@ -429,51 +620,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       set({filterCache: new Map()});
     }
   },
-  /*
-  applyFilters: () => {
-    const { projects, filters } = get();
     
-    let filtered = [...projects];
-
-    if (filters.type.length > 0) {
-      filtered = filtered.filter(p => 
-        p.project.type && filters.type.includes(p.project.type)
-      );
-    }
-
-    if (filters.state.length > 0) {
-      filtered = filtered.filter(p => 
-        p.project.state && filters.state.includes(p.project.state)
-      );
-    }
-
-    if (filters.dateFrom) {
-      filtered = filtered.filter(p => {
-        const projectDate = p.project.scheduled_date || p.project.start_date;
-        return projectDate && projectDate >= filters.dateFrom!;
-      });
-    }
-
-    if (filters.dateTo) {
-      filtered = filtered.filter(p => {
-        const projectDate = p.project.scheduled_date || p.project.start_date;
-        return projectDate && projectDate <= filters.dateTo!;
-      });
-    }
-
-    if (filters.searchQuery.trim()) {
-      const query = filters.searchQuery.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.client.name.toLowerCase().includes(query) ||
-        p.project.note?.toLowerCase().includes(query) ||
-        p.objects.some(obj => obj.object.address?.toLowerCase().includes(query))
-      );
-    }
-
-    set({ filteredProjects: filtered });
-    console.log(`🔍 Filtered: ${filtered.length}/${projects.length} projects`);
-  },
-  */
   toggleTypeFilter:(type: string) => {
       set((state) => {
         const types = state.filters.type.includes(type)
@@ -501,6 +648,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     get().applySmartFilters(get().filters);
   },
 
+  toggleUserFilter: (userId: string) => {
+    set((state) => {
+      const users = state.filters.users.includes(userId)
+        ? state.filters.users.filter(u => u !== userId)
+        : [...state.filters.users, userId];
+
+      return {
+        filters: { ...state.filters, users: users}
+      };
+    });
+    get().applySmartFilters(get().filters);
+  },
+
   removeFilter: (filterType: "type" | "state", value: string) => {
     set((state) => {
       if (filterType === "type"){
@@ -510,14 +670,21 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             type: state.filters.type.filter(t=> t !== value)
           }
         };
-      } else {
+      } else if(filterType === "state") {
         return {
           filters: {
             ...state.filters,
             state: state.filters.state.filter(s=> s !== value)
           }
         };
-      } 
+      } else{
+        return {
+          filters: {
+            ...state.filters,
+            users: state.filters.users.filter(u => u !== value)
+          }
+        };
+      }
     });
     get().applySmartFilters(get().filters);
   },

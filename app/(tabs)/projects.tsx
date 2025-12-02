@@ -1,61 +1,62 @@
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
-import FilterModal from '@/components/filterModal';
+import { getFooterImageBase64, getWatermarkBase64 } from '@/constants/icons';
+import { supabase } from '@/lib/supabase';
+import { generateAllChimneyRecords } from "@/services/pdfService";
 import { useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from "@/types/projectSpecific";
-import { Ionicons } from '@expo/vector-icons';
+import { EvilIcons, Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+
 const TYPE_OPTIONS = [
-  { 
+  {
     value: "Obhliadka", 
-    label: "Obhliadka", 
-    color: "bg-green-50", 
-    checkColor: "bg-green-600" 
+    colors: ["text-dark-project-type-obhliadka", "border-2 border-dark-project-type-obhliadka"],
   },
-  { 
-    value: "Montáž", 
-    label: "Montáž", 
-    color: "bg-blue-50", 
-    checkColor: "bg-blue-600" 
+  {
+    value: "Montáž",
+    colors: ["text-dark-project-type-montaz","border-2 border-dark-project-type-montaz"],
   },
-  { 
+  {
     value: "Revízia", 
-    label: "Revízia", 
-    color: "bg-red-50", 
-    checkColor: "bg-amber-600" 
+    colors: ["text-dark-project-type-revizia","border-2 border-dark-project-type-revizia"],
   },
   {
     value: "Čistenie", 
-    label: "Čistenie", 
-    color: "bg-yellow-50", 
-    checkColor: "bg-yellow-500" 
+    colors: ["text-dark-project-type-cistenie","border-2 border-dark-project-type-cistenie"],
   }
 ];
 
 const STATE_OPTIONS = [
-  { 
+  {
+    value: "Nový",
+    colors: ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
+  },
+  {
     value: "Aktívny", 
-    label: "Aktívny", 
-    color: "bg-green-50", 
-    checkColor: "bg-green-600" 
+    colors: ["text-dark-project-state-aktivny","border-2 border-dark-project-state-aktivny"],
   },
-  { 
+  {
     value: "Prebieha", 
-    label: "Prebieha", 
-    color: "bg-yellow-50", 
-    checkColor: "bg-yellow-500" 
+    colors: ["text-dark-project-state-prebieha","border-2 border-dark-project-state-prebieha"],
   },
-  { 
+  {
+    value: "Pozastavený", 
+    colors: ["text-dark-project-state-pozastaveny","border-2 border-dark-project-state-pozastaveny"],
+  },
+  {
     value: "Ukončený", 
-    label: "Ukončený", 
-    color: "bg-gray-100", 
-    checkColor: "bg-gray-600" 
+    colors: ["text-dark-project-state-ukonceny","border-2 border-dark-project-state-ukonceny"]
   },
+  {
+    value: "Zrušený", 
+    colors: ["text-dark-project-state-zruseny","border-2 border-dark-project-state-zruseny"]
+  }
 ];
 
 export default function Projects() {
@@ -65,6 +66,8 @@ export default function Projects() {
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showStateModal, setShowStateModal] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const {
     filteredProjects,
@@ -79,12 +82,103 @@ export default function Projects() {
     deleteProject
   } = useProjectStore();
 
+  const stateColorMap: Record<string, string[]> = {
+        "Nový": ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
+        "Aktívny": ["text-dark-project-state-aktivny","border-2 border-dark-project-state-aktivny"],
+        "Prebieha": ["text-dark-project-state-prebieha","border-2 border-dark-project-state-prebieha"],
+        "Pozastavený": ["text-dark-project-state-pozastaveny","border-2 border-dark-project-state-pozastaveny"],
+        "Ukončený": ["text-dark-project-state-ukonceny","border-2 border-dark-project-state-ukonceny"],
+        "Zrušený": ["text-dark-project-state-zruseny","border-2 border-dark-project-state-zruseny"]
+      };
+
   useFocusEffect(
     useCallback(() => {
       fetchProjects(50);
+      
     }, [])
   );
-  
+
+  // Inside your button handler
+  const handleGeneratePDF = async (type: "cleaning" | "inspection") => {
+    try {
+      setIsGenerating(true);
+      console.log('Starting PDF generation...');
+      
+      const watermarkBase64 = await getWatermarkBase64();
+      const footerBase64 = await getFooterImageBase64();
+      
+      if(selectedProject){
+        console.log('Generating records for project:', selectedProject.project.id);
+        console.log('Number of objects:', selectedProject.objects.length);
+        console.log('Number of chimneys in first object:', selectedProject.objects[0]?.chimneys.length);
+        
+        const uris = await generateAllChimneyRecords(
+          selectedProject.project,
+          selectedProject.users[0],
+          selectedProject.client,
+          selectedProject.objects,
+          watermarkBase64,
+          footerBase64,
+          type
+        );
+        const uploadPromises = uris.map(async (uri, index) => {
+          try {
+            // Create unique filename for each PDF
+            const timestamp = Date.now();
+            const chimneyIndex = index + 1;
+            let filename;
+            if(type === "cleaning"){
+              filename =`cleaning_${chimneyIndex}_${timestamp}.pdf`;
+            }
+            else{
+              filename =`inspection_${chimneyIndex}_${timestamp}.pdf`;
+            }
+            
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            const arrayBuffer = await new Response(blob).arrayBuffer();
+            
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase
+              .storage
+              .from("pdf-reports")
+              .upload(filename, arrayBuffer, {
+                contentType: 'application/pdf',
+                upsert: false,
+              });
+            
+            if (uploadError) throw uploadError;
+            
+            // Get public URL
+            const { data: urlData } = supabase.storage
+              .from("pdf-reports")
+              .getPublicUrl(filename);
+            
+            console.log(`PDF ${chimneyIndex} uploaded:`, urlData.publicUrl);
+            
+            return urlData.publicUrl;
+          } catch (error) {
+            console.error(`Error uploading PDF ${index + 1}:`, error);
+            throw error;
+          }
+        });
+        
+        // Wait for all uploads to complete
+        const publicUrls = await Promise.all(uploadPromises);
+        
+        console.log('All PDFs uploaded:', publicUrls);
+        alert(`${uris.length} PDF(s) úspešne nahrané!`);
+        
+        console.log('Generated PDFs:', uris);
+      }
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      alert(`PDF generation failed: ${error}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleRefresh = () => {
     fetchProjects(50);
   };
@@ -117,52 +211,37 @@ export default function Projects() {
   };
 
   return (
-    <SafeAreaView className="flex-1">
-      <View className="flex-2 mt-4 px-6 mb-8">
+    <SafeAreaView className="flex-1 bg-dark-bg">
+      <View className="flex-2 mt-4 px-6 mb-4">
         <View className="flex-row justify-between">
-          <Text className="font-bold text-4xl">Projekty</Text>
+          <Text className="font-bold text-4xl text-dark-text_color">Projekty</Text>
+          <View className="flex-row justify-between items-center">
           <Text className="text-xl text-green-500">ONLINE</Text>
+          <TouchableOpacity
+                    onPress={() => {setShowFilterModal(true)}}
+                    activeOpacity={0.8}
+                    className="ml-4 items-center justify-center"
+                  >
+                    <Feather name="filter" size={20} color="white" />
+                  </TouchableOpacity>
+            
+          </View>
+  
         </View>
 
         {/* Search klient Input*/}
-        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-2 mt-4 mb-2">
-          <Ionicons name="search" size={20} color="gray" />
+        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4 mb-4">
+          <EvilIcons name="search" size={20} color="gray" />
           <TextInput
-            className="flex-1 ml-2"
+            className="flex-1 ml-2 text-dark-text_color"
             placeholder='Vyhladajte klienta alebo mesto...'
+            placeholderTextColor="#9CA3AF"
             value={searchText}
             onChangeText={handleSearch}
           />
         </View>
 
-        <View className='flex-row'>
-        {/* Type filter button */}
-          <TouchableOpacity
-            onPress={() => setShowTypeModal(true)}
-            className="bg-white border-2 border-gray-300 rounded-xl px-4 py-4 flex-row items-center mr-2"
-          >
-            <Text className="mr-2">Typ projektu</Text>
-            {activeTypeCount > 0 && (
-              <View className="bg-blue-500 rounded-full w-4 h-4 items-center justify-center">
-                <Text className="text-white text-xs font-bold">{activeTypeCount}</Text>
-              </View>
-            )}
-            <Text className="ml-2">▼</Text>
-          </TouchableOpacity>
-
-          {/* State filter button */}
-          <TouchableOpacity
-            onPress={() => setShowStateModal(true)}
-            className="bg-white border-2 border-gray-300 rounded-xl px-4 py-4 flex-row items-center"
-          >
-            <Text className="mr-2">Stav projektu</Text>
-            {activeStateCount > 0 && (
-              <View className="bg-blue-500 rounded-full w-4 h-4 items-center justify-center">
-                <Text className="text-white text-xs font-bold">{activeStateCount}</Text>
-              </View>
-            )}
-            <Text className="ml-2">▼</Text>
-          </TouchableOpacity>
+        <View className='flex-row'>            
 
           {/* Clear filters button */}
           <View className='flex-1 items-end justify-center'>
@@ -208,17 +287,25 @@ export default function Projects() {
                   }
                 } else {
                   switch(filter.value) {
+                    case "Nový":
+                      pillColor = `${stateColorMap["Nový"][1]}`;
+                      textColor = `${stateColorMap["Nový"][0]}`;
+                      break;
                     case "Aktívny":
-                      pillColor = "bg-green-100";
-                      textColor = "text-green-700";
+                      pillColor = `${stateColorMap["Aktívny"][1]}`;
+                      textColor = `${stateColorMap["Aktívny"][0]}`;
                       break;
                     case "Prebieha":
-                      pillColor = "bg-yellow-100";
-                      textColor = "text-yellow-700";
+                      pillColor = `${stateColorMap["Prebieha"][1]}`;
+                      textColor = `${stateColorMap["Prebieha"][0]}`;
+                      break;
+                    case "Pozastavený":
+                      pillColor = `${stateColorMap["Pozastavený"][1]}`;
+                      textColor = `${stateColorMap["Pozastavený"][0]}`;
                       break;
                     case "Ukončený":
-                      pillColor = "bg-gray-100";
-                      textColor = "text-gray-700";
+                      pillColor = `${stateColorMap["Ukončený"][1]}`;
+                      textColor = `${stateColorMap["Ukončený"][0]}`;
                       break;
                   }
                 }
@@ -226,7 +313,7 @@ export default function Projects() {
                 return (
                   <TouchableOpacity
                     key={`${filter.type}-${filter.value}-${index}`}
-                    onPress={() => removeFilter(filter.type, filter.value)}  // ✅ Use filter.type directly!
+                    onPress={() => removeFilter(filter.type, filter.value)}
                     className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
                   >
                     <Text className={`${textColor} font-medium mr-1`}>
@@ -295,6 +382,7 @@ export default function Projects() {
       </Text>
       </TouchableOpacity>
 
+      {/* Project details modal */}
       <Modal
         visible={showDetails}
         transparent={true}
@@ -302,13 +390,41 @@ export default function Projects() {
         onRequestClose={() => setShowDetails(false)}
       >
         <View className="flex-1 bg-black/50 justify-center items-center">
-          <View className="w-3/4 bg-white rounded-2xl overflow-hidden">
+          <View className="w-10/12 h-fit bg-dark-bg rounded-2xl overflow-hidden">
             {/* Header */}
             <View className="px-4 py-6 border-b border-gray-200">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold">{selectedProject?.project.type}</Text>
-
+                <Text className="text-xl font-bold text-dark-text_color">
+                  {selectedProject?.project.type}
+                </Text>
+                
                 <View className="flex-row gap-2">
+
+                {selectedProject && selectedProject.project.type !== "Obhliadka" && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if(selectedProject.project.type === "Čistenie"){
+                        handleGeneratePDF("cleaning");
+                      }
+                      else{
+                        handleGeneratePDF("inspection");
+                      }
+                    }}
+                    disabled={isGenerating}
+                    className={`px-4 py-2 rounded ${isGenerating ? 'bg-gray-400' : 'bg-blue-500'}`}
+                  >
+                    <Text className="text-white">
+                      {isGenerating ? 'Generujem...' : 'Generovat zaznam'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                  {/*
+                      selectedProject.objects.map(ch => (
+                        ch.chimneys.map(c => {
+                          generateAllChimneyRecords(selectedProject.project, selectedProject.client, selectedProject.objects, c, "sgkshgksd", "ushgfukghsduidsu", "cleaning");
+                          })
+                        ));
+                    }*/}
                   <TouchableOpacity
                     onPress={() => {
                       setShowDetails(false);
@@ -322,9 +438,9 @@ export default function Projects() {
                       });
                     }}
                     activeOpacity={0.8}
-                    className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center"
+                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                   >
-                    <Text className="text-blue-600 font-bold">✏️</Text>
+                    <Feather name="edit-2" size={16} color="white" />
                   </TouchableOpacity>
                   
                   <TouchableOpacity
@@ -341,23 +457,23 @@ export default function Projects() {
                       }
                     }}
                     activeOpacity={0.8}
-                    className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center"
+                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                   >
-                    <Text className="text-blue-600 font-bold">🗑</Text>
+                    <EvilIcons name="trash" size={24} color="white" />
                   </TouchableOpacity>
 
 
                   <TouchableOpacity
                     onPress={() => setShowDetails(false)}
-                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                   >
-                    <Text className="text-gray-600 font-bold">✕</Text>
+                    <EvilIcons name="close" size={24} color="white" />
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
                   
-            <ScrollView className="max-h-96 p-4">
+            <ScrollView className="max-h-screen-safe-offset-12 p-4">
               {selectedProject && (
                 <ProjectDetails 
                   project={selectedProject.project}
@@ -367,31 +483,134 @@ export default function Projects() {
               )}
             </ScrollView>
           </View>
-        </View>
-        
+        </View>  
       </Modal>
+      
+      {/* Filters modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+        <View className="w-3/4 bg-dark-bg rounded-2xl overflow-hidden">
+            {/* Header */}
+            <View className="px-4 py-6 border-b border-gray-200">
+              <View className="flex-row items-center justify-between">
+                
+                <Text className="text-xl font-bold text-dark-text_color">
+                  Filtrovat
+                </Text>
 
-      <FilterModal
-          visible={showTypeModal}
-          onClose={() =>setShowTypeModal(false)}
-          title="Vyberte typ projektu"
-          options={TYPE_OPTIONS}
-          selectedCount={activeTypeCount}
-          selectedValues={filters.type}
-          onToggle={toggleTypeFilter}
-          onClearSelection={()=>setFilters({ type: []})}
-      />
+                <TouchableOpacity
+                  onPress={() => setShowFilterModal(false)}
+                  className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+                >
+                  <EvilIcons name="close" size={24} color="white" />
+                </TouchableOpacity>
+                
+              </View>
+            </View>
 
-      <FilterModal
-          visible={showStateModal}
-          onClose={() =>setShowStateModal(false)}
-          title="Vyberte stav projektu"
-          options={STATE_OPTIONS}
-          selectedCount={activeStateCount}
-          selectedValues={filters.state}
-          onToggle={toggleStateFilter}
-          onClearSelection={()=>setFilters({ state: []})}
-      />
+            <View className='flex-2 ml-4 mt-8 max-w-52'>
+              <TouchableOpacity
+                onPress={()=>{
+                  if(showTypeModal){
+                    setShowTypeModal(false);
+                  }
+                  else{
+                    setShowTypeModal(true);
+                  }
+                }}
+                activeOpacity={0.8}
+                className="rounded-2xl border-2 border-gray-400 py-2 px-4 flex-row items-center justify-between"
+                >
+                  <View className='flex-row gap-2'>     
+                    <Text className='text-dark-text_color'>
+                      Typ
+                    </Text>
+                    {activeTypeCount > 0 && (
+                        <View className="bg-blue-500 rounded-full w-5 h-5  items-center justify-center">
+                          <Text className="text-white text-xs font-bold">{activeTypeCount}</Text>
+                        </View>
+                    )}
+                  </View>
+                  <View>
+                    <Text className="text-dark-text_color">▼</Text>
+                  </View>
+              </TouchableOpacity>
+              
+              {showTypeModal && (
+                <ScrollView className='mb-4 mt-1'>
+                    {TYPE_OPTIONS.map((type) => (
+                      <View key={type.value} 
+                      className={`flex-row  items-center justify-between w-48`}>
+                      <Text className={`${type.colors[1]} rounded-2xl px-4 py-1 ${type.colors[0]}`}>
+                        {type.value}
+                      </Text>
+                      <Switch
+                        value={filters.type.includes(type.value)}
+                        onValueChange={() => toggleTypeFilter(type.value)}
+                        trackColor={{ false: "#555", true: "#4ade80" }}  // optional
+                        thumbColor={"white"}  // optional
+                      />
+                    </View>
+                    ))
+                    }
+                </ScrollView>
+              )}
+
+
+              <TouchableOpacity
+                onPress={()=>{
+                if(showStateModal){
+                  setShowStateModal(false);
+                }
+                else{
+                  setShowStateModal(true);
+                }
+              }}
+                activeOpacity={0.8}
+                className="rounded-2xl border-2 border-gray-400 py-2 px-4 flex-row items-center justify-between"
+                >
+                  <View className='flex-row gap-2'>          
+                    <Text className='text-dark-text_color'>
+                      Stav
+                    </Text>
+                    {activeStateCount > 0 && (
+                      <View className=" bg-blue-500 rounded-full w-5 h-5 items-center justify-center">
+                        <Text className="text-white text-xs font-bold">{activeStateCount}</Text>
+                      </View>
+                    )}
+                   </View>
+                  <View>
+                    <Text className="text-dark-text_color">▼</Text>
+                  </View>
+              </TouchableOpacity>
+              
+              {showStateModal && (
+                <ScrollView className='mb-8 mt-1'>
+                    {STATE_OPTIONS.map((state) => (
+                      <View key={state.value} 
+                        className={`flex-row items-center justify-between w-48`}>
+                        <Text className={` ${state.colors[1]} rounded-2xl px-4 py-1 ${state.colors[0]}`}>{state.value}</Text>
+                        <Switch
+                          value={filters.state.includes(state.value)}
+                          onValueChange={() => toggleStateFilter(state.value)}
+                          trackColor={{ false: "#555", true: "#4ade80" }}  // optional
+                          thumbColor={"white"}  // optional
+                        />
+                      </View>
+                    ))
+                    }
+                </ScrollView>
+              )}
+            </View>
+            
+          </View>
+        </View>  
+      </Modal>    
     </SafeAreaView>
   );
 }

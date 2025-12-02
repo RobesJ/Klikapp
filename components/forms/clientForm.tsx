@@ -1,8 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import { Client } from "@/types/generics";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
-
 
 interface ClientFormProps{
     mode: "create" | "edit";
@@ -34,6 +35,8 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
     const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
     const [searchingAddress, setSearchingAddress] = useState(false);
     const API_KEY = process.env.EXPO_PUBLIC_MAPS_API_KEY;
+    const router = useRouter();
+    
     useEffect(() => {
         if (initialData){
             setFormData({
@@ -65,23 +68,29 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
         }
     };
 
-    const validate =() : boolean => {
+    const validate = () : boolean => {
         const newErrors : Record<string, string> = {};
 
-        if(!formData.name){
-            newErrors.name = "Meno je povinna polozka!";
+        if(!formData.name.trim()){
+            newErrors.name = "Meno je povinná položka!";
         }
 
-        if(!formData.address){
-            newErrors.address = "Adresa je povinna polozka!";
+        if(formData.email){
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+                newErrors.email = 'Neplatný formát emailu!';
+            }
         }
 
-        if(!formData.phone){
-            newErrors.phone = "Telefonne cislo je povinna polozka!";
+        if(!formData.address?.trim()){
+            newErrors.address = "Adresa je povinná položka!";
+        }
+
+        if(!formData.phone?.trim()){
+            newErrors.phone = "Telefonné číslo je povinná položka!";
         }
 
         if(!formData.type){
-            newErrors.type = "Typ klienta je povinna polozka!";
+            newErrors.type = "Typ klienta je povinná položka!";
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -230,21 +239,40 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
     };
 
     return (
-        <ScrollView>
-            <View className="flex-1 items-center p-20">
-                <Text className="font-bold text-4xl">
-                    {mode === "create" ? "Vytvoriť klienta" : "Upraviť klienta"}
-                </Text>
+        <View className="flex-1">
+        
+            
+            <View className="mb-32 relative">
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="absolute top-4 left-6 w-10 h-10 items-center justify-center z-10"
+                >
+                  <MaterialIcons name="arrow-back" size={24} color="#d6d3d1"/>
+                </TouchableOpacity>
+                <View className="absolute top-4 left-0 right-0 items-center justify-center">
+                    <Text className="font-bold text-4xl text-dark-text_color">
+                        {mode === "create" ? "Vytvoriť klienta" : "Upraviť klienta"}
+                    </Text>
+                </View>
             </View>
+            
+            <ScrollView 
+              className="flex-1"
+              contentContainerStyle={{paddingBottom: 100}}
+            >
+            {/* Form */}
             <View className="flex-1 justify-center px-10">
+
+                {/* Name field */}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1">Meno klienta</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Meno</Text>
                     <TextInput
-                    placeholder="Meno a priezvisko / Nazov firmy"
-                    value={formData.name}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("name", value)}
-                    autoCapitalize="words"
+                        placeholder="Meno a priezvisko / Názov firmy"
+                        placeholderTextColor="#424242"
+                        value={formData.name}
+                        className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
+                        onChangeText={(value) => handleChange("name", value)}
+                        autoCapitalize="words"
                     />
                     {errors.name && (
                         <Text className='text-red-500 font-semibold ml-2 mt-1'>
@@ -252,12 +280,15 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                         </Text>
                     )}
                 </View>
+
+
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1">Email klienta</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Email</Text>
                     <TextInput
-                    placeholder="Email"
+                    placeholder="email.klienta@priklad.sk"
+                    placeholderTextColor="#424242"
                     value={formData.email || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                    className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
                     onChangeText={(value) => handleChange("email", value)}
                     autoCapitalize="none"
                     keyboardType="email-address"
@@ -269,13 +300,14 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                     )}
                 </View>
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1">Telefonne cislo</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Telefónne číslo</Text>
                     <TextInput
-                    placeholder="Telefonne cislo"
-                    value={formData.phone || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("phone", value)}
-                    keyboardType="phone-pad"
+                        placeholder="0901 234 567  |  +421 901 234 567"
+                        placeholderTextColor="#424242"
+                        value={formData.phone || ''}
+                        className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
+                        onChangeText={(value) => handleChange("phone", value)}
+                        keyboardType="phone-pad"
                     ></TextInput>
                     {errors.phone && (
                         <Text className='text-red-500 font-semibold ml-2 mt-1'>
@@ -286,13 +318,14 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
 
                 {/* address input*/}               
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium">Adresa objektu</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Adresa trvalého pobytu / Sídlo firmy</Text>
                     <View>
                         <TextInput
                             placeholder="Začnite písať adresu..."
+                            placeholderTextColor="#424242"
                             value={addressSearch || formData.address || ''}
                             onChangeText={searchGoogleAddress}
-                            className="border-2 border-gray-300 rounded-xl p-4 bg-white"
+                            className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
                         />
 
                         {searchingAddress && (
@@ -320,19 +353,19 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                 </View>
 
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1">Typ klienta</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Typ</Text>
                     <View className="flex-row">
                         <TouchableOpacity
-                            onPress={() => handleSelectedType("Fyzicka osoba")}
-                            className={`border-2 ${selectedType === "Fyzicka osoba" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-white"} rounded-xl p-4 mr-3 w-36 items-center`}
+                            onPress={() => handleSelectedType("Fyzická osoba")}
+                            className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-gray-500"} rounded-xl p-4 mr-3 w-36 items-center`}
                         >
-                            <Text  className={`${selectedType === "Fyzicka osoba" ? "font-semibold" : "font-normal"}`}>Fyzicka osoba</Text>
+                            <Text  className={`${selectedType === "Fyzická osoba" ? "font-semibold" : "font-normal"}`}>Fyzická osoba</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            className={`border-2 ${selectedType === "Pravnicka osoba" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-white"} rounded-xl p-4 w-36 items-center`}
-                            onPress={() => handleSelectedType("Pravnicka osoba")}
+                            className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-gray-500"} rounded-xl p-4 w-36 items-center`}
+                            onPress={() => handleSelectedType("Právnická osoba")}
                         >
-                            <Text  className={`${selectedType === "Pravnicka osoba" ? "font-semibold" : "font-normal"}`}>Pravnicka osoba</Text>
+                            <Text  className={`${selectedType === "Právnická osoba" ? "font-semibold" : "font-normal"}`}>Právnická osoba</Text>
                         </TouchableOpacity>  
                     </View>
                     {errors.type && (
@@ -343,25 +376,31 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                 </View>
 
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1">Poznamka</Text>
+                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Poznámka</Text>
                     <TextInput
-                    placeholder="Poznamka"
-                    value={formData.note || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-white"
-                    onChangeText={(value) => handleChange("note", value)}
+                        placeholder="Ďalšie informácie..."
+                        placeholderTextColor="#424242"
+                        value={formData.note || ''}
+                        className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
+                        onChangeText={(value) => handleChange("note", value)}
                     ></TextInput>
                 </View>
             </View>
 
-            <View className="flex-1 mt-16 border bg-slate-600 rounded-2xl items-center py-5 mx-24">
+            </ScrollView>
+
+            {/* Submit button */}
+            <View className="absolute bottom-0 left-0 right-0 px-6 pb-12 pt-4 items-center justify-center z-2">
                 <TouchableOpacity
+                    activeOpacity={0.8}
                     onPress={handleSubmit}
-                    disabled={loading}>
+                    disabled={loading}
+                    className="border bg-blue-600 rounded-2xl items-center py-5 px-12 ">
                     <Text className="color-primary font-bold">
-                        {mode === "create" ? "Vytvoriť klienta" : "Upraviť klienta"}
+                        {mode === "create" ? (loading ? "Vytvaram..." : "Vytvoriť klienta") : (loading ? "Upravujem..." : "Upraviť klienta")}
                     </Text>
                 </TouchableOpacity>
             </View>
-        </ScrollView>
+        </View>
     )
 }

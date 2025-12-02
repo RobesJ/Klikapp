@@ -132,6 +132,18 @@ export default function Login() {
                                 </Text>
                             )}
                         </View>
+                        <View className='flex-row justify-center items-center mt-2'>
+                        
+                        <TouchableOpacity
+                            onPress={() => router.push("/(auth)/forgot-pwd")} // TODO create password renewing page
+                            disabled={loading}
+                            activeOpacity={0.8}
+                        >
+                            <Text className='text-xs font-medium'>
+                                Zabudli ste heslo?
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                     </View>
                         
                     <TouchableOpacity
@@ -143,15 +155,17 @@ export default function Login() {
                         {loading ? 
                         (
                             <View className='flex-row items-center'>
-                                <Text className='font-bold'>
+                                <Text className='font-bold text-white'>
                                     Prihlasovanie
                                 </Text>
                             </View>
                         ):
-                        (
-                            <Text className='font-bold'>
-                                Prihlásiť sa
-                            </Text>
+                        (   
+                            <View className='flex-row items-center'>
+                                <Text className='font-bold text-white'>
+                                    Prihlásiť sa
+                                </Text>
+                            </View>
                         )}
                     </TouchableOpacity>
 

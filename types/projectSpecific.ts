@@ -28,3 +28,13 @@ export interface ProjectWithRelations {
   users: User[];
   objects: ObjectWithRelations[];
 }
+
+export interface Photo{
+  id: string;
+  project_id: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  storage_path: string;
+  uploaded_at: string;
+}

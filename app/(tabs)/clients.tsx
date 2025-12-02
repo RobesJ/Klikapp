@@ -2,7 +2,7 @@ import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/cards/clientCard";
 import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
-import { Ionicons } from "@expo/vector-icons";
+import { EvilIcons, Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from 'react';
@@ -10,7 +10,6 @@ import { Alert, FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, 
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Clients() {
- 
   const [showDetails, setShowDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [searchText, setSearchText] = useState('');
@@ -31,7 +30,6 @@ export default function Clients() {
     }, [])
   );
   
-  
   const handleModalVisibility = (client: Client, value: boolean) => {
     setShowDetails(value);
     setSelectedClient(client);
@@ -47,24 +45,30 @@ export default function Clients() {
   };
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1 bg-dark-bg">
       {/* header */}
-      <View className="flex-2 mt-4 px-6 mb-8">
-        <View className="flex-row justify-between">
-          <Text className="font-bold text-4xl">Klienti</Text>
+      <View className="flex-2 mt-4 px-6 mb-8 ">
+        <View className="flex-row justify-between ">
+          <Text className="font-bold text-4xl text-dark-text_color">Klienti</Text>
+
+          {/* online / offline indicator */}
           <Text className="text-xl text-green-500">ONLINE</Text>
         </View>
-        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-2 mt-4">
-          <Ionicons name="search" size={20} color="gray" />
+
+        {/* search option - search by client name or phone number */}
+        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4">
+          <EvilIcons name="search" size={20} color="gray" />
           <TextInput
-            className="flex-1 ml-2"
+            className="flex-1 ml-2 text-dark-text_color"
             placeholder='Vyhladajte klienta...'
+            placeholderTextColor="#9CA3AF"
             value={searchText}
             onChangeText={handleSearch}
           />
         </View>
       </View>
       
+      {/* list of clients */}
       <FlatList
         data={filteredClients}
         keyExtractor={(item) => item.id}
@@ -81,10 +85,12 @@ export default function Clients() {
           loading ? (
             <Text className="text-center text-gray-500 mt-10">Načítavam...</Text>
           ) : (
-            <Text className="text-center text-gray-500 mt-10">Žiadne projekty</Text>
+            <Text className="text-center text-gray-500 mt-10">Žiadny klienti</Text>
           )
         }
       />
+
+      { /* Action Button - add new client */}
       <TouchableOpacity
         onPress={() => router.push({
           pathname: "/addClientScreen",
@@ -93,36 +99,40 @@ export default function Clients() {
         activeOpacity={0.8}
         style={{
           position: 'absolute',
-          bottom: 110,
-          right: 28,
+          bottom: 100,
+          right: 20,
           width: 64,
           height: 64,
           borderRadius: 32,
-          backgroundColor: '#777777',
+          backgroundColor: '#3182ce',
           alignItems: 'center',
           justifyContent: 'center',
-          shadowColor: '#000',
+          shadowColor: '#FFF',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,
           elevation: 8,
         }}
       >
-        <Text className="text-white text-3xl">+</Text>
+        <Text className="text-dark-text_color text-4xl">+</Text>
       </TouchableOpacity>
+      
+
+      {/* Client details modal*/}
       <Modal
         visible={showDetails}
         transparent={true}
-        animationType="fade"
+        animationType="slide"
         onRequestClose={()=> setShowDetails(false)}
         >
           <View className="flex-1 bg-black/50 justify-center items-center">
-            <View className="w-3/4 bg-white rounded-2xl overflow-hidden">
+            <View className="w-3/4 bg-dark-bg rounded-2xl overflow-hidden">
               {/* header */}
               <View className="px-4 py-6 border-b border-gray-200">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold">{selectedClient?.name}</Text>
+                <Text className="text-xl font-bold text-dark-text_color">{selectedClient?.name}</Text>
 
+                  {/* Edit selected client */}
                   <View className="flex-row gap-2">
                     <TouchableOpacity
                         onPress={() => {
@@ -136,41 +146,46 @@ export default function Clients() {
                         });
                       }}
                         activeOpacity={0.8}
-                        className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                        className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                     >
-                        <Text className="text-gray-600">✏️</Text>
+                        <Feather name="edit-2" size={16} color="white" />
+                    </TouchableOpacity>
+
+                    {/* Delete selected client */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        if(selectedClient){
+                          try{
+                            deleteClient(selectedClient?.id);
+                            setShowDetails(false);
+
+                          }
+                          catch (error){
+                            console.error("Delete failed:", error);
+                          }
+                          Alert.alert("Klient bol uspesne odstraneny");
+                          setSelectedClient(null);
+                        }
+                      }}
+                      activeOpacity={0.8}
+                      className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+                    >
+                      <EvilIcons name="trash" size={24} color="white" />
+
                     </TouchableOpacity>
                     
-                    <TouchableOpacity
-                    onPress={() => {
-                      if(selectedClient){
-                        try{
-                          deleteClient(selectedClient?.id);
-                          setShowDetails(false);
-
-                        }
-                        catch (error){
-                          console.error("Delete failed:", error);
-                        }
-                        Alert.alert("Klient bol uspesne odstraneny");
-                        setSelectedClient(null);
-                      }
-                    }}
-                    activeOpacity={0.8}
-                    className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center"
-                  >
-                    <Text className="text-blue-600 font-bold">🗑</Text>
-                  </TouchableOpacity>
-
+                    {/* Close details modal */}
                     <TouchableOpacity
                         onPress={() => setShowDetails(false)}
-                        className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                        className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                     >
-                        <Text className="text-gray-600">x</Text>
+                        <EvilIcons name="close" size={24} color="white" />
                     </TouchableOpacity>
                   </View>
               </View>
           </View> 
+
+          {/* Details Card */}
           <ScrollView className="max-h-screen-safe-offset-12 p-4">
             {selectedClient && (
               <ClientDetails client={selectedClient} />
@@ -179,6 +194,7 @@ export default function Clients() {
         </View>
         </View>
       </Modal>
+      
     </SafeAreaView>
   );
 }

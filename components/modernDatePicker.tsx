@@ -52,7 +52,7 @@ export default function ModernDatePicker({
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     
-    return `${day}.${month}.${year}`;
+    return `${year}-${month}-${day}`;
   };
 
   const handleDayPress = (day: any) => {
@@ -65,10 +65,10 @@ export default function ModernDatePicker({
     <View>
       <TouchableOpacity
         onPress={() => setShow(true)}
-        className={`border-2 ${error ? 'border-red-400' : 'border-gray-300'} bg-white rounded-xl p-3`}
+        className={`border-2 ${error ? 'border-red-400' : 'border-gray-300'} bg-gray-500 rounded-xl p-3`}
       >
         <View className="flex-row items-center justify-between">
-          <Text className={value ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+          <Text className={value ? 'text-white font-bold' : "#424242"}>
             {formatDate(value)}
           </Text>
           <Text className="text-2xl">📅</Text>

@@ -151,31 +151,37 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
     return (
         <ScrollView className="flex-1">
             {/* Client Info */}
-            <View className="mb-6">
+            <View className="mb-2">
                 {client.email && (
                     <View className="flex-row items-center mb-2">
-                        <Text className="mr-2 text-sm">📧</Text>
-                        <Text>{client.email}</Text>
+                        <Text className="mr-2 text-base overflow-hidden">📧</Text>
+                        <Text className="text-dark-text_color">{client.email}</Text>
                     </View>
                 )}
 
                 {client.phone && (
                     <View className="flex-row items-center mb-2">
-                        <Text className="mr-2 text-sm">📱</Text>
-                        <Text>{client.phone}</Text>
+                        <Text className="mr-2 text-lg">📱</Text>
+                        <Text className="text-dark-text_color">{client.phone}</Text>
                     </View>
                 )}
 
                 {client.address && (
                     <View className="flex-row items-center mb-2">
-                        <Text className="mr-2 text-sm">📍</Text>
-                        <Text>{client.address}</Text>
+                        <Text className="mr-2 text-lg">📍</Text>
+                        <Text className="text-dark-text_color">{client.address}</Text>
                     </View>
                 )}
-
+                {client.type && (
+                    <View className="flex-row items-center mb-2">
+                        <Text className="mr-2 text-lg">{client.type === "Právnická osoba" ? "🏢" : "👤"}</Text>
+                        <Text className="text-dark-text_color">{client.type}</Text>
+                    </View>
+                )}
                 {client.note && (
                     <View className="flex-row items-center mb-2">
-                        <Text>{client.note}</Text>
+                        <Text className="mr-2 text-lg">📝</Text>
+                        <Text className="text-dark-text_color w-80">{client.note}</Text>
                     </View>
                 )}
             </View>
@@ -183,13 +189,13 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
             {/* Objects Section */}
             <View className="mb-8">
                 <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-lg font-bold mb-2">
+                <Text className="text-lg font-bold text-dark-text_color">
                     Objekty ({objectsWithRelations.length})
                 </Text>
 
                 <TouchableOpacity
                     activeOpacity={0.8}
-                    className="bg-blue-500 py-2 px-4 rounded-lg "
+                    className="bg-blue-600 py-2 px-4 rounded-lg "
                     onPress={() => router.push({
                         pathname: "/addObjectScreen",
                         params: { mode: "create", preselectedClient: JSON.stringify(client) }
@@ -202,12 +208,35 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
                     <Text className="text-gray-500">Žiadne objekty</Text>
                 ) : (
                     objectsWithRelations.map((item) => (
-                        <View key={item.object.id} className="bg-gray-100 p-3 rounded-lg mb-2">
-                            <Text className="font-semibold">{item.object.streetNumber}, {item.object.city}</Text>  
-                            <Text className="text-sm text-gray-600 mt-1">
+                        <TouchableOpacity 
+                            key={item.object.id} 
+                            className="bg-dark-details-o_p_bg p-3 rounded-lg mb-2"
+                            onPress={()=> {
+                            router.push({
+                                pathname: "/addObjectScreen",
+                                params: { 
+                                  object: JSON.stringify(item),
+                                  mode: "edit", 
+                                  preselectedClient: JSON.stringify(client)
+                                }
+                              });
+                              
+                            }}
+                            >
+                            {!item.object.streetNumber 
+                            ? (
+                                <Text className="font-semibold text-dark-text_color">
+                                    {item.object.address}
+                                </Text> 
+                            ):(
+                                <Text className="font-semibold text-dark-text_color">
+                                    {item.object.streetNumber}, {item.object.city}
+                                </Text> 
+                            )}
+                            <Text className="text-sm text-dark-text_color mt-1">
                                 Komíny: {item.chimneys.length}
                             </Text>
-                        </View>
+                        </TouchableOpacity>
                     ))
                 )}
             </View>
@@ -215,12 +244,12 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
             {/* Projects Section */}
             <View className="mb-4 pb-4">
                 <View className="flex-row items-center justify-between mb-4">
-                    <Text className="text-lg font-bold mb-3">
+                    <Text className="text-lg font-bold text-dark-text_color">
                         Projekty ({projectsWithRelations.length})
                     </Text>
                     <TouchableOpacity
                         activeOpacity={0.8}
-                        className="bg-green-500 py-2 px-4 rounded-lg"
+                        className="bg-blue-600 py-2 px-4 rounded-lg"
                         onPress={() => router.push({
                             pathname: "/addProjectScreen",
                             params: { mode: "create", preselectedClient: JSON.stringify(client) }
@@ -232,15 +261,26 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
                     <Text className="text-gray-500">Žiadne projekty</Text>
                 ) : (
                     projectsWithRelations.map((item) => (
-                        <View key={item.project.id} className="bg-gray-100 p-3 rounded-lg mb-2">
-                            <Text className="font-semibold">{item.project.type}</Text>
-                            <Text className="text-sm text-gray-600">{item.project.state}</Text>
-                            {item.project.scheduled_date && (
+                        <TouchableOpacity key={item.project.id} className="bg-dark-details-o_p_bg p-3 rounded-lg mb-2"
+                        onPress={()=> {
+                            router.push({
+                                pathname: "/addProjectScreen",
+                                params: { 
+                                  project: JSON.stringify(item),
+                                  mode: "edit", 
+                                  preselectedClient: JSON.stringify(client)
+                                }
+                              });
+                            }}
+                            >
+                            <Text className="font-semibold text-dark-text_color">{item.project.type}</Text>
+                            <Text className="text-sm text-dark-text_color">{item.project.state}</Text>
+                            {/*item.project.scheduled_date && (
                                 <Text className="text-xs text-gray-500 mt-1">
                                     {new Date(item.project.scheduled_date).toLocaleDateString()}
                                 </Text>
-                            )}
-                        </View>
+                            )*/}
+                        </TouchableOpacity>
                     ))
                 )}
             </View>

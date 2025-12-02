@@ -9,7 +9,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.robesj.klikoncrm",
+      "associatedDomains": ["applinks.klikoncrm.applinks"]
     },
     "android": {
       "adaptiveIcon": {
@@ -18,6 +20,17 @@
         "backgroundImage": "./assets/images/chimney-sweep-holding-sweeper-logo-vector.jpg",
         "monochromeImage": "./assets/images/chimney-sweep-holding-sweeper-logo-vector.jpg"
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "klikoncrm"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.robesj.klikoncrm"
@@ -38,6 +51,12 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Aplikácia potrebuje prístup k fotoaparátu na fotenie."
         }
       ]
     ],
