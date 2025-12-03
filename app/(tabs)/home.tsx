@@ -151,11 +151,24 @@ export default function Home() {
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
       {appReady && (
-        <View>          
-          <View className="flex-2 mt-4 px-6 mb-8">
+        <View>       
+          {/* Header */}   
+          <View className="flex-2 mt-4 mx-4 mb-8">
             <View className="flex-row justify-between">
-              <Text className="font-bold text-4xl text-dark-text_color">Aktuálne projekty</Text>
-              <View className="flex-row justify-between items-center">
+              <TouchableOpacity
+                onPress={() => {}}
+                activeOpacity={0.8}
+                className="items-center justify-center"
+              >
+                <EvilIcons name="navicon" size={36} color="white" />
+              </TouchableOpacity>
+              <View className='ml-6 items-center justify-center'>
+                <Text className="font-bold text-4xl text-dark-text_color">Aktuálne projekty</Text>
+                <Text className=' text-dark-text_color'>
+                  {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
+                </Text>
+             </View>
+              <View className="flex-2 justify-between items-center">
                 <Text className="text-xl text-green-500">ONLINE</Text>
                 <TouchableOpacity
                     onPress={() => {setShowFilterModal(true)}}
@@ -166,11 +179,7 @@ export default function Home() {
                 </TouchableOpacity>
               </View>
             </View>
-             <View>
-                <Text className=' text-dark-text_color'>
-                  {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
-                </Text>
-             </View>
+             
              <View className="mt-4">
                 <WeekCalendar 
                   selectedDay={selectedDate}
@@ -178,6 +187,7 @@ export default function Home() {
                 />
              </View>
           </View>
+
           {projectsForSelectedDate.length > 0 ? (
             <View >
               <FlatList

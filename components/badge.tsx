@@ -1,0 +1,262 @@
+import React from 'react';
+import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+
+interface BadgeOption {
+  value: string;
+  colors: string[];
+}
+
+interface ProjectBadgeProps {
+  value: string | null;
+  isSelected: boolean;
+  onPress?: () => void;
+  colors: string[];
+  size?: 'small' | 'medium' | 'large';
+}
+
+export const ProjectBadge: React.FC<ProjectBadgeProps> = ({
+  value,
+  isSelected,
+  onPress,
+  colors,
+  size = 'medium'
+}) => {
+  const sizeClasses = {
+    small: 'px-2 py-1',
+    medium: 'px-3 py-2',
+    large: 'px-4 py-3'
+  };
+
+  const textSizeClasses = {
+    small: 'text-xs',
+    medium: 'text-sm',
+    large: 'text-base'
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className={`
+        rounded-2xl
+        ${sizeClasses[size]}
+        ${isSelected ? `${colors[1]} ${colors[0]} bg-opacity-20` : 'border-2 border-gray-600 bg-gray-800'}
+      `}
+    >
+      <Text
+        className={`
+          ${textSizeClasses[size]}
+          font-semibold
+          ${isSelected ? colors[0] : 'text-gray-400'}
+        `}
+      >
+        {value}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+// Reusable Badge Selector Component
+interface BadgeSelectorProps {
+  options: BadgeOption[];
+  selectedValue: string;
+  onSelect: (value: string) => void;
+  label: string;
+  error?: string;
+}
+
+export const BadgeSelector: React.FC<BadgeSelectorProps> = ({
+  options,
+  selectedValue,
+  onSelect,
+  label,
+  error
+}) => {
+  return (
+    <View className="mb-4">
+      <Text className="mb-2 ml-1 text-dark-text_color">{label}</Text>
+      <View className="flex-row justify-between gap-2">
+        {options.map((option) => (
+          <ProjectBadge
+            key={option.value}
+            value={option.value}
+            isSelected={selectedValue === option.value}
+            onPress={() => onSelect(option.value)}
+            colors={option.colors}
+            size="large"
+          />
+        ))}
+      </View>
+      {error && (
+        <Text className="text-red-500 font-semibold ml-2 mt-1">
+          {error}
+        </Text>
+      )}
+    </View>
+  );
+};
+
+// Modal Selector for States
+interface ModalSelectorProps {
+  options: BadgeOption[];
+  selectedValue: string;
+  onSelect: (value: string) => void;
+  label: string;
+  error?: string;
+  placeholder?: string;
+}
+
+export const ModalSelector: React.FC<ModalSelectorProps> = ({
+  options,
+  selectedValue,
+  onSelect,
+  label,
+  error,
+  placeholder = 'Vyberte...'
+}) => {
+  const [showModal, setShowModal] = React.useState(false);
+  
+  const selectedOption = options.find(opt => opt.value === selectedValue);
+
+  return (
+    <>
+      <View className="mb-4">
+        <Text className="mb-2 ml-1 font-medium text-dark-text_color">{label}</Text>
+        <TouchableOpacity
+          onPress={() => setShowModal(true)}
+          className={`border-2 
+            ${error 
+                ? 'border-red-400' 
+                : showModal 
+                    ? 'border-blue-500'
+                    : 'border-gray-600'
+            } bg-gray-800 rounded-2xl p-3`}
+        >
+          <View className="flex-row items-center justify-between">
+            {selectedOption ? (
+              <View className={`${selectedOption.colors[1]} ${selectedOption.colors[0]} bg-opacity-20 rounded-full px-4 py-1`}>
+                <Text className={`${selectedOption.colors[0]} font-semibold`}>
+                  {selectedOption.value}
+                </Text>
+              </View>
+            ) : (
+              <Text style={{ color: '#ABABAB' }}>{placeholder}</Text>
+            )}
+            <Text className="text-gray-400">▼</Text>
+          </View>
+        </TouchableOpacity>
+        {error && (
+          <Text className="text-red-500 text-xs mt-1 ml-1">
+            {error}
+          </Text>
+        )}
+      </View>
+
+      {/* Selection Modal */}
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-dark-bg rounded-t-3xl" style={{ height: '60%' }}>
+            {/* Header */}
+            <View className="p-6 border-b border-gray-700">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xl text-white font-bold">{label}</Text>
+                <TouchableOpacity
+                  onPress={() => setShowModal(false)}
+                  className="w-9 h-9 bg-gray-700 rounded-full items-center justify-center"
+                >
+                  <Text className="text-white text-xl">×</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Options List */}
+            <ScrollView className="flex-1 p-4">
+              {options.map((option) => {
+                const isSelected = selectedValue === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => {
+                      onSelect(option.value);
+                      setShowModal(false);
+                    }}
+                    className={`
+                      mb-3 p-4 rounded-xl border-2
+                      ${isSelected ? `${option.colors[1]} ${option.colors[0]} bg-opacity-20` : 'border-gray-700 bg-gray-800'}
+                    `}
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <Text className={`font-semibold text-base ${isSelected ? option.colors[0] : 'text-white'}`}>
+                        {option.value}
+                      </Text>
+                      {isSelected && (
+                        <View className={`w-6 h-6 rounded-full items-center justify-center ${option.colors[1]}`}>
+                          <Text className={option.colors[0]}>✓</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+};
+
+// Export constants
+export const TYPE_OPTIONS = [
+  {
+    value: "Obhliadka", 
+    colors: ["text-dark-project-type-obhliadka", "border-2 border-dark-project-type-obhliadka"],
+  },
+  {
+    value: "Montáž",
+    colors: ["text-dark-project-type-montaz", "border-2 border-dark-project-type-montaz"],
+  },
+  {
+    value: "Revízia", 
+    colors: ["text-dark-project-type-revizia", "border-2 border-dark-project-type-revizia"],
+  },
+  {
+    value: "Čistenie", 
+    colors: ["text-dark-project-type-cistenie", "border-2 border-dark-project-type-cistenie"],
+  }
+];
+
+export const STATE_OPTIONS = [
+  {
+    value: "Nový",
+    colors: ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
+  },
+  {
+    value: "Naplánovaný",
+    colors: ["text-dark-project-state-naponovany", "border-2 border-dark-project-state-naponovany"],
+  },
+  {
+    value: "Aktívny", 
+    colors: ["text-dark-project-state-aktivny", "border-2 border-dark-project-state-aktivny"],
+  },
+  {
+    value: "Prebieha", 
+    colors: ["text-dark-project-state-prebieha", "border-2 border-dark-project-state-prebieha"],
+  },
+  {
+    value: "Pozastavený", 
+    colors: ["text-dark-project-state-pozastaveny", "border-2 border-dark-project-state-pozastaveny"],
+  },
+  {
+    value: "Ukončený", 
+    colors: ["text-dark-project-state-ukonceny", "border-2 border-dark-project-state-ukonceny"]
+  },
+  {
+    value: "Zrušený", 
+    colors: ["text-dark-project-state-zruseny", "border-2 border-dark-project-state-zruseny"]
+  }
+];

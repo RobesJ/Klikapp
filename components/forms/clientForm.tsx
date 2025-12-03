@@ -3,16 +3,16 @@ import { Client } from "@/types/generics";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FormInput } from "../formInput";
 
 interface ClientFormProps{
     mode: "create" | "edit";
     initialData?: Client;
     onSuccess?: (client: Client) => void;
-    onCancel?: () => void;
 }
 
-export default function ClientForm({ mode, initialData, onSuccess, onCancel} : ClientFormProps) {
+export default function ClientForm({ mode, initialData, onSuccess} : ClientFormProps) {
 
     const [formData, setFormData] = useState<Omit<Client, "id"> & {id?: string}>({
         name: initialData?.name || '',
@@ -29,6 +29,7 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [selectedType, setSelectedType] = useState('');
+    const [focusedField, setFocusedField] = useState<string | null>(null);
 
     const [addressSearch, setAddressSearch] = useState('');
     const [addressSuggestions, setAddressSuggestions] =  useState<any[]>([]);
@@ -240,14 +241,12 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
 
     return (
         <View className="flex-1">
-        
-            
             <View className="mb-32 relative">
                 <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="absolute top-4 left-6 w-10 h-10 items-center justify-center z-10"
+                  onPress={() => router.back()}
+                  className="absolute top-4 left-6 w-10 h-10 items-center justify-center z-10"
                 >
-                  <MaterialIcons name="arrow-back" size={24} color="#d6d3d1"/>
+                    <MaterialIcons name="arrow-back" size={24} color="#d6d3d1"/>
                 </TouchableOpacity>
                 <View className="absolute top-4 left-0 right-0 items-center justify-center">
                     <Text className="font-bold text-4xl text-dark-text_color">
@@ -256,6 +255,10 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                 </View>
             </View>
             
+            <KeyboardAvoidingView
+            behavior={Platform.OS === "android" ? "padding" : "height"}
+            className='flex-1'
+            >
             <ScrollView 
               className="flex-1"
               contentContainerStyle={{paddingBottom: 100}}
@@ -264,68 +267,61 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
             <View className="flex-1 justify-center px-10">
 
                 {/* Name field */}
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Meno</Text>
-                    <TextInput
-                        placeholder="Meno a priezvisko / Názov firmy"
-                        placeholderTextColor="#424242"
-                        value={formData.name}
-                        className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
-                        onChangeText={(value) => handleChange("name", value)}
-                        autoCapitalize="words"
-                    />
-                    {errors.name && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.name}
-                        </Text>
-                    )}
-                </View>
+                <FormInput
+                    label="Meno"
+                    value={formData.name}
+                    onChange={(value) => handleChange("name", value)}
+                    placeholder="Meno a priezvisko / Názov firmy"
+                    error={errors.name}
+                    fieldName="name"
+                    focusedField={focusedField}
+                    setFocusedField={setFocusedField}
+                    autoCapitalize="words"
+                />
 
-
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Email</Text>
-                    <TextInput
-                    placeholder="email.klienta@priklad.sk"
-                    placeholderTextColor="#424242"
+                {/* Email field */}
+                <FormInput
+                    label="Email"
                     value={formData.email || ''}
-                    className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
-                    onChangeText={(value) => handleChange("email", value)}
+                    onChange={(value) => handleChange("email", value)}
+                    placeholder="email.klienta@priklad.sk"
+                    error={errors.email}
+                    fieldName="email"
+                    focusedField={focusedField}
+                    setFocusedField={setFocusedField}
                     autoCapitalize="none"
                     keyboardType="email-address"
-                    ></TextInput>
-                    {errors.email && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.email}
-                        </Text>
-                    )}
-                </View>
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Telefónne číslo</Text>
-                    <TextInput
-                        placeholder="0901 234 567  |  +421 901 234 567"
-                        placeholderTextColor="#424242"
-                        value={formData.phone || ''}
-                        className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
-                        onChangeText={(value) => handleChange("phone", value)}
-                        keyboardType="phone-pad"
-                    ></TextInput>
-                    {errors.phone && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.phone}
-                        </Text>
-                    )}
-                </View>
+                />
 
-                {/* address input*/}               
-                <View className="mb-3">
+                {/* Phone field */}
+                <FormInput
+                    label="Telefónne číslo"
+                    value={formData.phone || ''}
+                    onChange={(value) => handleChange("phone", value)}
+                    placeholder="0901 234 567  |  +421 901 234 567"
+                    error={errors.phone}
+                    fieldName="phone"
+                    focusedField={focusedField}
+                    setFocusedField={setFocusedField}            
+                    keyboardType="phone-pad"
+                />
+                
+
+                {/* Address field */}               
+                <View className="mb-4">
                     <Text className="mb-1 ml-1 font-medium text-dark-text_color">Adresa trvalého pobytu / Sídlo firmy</Text>
                     <View>
                         <TextInput
                             placeholder="Začnite písať adresu..."
-                            placeholderTextColor="#424242"
+                            placeholderTextColor="#ABABAB"
+                            cursorColor="#FFFFFF"
                             value={addressSearch || formData.address || ''}
                             onChangeText={searchGoogleAddress}
-                            className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
+                            onFocus={() => setFocusedField('address')}
+                            onBlur={() => setFocusedField(null)}
+                            className={`flex-row items-center border-2 bg-gray-800 rounded-xl px-4 py-4 text-white 
+                                ${focusedField === 'address' ? 'border-blue-500' : 'border-gray-700'}
+                            `}
                         />
 
                         {searchingAddress && (
@@ -335,8 +331,8 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                         )}
 
                         {showAddressSuggestions && addressSuggestions.length > 0 && (
-                            <View className="border-2 border-gray-300 rounded-xl mt-2 bg-white max-h-60">
-                                <ScrollView>
+                             <View className="border-2 border-gray-300 rounded-xl mt-1 bg-gray-300 max-h-60">
+                                <ScrollView className="border-b rounded-xl border-gray-300">
                                     {addressSuggestions.map((item) => (
                                         <TouchableOpacity
                                             key={item.place_id}
@@ -351,21 +347,32 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                         )}
                     </View>
                 </View>
-
-                <View className="mb-3">
+                
+                {/* Type field */}
+                <View className="mb-4">
                     <Text className="mb-1 ml-1 font-medium text-dark-text_color">Typ</Text>
                     <View className="flex-row">
                         <TouchableOpacity
                             onPress={() => handleSelectedType("Fyzická osoba")}
-                            className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-gray-500"} rounded-xl p-4 mr-3 w-36 items-center`}
+                            className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-300" : "border-gray-700 bg-gray-800"} rounded-xl p-4 mr-3 w-36 items-center`}
                         >
-                            <Text  className={`${selectedType === "Fyzická osoba" ? "font-semibold" : "font-normal"}`}>Fyzická osoba</Text>
+                            <Text
+                              style={{ color: selectedType === "Fyzická osoba" ? '#FFFFFF' : '#ABABAB' }}
+                              className={`${selectedType === "Fyzická osoba" ? "font-semibold" : "font-normal"}`}
+                            >
+                                Fyzická osoba
+                            </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-gray-500"} rounded-xl p-4 w-36 items-center`}
+                            className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-300 " : "border-gray-700 bg-gray-800"} rounded-xl p-4 w-36 items-center`}
                             onPress={() => handleSelectedType("Právnická osoba")}
                         >
-                            <Text  className={`${selectedType === "Právnická osoba" ? "font-semibold" : "font-normal"}`}>Právnická osoba</Text>
+                            <Text
+                              style={{ color: selectedType === "Právnická osoba" ? '#FFFFFF' : '#ABABAB' }}
+                              className={`${selectedType === "Právnická osoba" ? "font-semibold" : "font-normal"}`}
+                            >
+                                Právnická osoba
+                            </Text>
                         </TouchableOpacity>  
                     </View>
                     {errors.type && (
@@ -374,21 +381,25 @@ export default function ClientForm({ mode, initialData, onSuccess, onCancel} : C
                         </Text>
                     )}
                 </View>
-
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Poznámka</Text>
-                    <TextInput
-                        placeholder="Ďalšie informácie..."
-                        placeholderTextColor="#424242"
-                        value={formData.note || ''}
-                        className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 font-bold text-white"
-                        onChangeText={(value) => handleChange("note", value)}
-                    ></TextInput>
-                </View>
+                
+                {/* Note field */}
+                <FormInput
+                    label="Poznámka"
+                    value={formData.note || ''}
+                    onChange={(value) => handleChange("note", value)}
+                    placeholder="Ďalšie informácie..."
+                    error={errors.note}
+                    fieldName="note"
+                    focusedField={focusedField}
+                    setFocusedField={setFocusedField}            
+                    multiline
+                    numberOfLines={3}
+                />
+                
             </View>
-
             </ScrollView>
-
+            </KeyboardAvoidingView>
+            
             {/* Submit button */}
             <View className="absolute bottom-0 left-0 right-0 px-6 pb-12 pt-4 items-center justify-center z-2">
                 <TouchableOpacity

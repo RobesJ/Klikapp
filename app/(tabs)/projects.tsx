@@ -1,3 +1,4 @@
+import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import { getFooterImageBase64, getWatermarkBase64 } from '@/constants/icons';
@@ -11,53 +12,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-
-const TYPE_OPTIONS = [
-  {
-    value: "Obhliadka", 
-    colors: ["text-dark-project-type-obhliadka", "border-2 border-dark-project-type-obhliadka"],
-  },
-  {
-    value: "Montáž",
-    colors: ["text-dark-project-type-montaz","border-2 border-dark-project-type-montaz"],
-  },
-  {
-    value: "Revízia", 
-    colors: ["text-dark-project-type-revizia","border-2 border-dark-project-type-revizia"],
-  },
-  {
-    value: "Čistenie", 
-    colors: ["text-dark-project-type-cistenie","border-2 border-dark-project-type-cistenie"],
-  }
-];
-
-const STATE_OPTIONS = [
-  {
-    value: "Nový",
-    colors: ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
-  },
-  {
-    value: "Aktívny", 
-    colors: ["text-dark-project-state-aktivny","border-2 border-dark-project-state-aktivny"],
-  },
-  {
-    value: "Prebieha", 
-    colors: ["text-dark-project-state-prebieha","border-2 border-dark-project-state-prebieha"],
-  },
-  {
-    value: "Pozastavený", 
-    colors: ["text-dark-project-state-pozastaveny","border-2 border-dark-project-state-pozastaveny"],
-  },
-  {
-    value: "Ukončený", 
-    colors: ["text-dark-project-state-ukonceny","border-2 border-dark-project-state-ukonceny"]
-  },
-  {
-    value: "Zrušený", 
-    colors: ["text-dark-project-state-zruseny","border-2 border-dark-project-state-zruseny"]
-  }
-];
 
 export default function Projects() {
   const router = useRouter();
@@ -81,15 +35,6 @@ export default function Projects() {
     toggleStateFilter,
     deleteProject
   } = useProjectStore();
-
-  const stateColorMap: Record<string, string[]> = {
-        "Nový": ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
-        "Aktívny": ["text-dark-project-state-aktivny","border-2 border-dark-project-state-aktivny"],
-        "Prebieha": ["text-dark-project-state-prebieha","border-2 border-dark-project-state-prebieha"],
-        "Pozastavený": ["text-dark-project-state-pozastaveny","border-2 border-dark-project-state-pozastaveny"],
-        "Ukončený": ["text-dark-project-state-ukonceny","border-2 border-dark-project-state-ukonceny"],
-        "Zrušený": ["text-dark-project-state-zruseny","border-2 border-dark-project-state-zruseny"]
-      };
 
   useFocusEffect(
     useCallback(() => {
@@ -214,16 +159,24 @@ export default function Projects() {
     <SafeAreaView className="flex-1 bg-dark-bg">
       <View className="flex-2 mt-4 px-6 mb-4">
         <View className="flex-row justify-between">
-          <Text className="font-bold text-4xl text-dark-text_color">Projekty</Text>
-          <View className="flex-row justify-between items-center">
-          <Text className="text-xl text-green-500">ONLINE</Text>
-          <TouchableOpacity
-                    onPress={() => {setShowFilterModal(true)}}
-                    activeOpacity={0.8}
-                    className="ml-4 items-center justify-center"
-                  >
-                    <Feather name="filter" size={20} color="white" />
-                  </TouchableOpacity>
+        <TouchableOpacity
+            onPress={() => {}}
+            activeOpacity={0.8}
+            className="justify-center"
+          >
+            <EvilIcons name="navicon" size={32} color="white" />
+          </TouchableOpacity>
+          <Text className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Text>
+          
+            <View className='flex-2 justify-between items-center '>
+              <Text className="text-xl text-green-500">ONLINE</Text>
+              <TouchableOpacity
+                onPress={() => {setShowFilterModal(true)}}
+                activeOpacity={0.8}
+                className="ml-4 items-center justify-center"
+              >
+                <Feather name="filter" size={20} color="white" />
+              </TouchableOpacity>
             
           </View>
   
@@ -267,47 +220,12 @@ export default function Projects() {
                 let textColor = "text-blue-700";
 
                 if (filter.type === 'type') {
-                  switch(filter.value) {
-                    case "Čistenie":
-                      pillColor = "bg-yellow-100";
-                      textColor = "text-yellow-700";
-                      break;
-                    case "Revízia":
-                      pillColor = "bg-red-100";
-                      textColor = "text-red-700";
-                      break;
-                    case "Obhliadka":
-                      pillColor = "bg-green-100";
-                      textColor = "text-green-700";
-                      break;
-                    case "Montáž":
-                      pillColor = "bg-blue-100";
-                      textColor = "text-blue-700";
-                      break;
-                  }
-                } else {
-                  switch(filter.value) {
-                    case "Nový":
-                      pillColor = `${stateColorMap["Nový"][1]}`;
-                      textColor = `${stateColorMap["Nový"][0]}`;
-                      break;
-                    case "Aktívny":
-                      pillColor = `${stateColorMap["Aktívny"][1]}`;
-                      textColor = `${stateColorMap["Aktívny"][0]}`;
-                      break;
-                    case "Prebieha":
-                      pillColor = `${stateColorMap["Prebieha"][1]}`;
-                      textColor = `${stateColorMap["Prebieha"][0]}`;
-                      break;
-                    case "Pozastavený":
-                      pillColor = `${stateColorMap["Pozastavený"][1]}`;
-                      textColor = `${stateColorMap["Pozastavený"][0]}`;
-                      break;
-                    case "Ukončený":
-                      pillColor = `${stateColorMap["Ukončený"][1]}`;
-                      textColor = `${stateColorMap["Ukončený"][0]}`;
-                      break;
-                  }
+                  pillColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
+                  textColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
+                } 
+                else {
+                  pillColor = STATE_OPTIONS.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
+                  textColor = STATE_OPTIONS.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
                 }
 
                 return (

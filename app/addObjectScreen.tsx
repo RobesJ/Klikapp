@@ -1,7 +1,6 @@
 import ObjectForm from '@/components/forms/objectForm';
 import { useObjectStore } from '@/store/objectStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AddObjectScreen() {
@@ -24,17 +23,12 @@ export default function AddObjectScreen() {
   
   return (
     <SafeAreaView className='flex-1 bg-dark-bg'>
-      <KeyboardAvoidingView
-          behavior={Platform.OS === "android" ? "padding" : "height"}
-          className='flex-1'
-      >
-        <ObjectForm
-          mode={(mode as "create" | "edit") || "create"}
-          initialData={parsedObject}
-          onSuccess={handleSuccess}
-          preselectedClient={parsedClient}
-        />  
-      </KeyboardAvoidingView>
+      <ObjectForm
+        mode={(mode as "create" | "edit") || "create"}
+        initialData={parsedObject}
+        onSuccess={handleSuccess}
+        preselectedClient={parsedClient}
+      />  
     </SafeAreaView>
   );
 }

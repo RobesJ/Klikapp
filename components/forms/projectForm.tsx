@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { BadgeSelector, ModalSelector, STATE_OPTIONS, TYPE_OPTIONS } from "../badge";
 import ModernDatePicker from "../modernDatePicker";
 
 
@@ -38,6 +39,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [focusedField, setFocusedField] = useState<string | null>(null);
 
     const [clientSuggestions, setClientSuggestions] = useState<Client[]>([]);
     const [loadingClients, setLoadingClients] = useState(false);
@@ -165,6 +167,14 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 return newErrors;
             });
         }
+
+        if (errors.objects){
+            setErrors(prev => {
+                const newErrors = {...prev};
+                delete newErrors.objects;
+                return newErrors;
+            });
+        }
     };
 
     const clientIsPreselected = () : boolean => {
@@ -176,8 +186,8 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const validate = () : boolean => {
         const newErrors: Record<string, string> = {};
 
-        if (!formData.client_id){
-            newErrors.client_id = "Klient je povinny udaj!";
+        if (!formData.client_id?.trim()){
+            newErrors.client = "Klient je povinny udaj!";
         }
         if (!formData.scheduled_date && !formData.start_date ){
             newErrors.dates = "Pre ulozenie je potrebne zadat planovany datum alebo datum zacatia projektu!";
@@ -460,11 +470,22 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     };
 
 
-    async function getAssignedObjects() {
+    async function getAssignedObjects(): Promise<boolean> {
         if(!formData.client_id) {
-            Alert.alert("Upozernenie", "Najprv vyberte klienta");
+            setErrors(prev => ({
+                ...prev,
+                objects: "Najprv vyberte klienta pred priradením objektov"
+            }))
             setAssignedObjects([]);
-            return;
+            return false;
+        }
+
+        if (errors.objects){
+            setErrors(prev => {
+                const newErrors = {...prev};
+                delete newErrors.objects;
+                return newErrors;
+            });
         }
 
         setLoadingObjects(true);
@@ -512,11 +533,17 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
           });
           setAssignedObjects(transformedData);
         }
+        return true;
         
     } 
         catch(error: any){
             console.error("Chyba: ", error.message);
             setAssignedObjects([]);
+            setErrors(prev => ({
+                ...prev,
+                objects: "Chyba pri načítaní objektov"
+            }));
+            return false;
         }
         finally{
             setLoadingObjects(false);
@@ -548,7 +575,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
     return (
         <View>
-        
             {/* header */}
             <View className="mb-32 relative">
                 <TouchableOpacity
@@ -563,7 +589,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                     </Text>
                 </View>
             </View>
-        
+            
             {/* form */}
             <ScrollView >
             <View className="flex-1 justify-center px-10">
@@ -575,17 +601,22 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         
                         {clientIsPreselected() &&
                             <Text
-                                className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold">
+                                className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-600 text-white">
                                 {selectedClient?.name}
                             </Text>
                         }
                         {!clientIsPreselected() && (
                             <TextInput
                             placeholder="Začnite písať meno klienta..."
-                            placeholderTextColor="#424242"
+                            placeholderTextColor="#ABABAB"
                             value={searchQuery}
                             onChangeText={handleSearchClient}
-                            className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold"
+                            cursorColor="#FFFFFF"
+                            className={`flex-row items-center border-2 bg-gray-800 rounded-xl px-4 py-4 text-white 
+                                ${focusedField === 'client' ? 'border-blue-500' : 'border-gray-700'}
+                            `}
+                            onFocus={() => setFocusedField('client')}
+                            onBlur={() => setFocusedField(null)}
                             />
                         )}
                         
@@ -596,8 +627,8 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         )}
 
                         {clientSuggestions && (!clientIsPreselected()) && clientSuggestions.length > 0 && (
-                            <View className="border-2 border-gray-300 rounded-xl mt-2 bg-white max-h-60">
-                                <ScrollView>
+                            <View className="border-2 border-gray-300 rounded-xl mt-1 bg-gray-300 max-h-60">
+                                <ScrollView className="border-b rounded-xl border-gray-300">
                                     {clientSuggestions.map((item) => (
                                         <TouchableOpacity
                                             key={item.id}
@@ -610,111 +641,33 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                                 </ScrollView>
                             </View>
                         )}
+                        {errors.client && (
+                            <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                                {errors.client}
+                            </Text>
+                        )}
                     </View>
                 </View> 
+                
+                {/* Type field*/}
+                <BadgeSelector
+                  options={TYPE_OPTIONS}
+                  selectedValue={selectedType}
+                  onSelect={handleSelectedType}
+                  label="Typ projektu"
+                  error={errors.type}
+                />
 
                 {/* State field*/}
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Stav projektu</Text>
-                    <View className="flex-row">
-                    <TouchableOpacity
-                        className={`border-2 ${selectedState === "Nový" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center mr-2`}
-                        onPress={()=> handleSelectedState("Nový")}
-                    >
-                        <Text>Nový</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className={`border-2 ${selectedState === "Aktívny" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center mr-2`}
-                        onPress={()=> handleSelectedState("Aktívny")}
-                    >
-                        <Text>Aktívny</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className={`border-2 ${selectedState === "Prebieha" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center mr-2`}
-                        onPress={()=> handleSelectedState("Prebieha")}
-                    >
-                        <Text>Prebieha</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className={`border-2 ${selectedState === "Pozastavený" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center mr-2`}
-                        onPress={()=> handleSelectedState("Pozastavený")}
-                    >
-                        <Text>Pozastavený</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className={`border-2 ${selectedState === "Ukončený" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
-                        onPress={()=> handleSelectedState("Ukončený")}
-                    >
-                        <Text>Ukončený</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className={`border-2 ${selectedState === "Zrušený" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
-                        onPress={()=> handleSelectedState("Zrušený")}
-                    >
-                        <Text>Zrušený</Text>
-                    </TouchableOpacity>
-                    
-                    </View>
-                    {errors.state && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.state}
-                        </Text>
-                    )}
-                </View>
-
-                {/* Type field*/}
-                <View className="mb-3 ">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Typ projektu</Text>
-                    <View className="flex-row">
-                        <TouchableOpacity
-                            className={`border-2 ${selectedType === "Obhliadka" ? "border-gray-900 bg-green-500" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
-                            onPress={() => handleSelectedType("Obhliadka")}
-                        >
-                            <Text
-                                className={`${selectedType === "Obhliadka" ? "font-semibold" : "font-normal"}`}
-                            >
-                                Obhliadka
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            className={`border-2 ${selectedType === "Revízia" ? "border-gray-900 bg-amber-500" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
-                            onPress={() => handleSelectedType("Revízia")}
-                        >
-                            <Text
-                                className={`${selectedType === "Revízia" ? "font-semibold" : "font-normal"}`}
-                            >
-                                Revízia
-                            </Text>
-                        </TouchableOpacity>
-                    
-                        <TouchableOpacity 
-                            className={`border-2 ${selectedType === "Montáž" ? "border-gray-900 bg-blue-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
-                            onPress={() => handleSelectedType("Montáž")}
-                        >
-                            <Text
-                                className={`${selectedType === "Montáž" ? "font-semibold" : "font-normal"}`}
-                            >
-                                Montáž
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            className={`border-2 ${selectedType === "Čistenie" ? "border-gray-900 bg-yellow-400" : "border-gray-300 bg-white"} rounded-xl px-4 py-2 items-center`}
-                            onPress={() => handleSelectedType("Čistenie")}
-                        >
-                            <Text
-                                className={`${selectedType === "Čistenie" ? "font-semibold" : "font-normal"}`}
-                            >
-                                Čistenie
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                    {errors.type && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.type}
-                        </Text>
-                    )}
-                </View>
-
+                <ModalSelector
+                  options={STATE_OPTIONS}
+                  selectedValue={selectedState}
+                  onSelect={handleSelectedState}
+                  label="Stav projektu"
+                  error={errors.state}
+                  placeholder="Vyberte stav projektu"
+                />
+             
                 {/* Scheduled project start field */}
                 <View className="mb-3 ">
                     <Text className="mb-1 ml-1 font-medium text-dark-text_color">Plánovaný deň začatia</Text>
@@ -753,24 +706,36 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         onChange={handleCompletionDate}
                         error={errors.completionDate}
                     />
+                    {errors.completionDate && (
+                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                            {errors.completionDate}
+                        </Text>
+                    )}
                 </View>
 
                 {/* note input*/}
                 <View className="mb-3">
                     <Text className="mb-1 ml-1 font-medium text-dark-text_color">Poznámka</Text>
                     <TextInput
-                      placeholder="Poznámka"
-                      placeholderTextColor="#424242"
+                      placeholder="Ďalšie informácie..."
+                      placeholderTextColor="#ABABAB"
                       value={formData.note || ''}
-                      className="border-2 border-gray-300 rounded-xl p-4 bg-gray-500 text-white font-bold"
+                      cursorColor="#FFFFFF"
+                      className={`flex-row items-center border-2 bg-gray-800 rounded-xl px-4 py-4 text-white 
+                          ${focusedField === "note" ? 'border-blue-500' : 'border-gray-700'}
+                      `}
+                      onFocus={() => setFocusedField("note")}
+                      onBlur={() => setFocusedField(null)}
                       onChangeText={(value) => handleChange("note", value)}
-                    ></TextInput>
+                      multiline
+                      numberOfLines={3}
+                    />
                 </View>
 
                 {/* Users Field */}
                 <View className="mb-3">
                     <Text className="mb-2 ml-1 font-semibold text-dark-text_color">
-                        Priradený používatelia <Text className="text-red-500">*</Text>
+                        Priradený používatelia
                     </Text>
                     
                     {/* Selected Chimneys Display */}
@@ -779,10 +744,10 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                             {selectedUsers.map((user) => (
                                 <View 
                                     key={user.id}
-                                    className="flex-row items-center justify-between bg-blue-50 rounded-xl p-3 mb-2"
+                                    className="flex-row items-center justify-between bg-slate-500 rounded-xl p-3 mb-2"
                                 >
                                     <View className="flex-1">
-                                        <Text className="font-semibold text-blue-900">
+                                        <Text className="font-semibold text-white">
                                             {user.name}
                                         </Text>
                                     </View>
@@ -806,7 +771,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         </Text>
                     </TouchableOpacity>
                     {errors.users && (
-                        <Text className="text-red-500 text-xs mt-1 ml-1">
+                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.users}
                         </Text>
                     )}
@@ -816,7 +781,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 {/* Objects Field */}
                 <View className="mb-3">
                     <Text className="mb-2 ml-1 font-semibold text-dark-text_color">
-                        Priradené objekty <Text className="text-red-500">*</Text>
+                        Priradené objekty
                     </Text>
                     
                     {/* Selected Chimneys Display */}
@@ -825,10 +790,10 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                             {selectedObjects.map((object) => (
                                 <View 
                                     key={object.object.id}
-                                    className="flex-row items-center justify-between bg-blue-50 rounded-xl p-3 mb-2"
+                                    className="flex-row items-center justify-between bg-slate-500 rounded-xl p-3 mb-2"
                                 >
                                     <View className="flex-1">
-                                        <Text className="font-semibold text-blue-900">
+                                        <Text className="font-semibold text-white">
                                             {object.object.address}
                                         </Text>
                                     </View>
@@ -845,9 +810,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                     {/* Assign Object Button */}
                     <TouchableOpacity
-                        onPress={() => {
-                            getAssignedObjects();
-                            setShowObjectModal(true);
+                        onPress={async () => {
+                            const success = await getAssignedObjects();
+                            if (success) {
+                                setShowObjectModal(true);
+                            }
                         }}
                         className={`border-2 ${errors.objects ? 'border-red-400' : 'border-gray-300'} bg-neutral-700 rounded-xl p-4`}
                     >
@@ -855,7 +822,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                             + Priradiť objekt
                         </Text>
                     </TouchableOpacity>
-                    
+                    {errors.objects && (
+                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                            {errors.objects}
+                        </Text>
+                    )}
                 </View>
             </View>
 
@@ -882,20 +853,20 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 onRequestClose={() => setShowUserModal(false)}
             >
                 <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-white rounded-t-3xl h-3/4">
+                    <View className="bg-dark-bg rounded-t-3xl h-3/4">
                         <View className="p-6 border-b border-gray-200">
                             <View className="flex-row items-center justify-between mb-4">
                                 <View className="flex-1">
-                                    <Text className="text-xl font-bold">Vyhľadajte používateľa</Text>
+                                    <Text className="text-xl font-bold text-dark-text_color">Vyhľadajte používateľa</Text>
                                     <Text className="text-sm text-gray-500">
                                         {selectedUsers.length} vybraných
                                     </Text>
                                 </View>
                                 <TouchableOpacity
                                     onPress={() => setShowUserModal(false)}
-                                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                                    className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
                                 >
-                                    <Text className="text-gray-600">✓</Text>
+                                    <Text className="text-white">✓</Text>
                                 </TouchableOpacity>
                             </View>
                             <TextInput
@@ -965,20 +936,20 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 onRequestClose={() => setShowObjectModal(false)}
             >
                 <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-white rounded-t-3xl h-3/4">
-                        <View className="p-6 border-b border-gray-200">
+                    <View className="bg-dark-bg rounded-t-3xl h-3/4">
+                        <View className="p-6 border-b border-gray-600">
                             <View className="flex-row items-center justify-between mb-4">
                                 <View className="flex-1">
-                                    <Text className="text-xl font-bold">Vyhľadajte objekty</Text>
+                                    <Text className="text-xl font-bold text-dark-text_color">Vyhľadajte objekty</Text>
                                     <Text className="text-sm text-gray-500">
                                         {selectedObjects.length} vybraných
                                     </Text>
                                 </View>
                                 <TouchableOpacity
                                     onPress={() => setShowObjectModal(false)}
-                                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                                    className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
                                 >
-                                    <Text className="text-gray-600">✓</Text>
+                                    <Text className="text-white">✓</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>

@@ -48,8 +48,15 @@ export default function Clients() {
     <SafeAreaView className="flex-1 bg-dark-bg">
       {/* header */}
       <View className="flex-2 mt-4 px-6 mb-8 ">
-        <View className="flex-row justify-between ">
-          <Text className="font-bold text-4xl text-dark-text_color">Klienti</Text>
+        <View className="flex-row justify-between items-center">
+          <TouchableOpacity
+            onPress={() => {}}
+            activeOpacity={0.8}
+            className="justify-center"
+          >
+            <EvilIcons name="navicon" size={32} color="white" />
+          </TouchableOpacity>
+          <Text className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Text>
 
           {/* online / offline indicator */}
           <Text className="text-xl text-green-500">ONLINE</Text>

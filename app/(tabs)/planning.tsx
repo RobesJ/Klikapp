@@ -81,17 +81,29 @@ export default function Planning() {
         <View className="flex-1 px-6 mt-4">
           {/* Header */}
           <View className="flex-row justify-between items-center mb-2">
+            <TouchableOpacity
+                onPress={() => {}}
+                activeOpacity={0.8}
+                className="items-center justify-center"
+              >
+                <EvilIcons name="navicon" size={36} color="white" />
+              </TouchableOpacity>
+              <View className='items-center justify-center ml-6'>
             <Text className="font-bold text-4xl text-dark-text_color">
               Plánovanie projektov
             </Text>
+            <Text className="text-dark-text_color mb-4">
+              {format(selectedDate, "EEE, d. MMMM yyyy", { locale: sk })}
+            </Text>
+            </View>
             <Text className="text-xl text-green-500">ONLINE</Text>
           </View>
 
-          {/* Selected Date */}
+          {/* Selected Date 
           <Text className="text-dark-text_color mb-4">
             {format(selectedDate, "EEE, d. MMMM yyyy", { locale: sk })}
           </Text>
-
+        */}
           {/* Calendar */}
           <View className="mb-6">
             <WeekCalendar

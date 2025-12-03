@@ -1,4 +1,4 @@
-// components/ModernDatePicker.tsx
+import { EvilIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Modal, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
@@ -65,10 +65,17 @@ export default function ModernDatePicker({
     <View>
       <TouchableOpacity
         onPress={() => setShow(true)}
-        className={`border-2 ${error ? 'border-red-400' : 'border-gray-300'} bg-gray-500 rounded-xl p-3`}
+        className={`border-2 ${
+          error ? 
+          'border-red-400' 
+          : show 
+            ? 'border-blue-500'
+            : 'border-gray-600'
+          } bg-gray-800 rounded-xl p-3`}
+        
       >
         <View className="flex-row items-center justify-between">
-          <Text className={value ? 'text-white font-bold' : "#424242"}>
+          <Text style={{ color: value ? "#FFFFFF" : "#ABABAB"}}>
             {formatDate(value)}
           </Text>
           <Text className="text-2xl">📅</Text>
@@ -104,7 +111,7 @@ export default function ModernDatePicker({
                     onPress={() => setShow(false)}
                     className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
                   >
-                    <Text className="text-gray-600 text-lg">✕</Text>
+                    <EvilIcons name="close" size={20} color="black"/>
                   </TouchableOpacity>
                 </View>
               </View>

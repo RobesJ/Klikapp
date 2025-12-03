@@ -61,7 +61,7 @@ export default function WeekCalendar({selectedDay, onDateSelect, initialWeekStar
                     <Text className="font-bold text-3xl text-dark-text_color">→</Text>
                 </TouchableOpacity>
             </View>
-
+            <View className="flex-2 items-center justify-center">
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View className="flex-row">
                     {weekDays.map((day, index) =>{
@@ -99,6 +99,7 @@ export default function WeekCalendar({selectedDay, onDateSelect, initialWeekStar
                     })}
                 </View>
             </ScrollView>
+            </View>
         </View>
     );
 }

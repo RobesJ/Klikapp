@@ -6,6 +6,7 @@ import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ProjectBadge, STATE_OPTIONS } from "../badge";
 
 interface ProjectCardDetailsProps {
   project: Project;
@@ -13,37 +14,6 @@ interface ProjectCardDetailsProps {
   assignedUsers: User[];
   objects: ObjectWithRelations[];
 }
-
-const STATE_OPTIONS = [
-  {
-    value: "Nový",
-    colors: ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
-  },
-  {
-    value: "Naplánovaný",
-    colors: ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
-  },
-  {
-    value: "Aktívny", 
-    colors: ["text-dark-project-state-aktivny","border-2 border-dark-project-state-aktivny"],
-  },
-  {
-    value: "Prebieha", 
-    colors: ["text-dark-project-state-prebieha","border-2 border-dark-project-state-prebieha"],
-  },
-  {
-    value: "Pozastavený", 
-    colors: ["text-dark-project-state-pozastaveny","border-2 border-dark-project-state-pozastaveny"],
-  },
-  {
-    value: "Ukončený", 
-    colors: ["text-dark-project-state-ukonceny","border-2 border-dark-project-state-ukonceny"]
-  },
-  {
-    value: "Zrušený", 
-    colors: ["text-dark-project-state-zruseny","border-2 border-dark-project-state-zruseny"]
-  }
-];
 
 export default function ProjectDetails({ 
   project, 
@@ -411,42 +381,32 @@ export default function ProjectDetails({
   return (
     <ScrollView className="flex-1">
       {/* Client Info */}
-      {client?.name && (
-        <View className="flex-row mt-1">
-          <Text className="mr-2 text-dark-text_color">Klient:</Text>
-          <Text className="font-semibold text-dark-text_color">{client.name}</Text>
-        </View>
+      {client && (
+        <View>
+          <View className="flex-row mt-1">
+            <Text className="mr-2 text-dark-text_color">Klient:</Text>
+            <Text className="font-semibold text-dark-text_color">{client.name}</Text>
+          </View>
+          <View className="flex-row mt-1">
+            <Text className="mr-2 text-dark-text_color">Kontakt:</Text>
+            <Text className="font-semibold text-dark-text_color">{client.phone}</Text>
+          </View>
+      </View>
       )}
 
       {/* State Selection */}
-      <View className="mt-4">
-        <Text className="mb-2 text-dark-text_color font-semibold">Stav projektu:</Text>
-        <View className="flex-row gap-2">
-          {STATE_OPTIONS.map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              onPress={() => handleStateChange(option.value)}
-              disabled={updatingState}
-              className={`flex-1 py-3 rounded-xl items-center ${
-                currentState === option.value
-                  ? `${option.colors[1]}`
-                  : 'bg-gray-700'
-              }`}
-            >
-              <Text
-                className={`font-semibold ${
-                  currentState === option.value ? `${option.colors[0]}` : 'text-white'
-                }`}
-              >
-                {option.value}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      <View className="flex-row mt-4 items-center mb-2">
+        <Text className=" mr-2 text-dark-text_color font-semibold">Stav projektu:</Text>
+        <ProjectBadge
+          value={currentState}
+          isSelected={true}
+          colors={STATE_OPTIONS.find(s => s.value === currentState)?.colors ?? ["text-white", "border-gray-500"]}
+          size = "medium"
+        />
       </View>
 
       {/* Dates */}
-      {project.scheduled_date && (
+      {project.scheduled_date && ((currentState === "Nový") || (currentState === "Naplánovaný")) && (
         <View className="flex-row mt-3">
           <Text className="mr-2 text-dark-text_color">Plánované na:</Text>
           <Text className="font-semibold text-dark-text_color">
@@ -455,7 +415,7 @@ export default function ProjectDetails({
         </View>
       )}
 
-      {project.start_date && (
+      {project.start_date && (currentState !== "Nový") && (currentState !== "Ukončený") && (currentState !== "Zrušený") && (
         <View className="flex-row mt-1">
           <Text className="mr-2 text-dark-text_color">Začiatok:</Text>
           <Text className="font-semibold text-dark-text_color">
@@ -464,7 +424,7 @@ export default function ProjectDetails({
         </View>
       )}
 
-      {project.completion_date && (
+      {project.completion_date && ((currentState === "Ukončený") || (currentState === "Zrušený")) &&(
         <View className="flex-row mt-1">
           <Text className="mr-2 text-dark-text_color">Ukončenie:</Text>
           <Text className="font-semibold text-dark-text_color">
