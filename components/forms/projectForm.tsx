@@ -572,12 +572,12 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             </View>
             
             {/* form */}
+            <View className="flex-1 mb-24 justify-center px-10">
             <ScrollView 
               className="flex-1"
-              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100, marginBottom: 100 }}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16 }}
               keyboardShouldPersistTaps="handled"
             >
-            <View className="flex-1 justify-center px-10">
 
                 {/* Client field*/}
                 <View className="mb-3">
@@ -833,13 +833,12 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         </Text>
                     )}
                 </View>
-            </View>
 
             </ScrollView>
-        
+        </View>
 
         {/* submit button */}
-        <View className="absolute bottom-10 left-0 right-0 items-center">
+        <View className="absolute bottom-4 left-0 right-0 items-center">
             <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={handleSubmit}

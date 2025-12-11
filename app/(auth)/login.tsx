@@ -29,16 +29,16 @@ export default function Login() {
         const newErrors: Record<string, string> = {};
 
         if (!formData.email){
-            newErrors.email = "Email je povinny!";
+            newErrors.email = "Email je povinný!";
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Neplatný formát emailu';
         }
 
         if (!formData.password){
-            newErrors.password = "Heslo je povinne!";
+            newErrors.password = "Heslo je povinné!";
         }
         else if (formData.password.length < 8 ){
-            newErrors.password = "Heslo musi obsahovat aspon 8 znakov!";
+            newErrors.password = "Heslo musí obsahovať aspoň 8 znakov!";
         }
         
         setErrors(newErrors);
@@ -61,19 +61,19 @@ export default function Login() {
 
             if (error) throw error;
 
-            router.replace("/(tabs)/home");
-
-        } catch(error: any){
+            router.replace("/(drawer)/(tabs)/home");
+        } 
+        catch(error: any){
             console.log("Error signing in: ", error);
-            Alert.alert("Chyba pri prihlasovani: ",
+            Alert.alert("Chyba pri prihlasovaní: ",
                 error.message === "Invalid login credentials"
-                ? "Nespravny email alebo heslo!"
-                : error.message || "Nepodarilo sa prihlasit"
+                ? "Nesprávny email alebo heslo!"
+                : error.message || "Nepodarilo sa príhlasiť"
             )
-        }finally{
+        }
+        finally{
             setLoading(false);
         }
-        
     }
     
     return (
@@ -90,10 +90,10 @@ export default function Login() {
                     {/* header */}
                     <View className='items-center mb-8'>
                         <Text className='text-4xl font-bold mb-2'>
-                            Vitajte spat
+                            Vitajte späť
                         </Text>
                         <Text className='text-base'>
-                            Prihlaste sa do vasho uctu
+                            Prihláste sa do vášho účtu
                         </Text>
                     </View>
 

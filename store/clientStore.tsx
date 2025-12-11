@@ -15,6 +15,8 @@ interface ClientStore {
   
   loading: boolean;
   lastFetch: number;
+  pageSize: number;
+  offset: number;
   error: string | null;
   
   fetchClients: (limit: number) => Promise<void>;
@@ -24,6 +26,7 @@ interface ClientStore {
   updateClient: (id: string, client: Client) => void;
   deleteClient: (id: string) => void;
   applyFilters: () => void;
+  loadMore: () => Promise<void>;
 }
 
 const CACHE_DURATION = 30000; // 30 seconds
@@ -40,8 +43,10 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   loading: false,
   lastFetch: 0,
   error: null,
+  pageSize: 30,
+  offset: 0,
 
-  fetchClients: async (limit = 100) => {
+  fetchClients: async (limit = 50) => {
     const { clients, lastFetch, loading } = get();
     const now = Date.now();
 
@@ -51,7 +56,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     }
 
     if (loading) {
-      console.log('Already fetching...');
       return;
     }
 
@@ -67,6 +71,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
             projects:projects(count),
             objects:objects(count)
         `)
+        .limit(limit)
         .order('created_at', { ascending: false });
 
       if (clientsError) throw clientsError;
@@ -118,12 +123,55 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     }
 
     set({ filteredClients: filtered });
-    console.log(`🔍 Filtered: ${filtered.length}/${clients.length} clients`);
+    console.log(` Filtered: ${filtered.length}/${clients.length} clients`);
+  },
+
+  loadMore: async () => {
+    const {offset, pageSize, loading } = get();
+
+    if (loading) {
+      return;
+    }
+
+    set({ loading: true });
+    try{
+      const { data: clientsData, error: clientsError } = await supabase
+          .from("clients")
+          .select(`
+              *,
+              projects:projects(count),
+              objects:objects(count)
+          `)
+          .range(offset, offset + pageSize -1)
+          .order('created_at', { ascending: false });
+
+      if (clientsError) throw clientsError;
+          
+      const clients: Client[] = clientsData.map(item => ({
+        ...item,
+        projectsCount: item.projects[0]?.count || 0,
+        objectsCount: item.objects[0]?.count || 0
+      }));
+
+      set({ 
+        clients: clients,
+        offset: offset + pageSize,
+        loading: false 
+      });
+    }
+    catch (error: any) {
+      console.error('Load more clients error:', error);
+      set({ 
+        loading: false,
+        error: error.message
+       });
+    }
   },
   
   addClient: (client) => {
     set((state) => ({
-      clients: [client, ...state.clients]
+      clients: [client, ...state.clients],
+      offset: 50
     }));
     get().applyFilters();
   },
@@ -139,7 +187,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
   deleteClient: async (id: string) => {
     Alert.alert(
-      'Odstrániť objekt',
+      'Odstrániť klienta',
       'Naozaj chcete odstrániť klienta?',
       [
         { text: 'Zrušiť', style: 'cancel' },

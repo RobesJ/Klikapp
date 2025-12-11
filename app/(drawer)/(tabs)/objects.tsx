@@ -17,6 +17,7 @@ export default function Objects() {
 
   const {
     loading,
+    loadMore,
     fetchObjects,
     setFilters,
     filters,
@@ -89,7 +90,7 @@ export default function Objects() {
         <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4">
           <EvilIcons name="search" size={20} color="gray" />
           <TextInput
-            className="flex-1 ml-2"
+            className="flex-1 ml-2 text-dark-text_color"
             placeholder='Vyhladajte klienta...'
             placeholderTextColor="#9CA3AF"
             value={searchText}
@@ -126,6 +127,7 @@ export default function Objects() {
           </View>
         )}
         contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
+        onEndReached={loadMore}
       />
 
       <TouchableOpacity

@@ -13,6 +13,10 @@ interface ProjectCardProps {
 
 export default function ProjectCard({ project, client, users, objects, onPress } : ProjectCardProps) {
     
+    if(!project || !client){
+        return null;
+    }
+    
     const pillColor = STATE_OPTIONS.find(s => s.value === project.state)?.colors[1] ?? "border-gray-500 bg-yellow-100";
     const textColor = STATE_OPTIONS.find(s => s.value === project.state)?.colors[0] ?? "border-gray-500 bg-yellow-100";
     const chimneySum = objects.reduce((sum, obj) => (sum + obj.chimneys?.length || 0),0);

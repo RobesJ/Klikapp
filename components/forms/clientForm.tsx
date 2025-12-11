@@ -246,7 +246,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
               behavior={Platform.OS === "android" ? "padding" : "height"}
               className='flex-1'
             >
-            
+                {/* Header */}
                 <View className="mb-12 relative">
                     <TouchableOpacity
                       onPress={() => router.back()}
@@ -260,149 +260,148 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                     </Text>
                 </View>
                 
-            <ScrollView 
-              className="flex-1"
-              contentContainerStyle={{paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100}}
-            >
-            {/* Form */}
-            <View className="flex-1 justify-center px-10">
+                {/* Form */}
+                <View className="flex-1 mb-24 justify-center px-10">
+                    <ScrollView 
+                      className="flex-1"
+                      contentContainerStyle={{paddingHorizontal: 16, paddingTop: 16}}
+                    >
 
-                {/* Name field */}
-                <FormInput
-                    label="Meno"
-                    value={formData.name}
-                    onChange={(value) => handleChange("name", value)}
-                    placeholder="Meno a priezvisko / Názov firmy"
-                    error={errors.name}
-                    fieldName="name"
-                    focusedField={focusedField}
-                    setFocusedField={setFocusedField}
-                    autoCapitalize="words"
-                />
-
-                {/* Email field */}
-                <FormInput
-                    label="Email"
-                    value={formData.email || ''}
-                    onChange={(value) => handleChange("email", value)}
-                    placeholder="email.klienta@priklad.sk"
-                    error={errors.email}
-                    fieldName="email"
-                    focusedField={focusedField}
-                    setFocusedField={setFocusedField}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                />
-
-                {/* Phone field */}
-                <FormInput
-                    label="Telefónne číslo"
-                    value={formData.phone || ''}
-                    onChange={(value) => handleChange("phone", value)}
-                    placeholder="0901 234 567  |  +421 901 234 567"
-                    error={errors.phone}
-                    fieldName="phone"
-                    focusedField={focusedField}
-                    setFocusedField={setFocusedField}            
-                    keyboardType="phone-pad"
-                />
-                
-
-                {/* Address field */}               
-                <View className="mb-4">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Adresa trvalého pobytu / Sídlo firmy</Text>
-                    <View>
-                        <TextInput
-                            placeholder="Začnite písať adresu..."
-                            placeholderTextColor="#ABABAB"
-                            cursorColor="#FFFFFF"
-                            value={addressSearch || formData.address || ''}
-                            onChangeText={searchGoogleAddress}
-                            onFocus={() => setFocusedField('address')}
-                            onBlur={() => setFocusedField(null)}
-                            className={`flex-row items-center border-2 bg-gray-800 rounded-xl px-4 py-4 text-white 
-                                ${focusedField === 'address' ? 'border-blue-500' : 'border-gray-700'}
-                            `}
+                        {/* Name field */}
+                        <FormInput
+                            label="Meno"
+                            value={formData.name}
+                            onChange={(value) => handleChange("name", value)}
+                            placeholder="Meno a priezvisko / Názov firmy"
+                            error={errors.name}
+                            fieldName="name"
+                            focusedField={focusedField}
+                            setFocusedField={setFocusedField}
+                            autoCapitalize="words"
                         />
 
-                        {searchingAddress && (
-                            <View className="absolute right-4 top-4">
-                                <Text className="text-gray-400">🔍</Text>
-                            </View>
-                        )}
+                        {/* Email field */}
+                        <FormInput
+                            label="Email"
+                            value={formData.email || ''}
+                            onChange={(value) => handleChange("email", value)}
+                            placeholder="email.klienta@priklad.sk"
+                            error={errors.email}
+                            fieldName="email"
+                            focusedField={focusedField}
+                            setFocusedField={setFocusedField}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
 
-                        {showAddressSuggestions && addressSuggestions.length > 0 && (
-                             <View className="border-2 border-gray-300 rounded-xl mt-1 bg-gray-300 max-h-60">
-                                <ScrollView className="border-b rounded-xl border-gray-300">
-                                    {addressSuggestions.map((item) => (
-                                        <TouchableOpacity
-                                            key={item.place_id}
-                                            onPress={() => selectAddress(item)}
-                                            className="p-4 border-b border-gray-100"
-                                        >
-                                            <Text className="text-base">{item.description}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
+                        {/* Phone field */}
+                        <FormInput
+                            label="Telefónne číslo"
+                            value={formData.phone || ''}
+                            onChange={(value) => handleChange("phone", value)}
+                            placeholder="0901 234 567  |  +421 901 234 567"
+                            error={errors.phone}
+                            fieldName="phone"
+                            focusedField={focusedField}
+                            setFocusedField={setFocusedField}            
+                            keyboardType="phone-pad"
+                        />
+
+
+                        {/* Address field */}               
+                        <View className="mb-4">
+                            <Text className="mb-1 ml-1 font-medium text-dark-text_color">Adresa trvalého pobytu / Sídlo firmy</Text>
+                            <View>
+                                <TextInput
+                                    placeholder="Začnite písať adresu..."
+                                    placeholderTextColor="#ABABAB"
+                                    cursorColor="#FFFFFF"
+                                    value={addressSearch || formData.address || ''}
+                                    onChangeText={searchGoogleAddress}
+                                    onFocus={() => setFocusedField('address')}
+                                    onBlur={() => setFocusedField(null)}
+                                    className={`flex-row items-center border-2 bg-gray-800 rounded-xl px-4 py-4 text-white 
+                                        ${focusedField === 'address' ? 'border-blue-500' : 'border-gray-700'}
+                                    `}
+                                />
+
+                                {searchingAddress && (
+                                    <View className="absolute right-4 top-4">
+                                        <Text className="text-gray-400">🔍</Text>
+                                    </View>
+                                )}
+
+                                {showAddressSuggestions && addressSuggestions.length > 0 && (
+                                     <View className="border-2 border-gray-300 rounded-xl mt-1 bg-gray-300 max-h-60">
+                                        <ScrollView className="border-b rounded-xl border-gray-300">
+                                            {addressSuggestions.map((item) => (
+                                                <TouchableOpacity
+                                                    key={item.place_id}
+                                                    onPress={() => selectAddress(item)}
+                                                    className="p-4 border-b border-gray-100"
+                                                >
+                                                    <Text className="text-base">{item.description}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+                                )}
                             </View>
-                        )}
-                    </View>
+                        </View>
+                            
+                        {/* Type field */}
+                        <View className="mb-4">
+                            <Text className="mb-1 ml-1 font-medium text-dark-text_color">Typ</Text>
+                            <View className="flex-row">
+                                <TouchableOpacity
+                                    onPress={() => handleSelectedType("Fyzická osoba")}
+                                    className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-300" : "border-gray-700 bg-gray-800"} rounded-xl p-4 mr-3 w-36 items-center`}
+                                >
+                                    <Text
+                                      style={{ color: selectedType === "Fyzická osoba" ? '#FFFFFF' : '#ABABAB' }}
+                                      className={`${selectedType === "Fyzická osoba" ? "font-semibold" : "font-normal"}`}
+                                    >
+                                        Fyzická osoba
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-300 " : "border-gray-700 bg-gray-800"} rounded-xl p-4 w-36 items-center`}
+                                    onPress={() => handleSelectedType("Právnická osoba")}
+                                >
+                                    <Text
+                                      style={{ color: selectedType === "Právnická osoba" ? '#FFFFFF' : '#ABABAB' }}
+                                      className={`${selectedType === "Právnická osoba" ? "font-semibold" : "font-normal"}`}
+                                    >
+                                        Právnická osoba
+                                    </Text>
+                                </TouchableOpacity>  
+                            </View>
+                            {errors.type && (
+                                <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                                    {errors.type}
+                                </Text>
+                            )}
+                        </View>
+                        
+                        {/* Note field */}
+                        <FormInput
+                            label="Poznámka"
+                            value={formData.note || ''}
+                            onChange={(value) => handleChange("note", value)}
+                            placeholder="Ďalšie informácie..."
+                            error={errors.note}
+                            fieldName="note"
+                            focusedField={focusedField}
+                            setFocusedField={setFocusedField}            
+                            multiline
+                            numberOfLines={3}
+                        />
+                    </ScrollView>
                 </View>
-                
-                {/* Type field */}
-                <View className="mb-4">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Typ</Text>
-                    <View className="flex-row">
-                        <TouchableOpacity
-                            onPress={() => handleSelectedType("Fyzická osoba")}
-                            className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-300" : "border-gray-700 bg-gray-800"} rounded-xl p-4 mr-3 w-36 items-center`}
-                        >
-                            <Text
-                              style={{ color: selectedType === "Fyzická osoba" ? '#FFFFFF' : '#ABABAB' }}
-                              className={`${selectedType === "Fyzická osoba" ? "font-semibold" : "font-normal"}`}
-                            >
-                                Fyzická osoba
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-300 " : "border-gray-700 bg-gray-800"} rounded-xl p-4 w-36 items-center`}
-                            onPress={() => handleSelectedType("Právnická osoba")}
-                        >
-                            <Text
-                              style={{ color: selectedType === "Právnická osoba" ? '#FFFFFF' : '#ABABAB' }}
-                              className={`${selectedType === "Právnická osoba" ? "font-semibold" : "font-normal"}`}
-                            >
-                                Právnická osoba
-                            </Text>
-                        </TouchableOpacity>  
-                    </View>
-                    {errors.type && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.type}
-                        </Text>
-                    )}
-                </View>
-                
-                {/* Note field */}
-                <FormInput
-                    label="Poznámka"
-                    value={formData.note || ''}
-                    onChange={(value) => handleChange("note", value)}
-                    placeholder="Ďalšie informácie..."
-                    error={errors.note}
-                    fieldName="note"
-                    focusedField={focusedField}
-                    setFocusedField={setFocusedField}            
-                    multiline
-                    numberOfLines={3}
-                />
-                
-            </View>
-            </ScrollView>
             </KeyboardAvoidingView>
             
             {/* Submit button */}
-            <View className="absolute bottom-0 left-0 right-0 px-6 pb-12 pt-4 items-center justify-center z-2">
+            <View className="absolute bottom-4 left-0 right-0 items-center">
                 <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={handleSubmit}

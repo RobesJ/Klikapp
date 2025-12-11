@@ -17,6 +17,7 @@ export default function Clients() {
   const {
     filteredClients,
     loading,
+    loadMore,
     fetchClients,
     setFilters,
     deleteClient
@@ -95,6 +96,7 @@ export default function Clients() {
             <Text className="text-center text-gray-500 mt-10">Žiadny klienti</Text>
           )
         }
+        onEndReached={loadMore}
       />
 
       { /* Action Button - add new client */}

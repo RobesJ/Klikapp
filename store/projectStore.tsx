@@ -357,17 +357,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set({backgroundLoading: true});
 
     try{
-      let query;
       const currentOffset = metadata.projects.currentOffset;
-
-      if(isInitialFilter(filters)){
-        query = buildQuery(metadata.planned.futureDate, 0, amount);
-      }
-      else{
-        query = buildFilteredQuery(filters, currentOffset, amount);
-      }
     
-      const {data, error, count} = await query;
+      const {data, error, count} = isInitialFilter(filters)
+        ? await buildQuery(metadata.planned.futureDate, 0, amount)
+        : await buildFilteredQuery(filters, currentOffset, amount);
+      
 
       if (error) throw error;
 
@@ -759,7 +754,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 }));
 
 function transformProjects(data: any): ProjectWithRelations[]{
-  const projectWithRelations: ProjectWithRelations[] = data.map((projectItem: any) => {
+  const projectWithRelations: ProjectWithRelations[] = data
+    .filter((projectItem: any) => projectItem && projectItem.id && projectItem.clients)
+    .map((projectItem: any) => {
     const users: User[] = projectItem.project_assignments
       ?.map((pa: any) => pa.user_profiles)
       .filter(Boolean) || [];

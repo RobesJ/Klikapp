@@ -601,13 +601,12 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 </View>
                 
                 {/* Form */}
+                <View className="flex-1 mb-24 justify-center px-10">
                 <ScrollView 
                   className="flex-1"
-                  contentContainerStyle={{paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100}}
+                  contentContainerStyle={{paddingHorizontal: 16, paddingTop: 16}}
                 >
                 
-                <View className="flex-1 justify-center px-10">
-
                     {/* Client Field*/}
                     <View className="mb-3">
                         <Text className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Text>
@@ -835,11 +834,12 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                             </Text>
                         )}
                     </View>
-                </View>
+                
             </ScrollView>
+            </View>
         
             {/* submit button */}
-            <View className="absolute bottom-0 left-0 right-0 px-6 pb-12 pt-4 items-center justify-center z-10">
+            <View className="absolute bottom-4 left-0 right-0 items-center">
                 <TouchableOpacity
                   onPress={handleSubmit}
                   disabled={loading}
@@ -854,6 +854,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
+
         {/* Chimney Type Selection Modal */}
         <Modal
             visible={showChimneyModal}

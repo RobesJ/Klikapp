@@ -18,6 +18,8 @@ interface ObjectStore {
   loading: boolean;
   initial_loading: boolean;
   lastFetch: number;
+  offset: number;
+  pageSize: number;
   error: string | null;
   
   fetchObjects: (limit?: number) => Promise<void>;
@@ -27,6 +29,7 @@ interface ObjectStore {
   updateObject: (id: string, object: ObjectWithRelations) => void;
   deleteObject: (id: string) => void;
   applyFilters: () => void;
+  loadMore: () => void;
 }
 
 const CACHE_DURATION = 30000; // 30 seconds
@@ -45,9 +48,11 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   loading: false,
   initial_loading: true,
   lastFetch: 0,
+  offset: 0,
+  pageSize: 30,
   error: null,
 
-  fetchObjects: async (limit = 100) => {
+  fetchObjects: async (limit = 50) => {
     const { objects, lastFetch,  loading } = get();
     const now = Date.now();
 
@@ -57,7 +62,6 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     }
 
     if (loading) {
-      console.log('Already fetching...');
       return;
     }
 
@@ -103,11 +107,12 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         objects: objectWithRelations,
         lastFetch: now,
         loading: false,
+        offset: limit,
         initial_loading: false 
       });
-      
+
       get().applyFilters();
-      console.log(`✅ Fetched ${objectWithRelations.length} objects`);
+      console.log(` Fetched ${objectWithRelations.length} objects`);
     } catch (error: any) {
       console.error('Error fetching objects:', error.message);
       set({ error: error.message, loading: false });
@@ -148,9 +153,66 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     }
 
     set({ filteredObjects: filtered });
-    console.log(`🔍 Filtered: ${filtered.length}/${objects.length} projects`);
+    console.log(`Filtered: ${filtered.length}/${objects.length} projects`);
   },
   
+  loadMore: async () => {
+    const {offset, pageSize, loading } = get();
+
+    if (loading) {
+      return;
+    }
+
+    set({ loading: true });
+    try{
+      const { data: objectsData, error: objectError } = await supabase
+        .from("objects")
+        .select(`
+          *,
+          clients (*),
+          chimneys (
+            id,
+            object_id,
+            chimney_type_id,
+            placement,
+            appliance,
+            note,
+            chimney_type:chimney_types (
+              id,
+              type,
+              labelling
+            )
+          )
+        `)
+        .range(offset, offset + pageSize -1);
+
+      if (objectError) throw objectError;
+
+      const objectWithRelations: ObjectWithRelations[] = objectsData.map((objectItem: any) => {
+        const chimneys: Chimney[] = objectItem.chimneys || [];
+
+        return {
+          object: objectItem,
+          client: objectItem.clients,
+          chimneys: chimneys,
+        };
+      });
+
+      set({ 
+        objects: objectWithRelations,
+        offset: offset + pageSize,
+        loading: false 
+      });
+    }
+    catch (error: any) {
+      console.error('Load more objects error:', error);
+      set({ 
+        loading: false,
+        error: error.message
+       });
+    }
+  },
+
   addObject: (object) => {
     if (!object || !object.object || !object.object.id || !object.client){
       console.log("Invalid object structure:", object);

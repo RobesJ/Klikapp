@@ -7,7 +7,7 @@ import { ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +26,7 @@ export default function Projects() {
     fetchActiveProjects,
     fetchPlannedProjects,
     getFilteredProjects,
+    applySmartFilters,
     loadMore,
     filters,
     setFilters,
@@ -45,6 +46,14 @@ export default function Projects() {
       }
     }, [clearFilters, setFilters])
   );
+
+  useEffect(() => {
+    const filtered = getFilteredProjects(filters);
+    if(filteredProjects.length < 30 && !backgroundLoading){
+      const amountToFetch = 30 - filtered.length;
+      applySmartFilters(filters, amountToFetch);
+    }
+  }, [filters]);
 
   const filterSections = [
     {
@@ -212,7 +221,7 @@ export default function Projects() {
         
       <FlatList
         data={filteredProjects}
-        keyExtractor={(item) => item.project.id}
+        keyExtractor={(item) => item?.project?.id || Math.random().toString()}
         renderItem={({item}) =>(
           <ProjectCard
               project={item.project}

@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
@@ -6,10 +7,12 @@ import { Text, TouchableOpacity, View } from 'react-native';
 export default function CustomDrawerContent(props: any) {
   const router = useRouter();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // TODO: Implement logout logic
     console.log("Logout");
-    // router.replace('/login');
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    router.replace('/login');
   };
 
   const handleSettings = () => {
