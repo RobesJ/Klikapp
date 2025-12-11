@@ -1,18 +1,20 @@
 import { useAuth } from "@/context/authContext"
 import { Redirect, Tabs } from "expo-router"
 import { ActivityIndicator, Image, Text, View } from "react-native"
-import { icons } from "../../constants/icons"
+import { icons } from "../../../constants/icons"
 
 
 const TabIcon = ({focused, icon, title} : any) => {
     if (focused){
         return (
-            <View className="w-full overflow-hidden flex-1 min-w-[124px] min-h-16 mt-3 justify-center items-center rounded-full bg-accent color-secondary">
+            //<View className="w-full overflow-hidden flex-1 min-w-[124px] min-h-16 mt-3 justify-center items-center rounded-full">
+            <View className="flex-1 w-full overflow-hidden min-w-[124px] min-h-16 mt-8 justify-center items-center rounded-full">
                 <Image
                     source={icon}
-                    tintColor="#000000"
-                    className="size-5"/>
-                <Text className="font-semibold text-base">{title}</Text>
+                    tintColor="#ABABAB"
+                    className="size-6"/>
+                <Text className="text-base"
+                    style={{color: "#ABABAB"}}>{title}</Text>
             </View>
         )
     }
@@ -20,8 +22,8 @@ const TabIcon = ({focused, icon, title} : any) => {
         <View className="size-full justify-center items-center mt-4 rounded-full">
             <Image
                 source={icon}
-                tintColor="#DBEAFE"
-                className="size-5"/>
+                tintColor="#ABABAB"
+                className="size-8"/>
         </View>
     )
 }
@@ -50,14 +52,14 @@ const _Layout = () => {
                     alignItems: 'center'
                 },
                 tabBarStyle: {
-                    backgroundColor: "#223042",
+                    backgroundColor: "#13122B",
                     borderRadius: 50,
-                    marginBottom: 36,
-                    height:52,
+                    height:72,
                     position: 'absolute',
                     overflow: "hidden",
                     borderWidth: 1, 
-                    borderColor: '#223042"'
+                    borderColor: "#0c1022"
+                    //"#0c1026f0",
                 }
             }}
         >
@@ -127,7 +129,7 @@ const _Layout = () => {
                         <TabIcon 
                             focused ={focused}
                             icon={icons.planningIcon}
-                            title="PLANOVANIE"
+                            title="PLÁNOVANIE"
                         />   
                     )
                 }}

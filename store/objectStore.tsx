@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { Chimney, ObjectWithRelations } from '@/types/objectSpecific';
+import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { useClientStore } from './clientStore';
-import { useProjectStore } from './projectStore';
 
 interface ObjectFilters {
   city: string | null;
@@ -173,32 +173,48 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   },
 
   deleteObject: async (id: string) => {
-    const previousObjects = get().objects;
-    set((state) => ({
-      objects: state.objects.filter(o => o.object.id !== id)
-    }));
-    get().applyFilters();
-
-    try{
-      const { data, error } = await supabase
-        .from("objects")
-        .delete()
-        .eq("id", id)
-        .select();
-
-      if(error) throw error;
-      if(data){
-        console.log("Deleted object with id:", id);
-      }
-
-      useClientStore.getState().lastFetch = 0;
-      useProjectStore.getState().lastFetch = 0;
-    }
-    catch(error){
-      console.error("Chyba pri mazani objektu:", error);
-      set({objects:previousObjects});
-      get().applyFilters();
-      throw error;
-    }
-  },
+    Alert.alert(
+      'Odstrániť objekt',
+      'Naozaj chcete odstrániť tento objekt?',
+      [
+        { text: 'Zrušiť', style: 'cancel' },
+        {
+          text: 'Odstrániť',
+          style: 'destructive',
+          onPress: async() =>{
+            const previousObjects = get().objects;
+            set((state) => ({
+              objects: state.objects.filter(o => o.object.id !== id)
+            }));
+            get().applyFilters();
+          
+            try{
+              const { data, error } = await supabase
+                .from("objects")
+                .delete()
+                .eq("id", id)
+                .select();
+            
+              if(error) throw error;
+              if(data){
+                console.log("Deleted object with id:", id);
+              }
+            
+              useClientStore.getState().lastFetch = 0;
+              //useProjectStore.getState().lastFetch = 0;
+              Alert.alert('Úspech', 'Objekt bol odstránený');
+            }
+            catch(error){
+              console.error("Chyba pri mazani objektu:", error);
+              Alert.alert('Chyba', 'Nepodarilo sa odstrániť objekt');
+              set({objects:previousObjects});
+              get().applyFilters();
+              throw error;
+            }
+          }
+        }
+      ]
+    );
+  }
 }));
+        

@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { Client } from '@/types/generics';
+import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { useObjectStore } from './objectStore';
-import { useProjectStore } from './projectStore';
 
 interface ClientFilters {
   searchQuery: string;
@@ -138,32 +138,45 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   },
 
   deleteClient: async (id: string) => {
-    const previousClients = get().clients;
-    set((state) => ({
-      clients: state.clients.filter(client => client.id !== id)
-    }));    
-    get().applyFilters();
-    
-    try{
-      const { data, error} = await supabase
-        .from("clients")
-        .delete()
-        .eq("id", id)
-        .select();
+    Alert.alert(
+      'Odstrániť objekt',
+      'Naozaj chcete odstrániť klienta?',
+      [
+        { text: 'Zrušiť', style: 'cancel' },
+        {
+          text: 'Odstrániť',
+          style: 'destructive',
+          onPress: async() =>{
+            const previousClients = get().clients;
+            set((state) => ({
+              clients: state.clients.filter(client => client.id !== id)
+            }));    
+            get().applyFilters();
 
-      if (error) throw error;
-      if (data){
-        console.log("Client was deleted successfuly");
-      }
-
-      useProjectStore.getState().lastFetch = 0;
-      useObjectStore.getState().lastFetch = 0;
-    }
-    catch(error){
-      console.error("error deleting client:",error);
-      set({clients: previousClients});
-      get().applyFilters();
-      throw error;
-    } 
+            try{
+              const { data, error} = await supabase
+                .from("clients")
+                .delete()
+                .eq("id", id)
+                .select();
+            
+              if (error) throw error;
+              if (data){
+                console.log("Client was deleted successfuly");
+              }
+              useObjectStore.getState().lastFetch = 0;
+              Alert.alert('Úspech', 'Klient bol odstránený');
+            }
+            catch(error){
+              console.error("error deleting client:",error);
+              Alert.alert('Chyba', 'Nepodarilo sa odstrániť klienta');
+              set({clients: previousClients});
+              get().applyFilters();
+              throw error;
+            }
+          }
+        }
+      ]
+    );
   }
 }));

@@ -1,6 +1,7 @@
 import { Client, Project, User } from "@/types/generics";
 import { ObjectWithRelations } from "@/types/projectSpecific";
 import { Text, TouchableOpacity, View } from "react-native";
+import { STATE_OPTIONS } from "../badge";
 
 interface ProjectCardProps {
     project: Project;
@@ -11,122 +12,119 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ project, client, users, objects, onPress } : ProjectCardProps) {
-    const typeColorMap: Record<string, string[]> = {
-        "Obhliadka": ["text-dark-project-type-obhliadka", "border-dark-project-type-obhliadka"],
-        "Montáž": ["text-dark-project-type-montaz", "border-dark-project-type-montaz"],
-        "Revízia": ["text-dark-project-type-revizia", "border-dark-project-type-revizia"],
-        "Čistenie": ["text-dark-project-type-cistenie", "border-dark-project-type-cistenie"]
-      };
-      
-      const stateColorMap: Record<string, string[]> = {
-        "Nový": ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
-        "Naplánovaný": ["text-dark-project-state-novy", "border-2 border-dark-project-state-novy"],
-        "Aktívny": ["text-dark-project-state-aktivny","border-2 border-dark-project-state-aktivny"],
-        "Prebieha": ["text-dark-project-state-prebieha","border-2 border-dark-project-state-prebieha"],
-        "Pozastavený": ["text-dark-project-state-pozastaveny","border-2 border-dark-project-state-pozastaveny"],
-        "Ukončený": ["text-dark-project-state-ukonceny","border-2 border-dark-project-state-ukonceny"]
-      };
+    
+    const pillColor = STATE_OPTIONS.find(s => s.value === project.state)?.colors[1] ?? "border-gray-500 bg-yellow-100";
+    const textColor = STATE_OPTIONS.find(s => s.value === project.state)?.colors[0] ?? "border-gray-500 bg-yellow-100";
+    const chimneySum = objects.reduce((sum, obj) => (sum + obj.chimneys?.length || 0),0);
 
     return (
         <TouchableOpacity
             activeOpacity={0.8}
             onPress={onPress}
-            className="rounded-2xl mb-3 border border-dark-card-border_color px-4 py-2 bg-dark-card-bg"
+            className="rounded-2xl mb-3 border-2 border-dark-card-border_color p-4 bg-dark-card-bg"
         >
-                <View className="flex-row items-start justify-between mb-2" >   
-                    <View className="flex-2">
-                        <Text className="text-2xl font-semibold mb-1 text-dark-text_color">
-                            {project.type}
+            
+            <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-2xl font-bold text-dark-text_color flex-1">
+                    {project.type}
+                </Text>
+                <View className={`px-3 py-1 ${pillColor} rounded-full`}>
+                    <Text className={`font-semibold text-sm ${textColor}`}>
+                        {project.state}
+                    </Text>
+                </View>
+            </View>
+
+            <View className="flex-row items-center mb-2">
+                <Text className="text-gray-400 text-sm">Klient: </Text>
+                <Text className="text-dark-text_color font-medium">
+                    {client.name}
+                </Text>
+            </View>
+            
+            {(project.state === "Nový" || project.state === "Naplánovaný") && project.scheduled_date && (
+                <View className="flex-row items-center mb-2">
+                    <Text className="text-gray-400 text-sm">Plánované na: </Text>
+                    <Text className="text-dark-text_color font-medium">
+                        {project.scheduled_date}
+                    </Text>
+                </View>
+            )}
+    
+            {(project.state === "Naplánovaný" || project.state === "Prebieha" || project.state === "Pozastavený") && project.start_date && (
+                <View className="flex-row items-center mb-2">
+                    <Text className="text-gray-400 text-sm">Začiatok: </Text>
+                    <Text className="text-dark-text_color font-medium">
+                        {project.start_date}
+                    </Text>
+                </View>
+            )}
+    
+            {(project.state === "Ukončený" || project.state === "Zrušený") && project.completion_date && (
+                <View className="flex-row items-center mb-2">
+                    <Text className="text-gray-400 text-sm">Ukončenie: </Text>
+                    <Text className="text-dark-text_color font-medium">
+                        {project.completion_date}
+                    </Text>
+                </View>
+            )}
+    
+            
+            {objects && objects.length > 0 && (
+                <View className="mt-2 pt-2 border-t border-dark-card-border_color">
+                    <View className="flex-row items-center justify-between mb-2">
+                        <Text className="text-gray-400 text-sm">
+                            {objects.length === 1 
+                                ? '1 objekt' 
+                                : objects.length >= 2 && objects.length <= 4 
+                                ? `${objects.length} objekty` 
+                                : `${objects.length} objektov`}
                         </Text>
-
-                        {client?.name &&
-                            <View className="flex-row items-center mb-1  text-dark-text_color">
-                                <Text className="mr-2 text-dark-text_color">
-                                    Klient:
-                                </Text>
-                                <Text className="font-semibold  text-dark-text_color">
-                                    {client?.name}
-                                </Text>
-                            </View>
-                        }
-
-                        {project.state !== "Ukončený" && project.start_date &&
-                            <View className="flex-row items-center mb-1  text-dark-text_color">
-                                <Text className="mr-2 text-dark-text_color">
-                                    Zaciatok projektu:
-                                </Text>
-                                <Text className="font-semibold  text-dark-text_color">
-                                    {project.start_date}
-                                </Text>
-                            </View>
-                        }
-
-                        {project.state === "Ukončený" && project.completion_date &&
-                            <View className="flex-row items-center mb-1  text-dark-text_color">
-                                <Text className="mr-2 text-dark-text_color">
-                                    Ukoncenie projektu:
-                                </Text>
-                                <Text className="font-semibold  text-dark-text_color">
-                                    {project.completion_date}
-                                </Text>
-                            </View>
-                        }
-
-                        {users && users.length > 0 && (
-                            <View className="flex-1 items-start mb-1  text-dark-text_color">
-                                <Text className="mr-2 text-dark-text_color">
-                                    Priradeny pouzivatelia:
-                                </Text>
-                                <View className="flex-row">
-                                {users.map((user) => (
-                                    <View 
-                                        className="rounded-full border-blue-300 px-2 py-1 border-2 mr-1 mt-1"
-                                        key={user.id}>
-                                        <Text 
-                                        className="font-semibold  text-dark-text_color">
-                                            {user.name}
-                                        </Text>
-                                    </View>
-                                ))}
-                                </View>
-                            </View>
-                        )}
+                            
+                        <Text className="text-gray-400 text-sm">
+                           {chimneySum} {chimneySum === 1 ? "komín" : (chimneySum > 4 ? "komínov" : "komíny")}
+                        </Text>
+                        
                     </View>
-                    
-
-                    <View className="flex-2 justify-between items-end ml-4"> 
-                        {project.state &&
-                            <View className={`px-4 ${stateColorMap[project.state][1]} rounded-full pt-1 items-center`}>
-                                <Text className={`font-semibold mb-1 ${stateColorMap[project.state][0]}`}>
-                                    {project.state}
+                    {objects.slice(0, 2).map(o => (
+                        <Text 
+                            key={o.object.id}
+                            className="text-dark-text_color text-sm"
+                        >
+                            📍 {(o.object.city) || o.object.address}
+                            {o.chimneys && o.chimneys.length > 0 && 
+                                ` • ${o.chimneys.length} ${o.chimneys.length === 1 ? 'komín' : 'komíny'}`
+                            }
+                        </Text>
+                    ))}
+                    {objects.length > 2 && (
+                        <Text className="text-gray-500 text-xs mt-1">
+                            +{objects.length - 2} ďalší
+                        </Text>
+                    )}
+                </View>
+            )}
+    
+            
+            {users && users.length > 0 && (
+                <View className="flex-row mt-2 pt-2 border-t border-dark-card-border_color items-center">
+                    <Text className="text-gray-400 text-xs mr-4">
+                        Priradení používatelia:
+                    </Text>
+                    <View className="flex-row flex-wrap gap-2">
+                        {users.map((user) => (
+                            <View 
+                                className=" border border-blue-400 rounded-full px-3 py-1"
+                                key={user.id}
+                            >
+                                <Text className="text-white text-xs font-medium ml-1">
+                                    {user.name}
                                 </Text>
                             </View>
-                        } 
-
-                        <View className="flex-1">
-                        {objects && objects.length > 0 && (
-                            <View >
-                                    <Text className=" text-dark-text_color">
-                                        {(objects.length == 1) ? 
-                                            (
-                                                `${objects.length} priradeny objekt`
-                                            ):(
-                                                (objects.length >= 2 &&  objects.length <= 4) ?
-                                                (
-                                                    `${objects.length} priradene objekty`
-                                                ):(
-                                                    `${objects.length} priradenych objektov`
-                                                )
-                                            )
-                                        }
-                                    </Text>
-                            </View>
-                        )}
-                        </View>
+                        ))}
                     </View>
                 </View>
-            
-
+            )}
         </TouchableOpacity>
-    )
+    ); 
 }

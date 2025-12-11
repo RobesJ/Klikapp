@@ -14,7 +14,7 @@ import {
 } from "react-native";
 
 import { Client } from "@/types/generics";
-import { ChimneyInput, ChimneyType, Object, ObjectWithRelations } from "@/types/objectSpecific";
+import { ChimneyInput, ChimneyType, Object as ObjectType, ObjectWithRelations } from "@/types/objectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { FormInput } from "../formInput";
@@ -29,7 +29,7 @@ interface ObjectFormProps{
 
 export default function ObjectForm({ mode, initialData, onSuccess, preselectedClient} : ObjectFormProps) {
 
-    const [formData, setFormData] = useState<Omit<Object, "id"> & {id?: string}>({
+    const [formData, setFormData] = useState<Omit<ObjectType, "id"> & {id?: string}>({
         client_id: initialData?.object.client_id || '',
         address: initialData?.object.address || '',
         streetNumber: initialData?.object.streetNumber || '',
@@ -141,7 +141,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     function parseAddressComponents(components: any[]) {
         let street: string | null = null;
         let number: string | null = null;
-    
+        
         components.forEach((component: any) => {
             const types = component.types;
             
@@ -151,7 +151,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             if (types.includes('street_number')) {
                 number = component.long_name;
             }
-            if (types.includes('sublocality')) {
+            if (types.includes('sublocality') || types.includes('locality')) {
                 handleChange("city",component.long_name)
             }
             if (types.includes('country')) {
@@ -193,7 +193,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         }
     }, [initialData, preselectedClient]);
     
-    const handleChange = (field: keyof Omit<Object, "id">, value: string) => {
+    const handleChange = (field: keyof Omit<ObjectType, "id">, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
         if(errors[field]){
             setErrors(prev => {
@@ -358,15 +358,16 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         if (selectedChimneys.length === 0) {
             newErrors.chimneys = "Pre uloženie objektu vytvorte aspoň jeden komín!";
         }
+
         setErrors(newErrors);
+        console.log(newErrors);
         return Object.keys(newErrors).length === 0;
     }
 
     const handleSubmit = async () => {
-
-        if(!validate()){
-            return;
-        }
+         if(!validate()){
+             return;
+         }
 
         setLoading(true);
         try{
@@ -585,23 +586,24 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 className='flex-1'
             >
                 {/* header */}
-                <View className="mb-32 relative">
+                <View className="mb-12 relative">
                     <TouchableOpacity
                         onPress={() => router.back()}
-                        className="absolute top-4 left-6 w-10 h-10 items-center justify-center"
+                        className="absolute top-3 left-6 w-10 h-10 items-center justify-center z-10"
                     >
                       <MaterialIcons name="arrow-back" size={24} color="#d6d3d1" />
                     </TouchableOpacity>
-                    <View className="absolute top-4 left-0 right-0 items-center justify-center">
-                        <Text className="font-bold text-4xl text-dark-text_color">
+                    
+                    <Text className="font-bold text-3xl text-dark-text_color top-3 text-center">
                             {mode === "create" ? "Vytvoriť objekt" : "Upraviť objekt"}
                         </Text>
-                    </View>
+                    
                 </View>
+                
                 {/* Form */}
                 <ScrollView 
                   className="flex-1"
-                  contentContainerStyle={{paddingBottom: 100}}
+                  contentContainerStyle={{paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100}}
                 >
                 
                 <View className="flex-1 justify-center px-10">
@@ -717,11 +719,29 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     </View>
                         
                     {/* Chimneys Field */}
-                    <View className="mb-4">
-                        <Text className="mb-2 ml-1 font-semibold text-dark-text_color">
-                            Komíny
-                        </Text>
-                        
+                    <View className="mt-2 mb-4">
+                        <View className="flex-row justify-between mb-2">
+                            <Text className="mt-2 ml-1 font-semibold text-dark-text_color">
+                                Komíny
+                            </Text>
+                            {/* Add Chimney Button */}
+                            <TouchableOpacity
+                                onPress={() => handleAddChimney()}
+                                className="bg-gray-500 rounded-xl py-2 px-4"
+                            >
+                                <Text className="text-white font-semibold text-center">
+                                    + Pridať
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                        {/* Selected Chimneys Display */}
+                        {selectedChimneys.length === 0 && (
+                            <View className="mb-3">
+                               <Text className="text-red-400 ml-1">
+                                Nie sú priradené žiadne komíny
+                               </Text>
+                            </View>
+                        )}
                         {/* Selected Chimneys Display */}
                         {selectedChimneys.length > 0 && (
                             <View className="mb-3">
@@ -731,6 +751,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                         className="bg-gray-700 rounded-xl p-3 mb-2"
                                     >
                                         <View className="flex-1">
+                                            {/* HEADER */}
                                             <View className="flex-row justify-between">
                                                 <View>
                                                     <Text className="font-semibold text-white">
@@ -759,6 +780,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                                    
                                                 </View>
                                             </View>
+
                                             <View className="flex-row mt-2">
                                                 <View className="mr-6">
                                                     {chimney.placement && (
@@ -772,12 +794,12 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                                         </Text>
                                                     )}
                                                     {chimney.note && (
-                                                        <Text className="text-sm text-gray-400 font-bold">
+                                                        <Text className="text-sm text-gray-400 font-bold"                                                        >
                                                             Poznámka: 
                                                         </Text>
                                                     )}
                                                 </View>
-                                                <View>
+                                                <View className="flex-2" style={{ flexShrink: 1 }}>
                                                     {chimney.placement && (
                                                         <Text className="text-sm text-gray-300 font-bold">
                                                             {chimney.placement}
@@ -791,7 +813,10 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
 
                                                     )}
                                                     {chimney.note && (
-                                                        <Text className="text-sm text-gray-300 font-bold">
+                                                        <Text className="text-sm text-gray-300 font-bold"
+                                                          numberOfLines={undefined} 
+                                                          style={{ flexWrap: 'wrap' }}
+                                                          >
                                                             {chimney.note}
                                                         </Text>
                                                     )} 
@@ -804,16 +829,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                             </View>
                         )}
 
-                        {/* Add Chimney Button */}
-                        <TouchableOpacity
-                            onPress={() => handleAddChimney()}
-                            className="border-2 border-gray-300 bg-neutral-700 rounded-xl p-4"
-                        >
-                            <Text className="text-white font-semibold text-center">
-                                + Pridať komín
-                            </Text>
-                        </TouchableOpacity>
-
                         {errors.chimneys && (
                             <Text className='text-red-500 font-semibold ml-2 mt-1'>
                                 {errors.chimneys}
@@ -822,24 +837,23 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     </View>
                 </View>
             </ScrollView>
-        </KeyboardAvoidingView>
         
-        {/* submit button */}
-        <View className="absolute bottom-0 left-0 right-0 px-6 pb-12 pt-4 items-center justify-center z-10">
-            <TouchableOpacity
-              onPress={handleSubmit}
-              disabled={loading}
-              className="bg-blue-600 rounded-2xl items-center py-5 px-12"
-            >
-                <Text className="color-primary font-bold">
-                    {mode === "create" 
-                        ? (loading ? "Vytváram..." : "Vytvoriť objekt") 
-                        : (loading ? "Upravujem..." : "Upraviť objekt")
-                    }
-                </Text>
-            </TouchableOpacity>
-        </View>
-
+            {/* submit button */}
+            <View className="absolute bottom-0 left-0 right-0 px-6 pb-12 pt-4 items-center justify-center z-10">
+                <TouchableOpacity
+                  onPress={handleSubmit}
+                  disabled={loading}
+                  className="bg-blue-600 rounded-2xl items-center py-5 px-12"
+                >
+                    <Text className="color-primary font-bold">
+                        {mode === "create" 
+                            ? (loading ? "Vytváram..." : "Vytvoriť objekt") 
+                            : (loading ? "Upravujem..." : "Upraviť objekt")
+                        }
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </KeyboardAvoidingView>
         {/* Chimney Type Selection Modal */}
         <Modal
             visible={showChimneyModal}

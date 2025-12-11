@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { useProjectStore } from "@/store/projectStore";
 import { Client, Project, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations, ProjectWithRelations } from "@/types/projectSpecific";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -7,7 +8,9 @@ import { useEffect, useState } from "react";
 import {
     Alert,
     FlatList,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     ScrollView,
     Text,
     TextInput,
@@ -16,6 +19,7 @@ import {
 } from "react-native";
 import { BadgeSelector, ModalSelector, STATE_OPTIONS, TYPE_OPTIONS } from "../badge";
 import ModernDatePicker from "../modernDatePicker";
+import UserPickerModal from "../userPickerModal";
 
 
 interface ProjectFormProps{
@@ -29,7 +33,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
     const [formData, setFormData] =  useState<Omit<Project, 'id'> & { id?: string }>({
         client_id: initialData?.client.id ?? "",
-        type: initialData?.project.type ?? "Nový",
+        type: initialData?.project.type ?? "",
         state: initialData?.project.state ?? "",
         scheduled_date: initialData?.project.scheduled_date ?? null,
         start_date: initialData?.project.start_date ?? null,
@@ -54,10 +58,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [completionDate, setCompletionDate] = useState<Date | null>(null);
 
     const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(false);
-    const [searchQueryUser, setSearchQueryUser] = useState('');
     const [selectedUsers, setSelectedUsers] = useState<User[]>(initialData?.users ?? [] );
-    const [timerId2, setTimerId2] = useState<number>();
     const [showUserModal, setShowUserModal] = useState(false);
 
     const [assignedObjects, setAssignedObjects] = useState<ObjectWithRelations[]>([]);
@@ -65,13 +66,14 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [selectedObjects, setSelectedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
     const [showObjectModal, setShowObjectModal] = useState(false);
     const router = useRouter();
+    const { availableUsers, fetchAvailableUsers } = useProjectStore();
     
     useEffect(() => {
         if (initialData){
             setFormData({
-                client_id: initialData?.client.id ?? "",
-                type: initialData?.project.type ?? "Nový",
-                state: initialData?.project.state ?? "",
+                client_id: initialData?.client.id,
+                type: initialData?.project.type,
+                state: initialData?.project.state,
                 scheduled_date: initialData?.project.scheduled_date ?? null,
                 start_date: initialData?.project.start_date ?? null,
                 completion_date: initialData?.project.completion_date ?? null,
@@ -91,7 +93,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 setCompletionDate(parsedDate);
             }
             if (initialData.users && initialData.users.length > 0){
-                setAssignedUsers(initialData.users);
+                setSelectedUsers(initialData.users);
             }
             if (initialData.objects && initialData.objects.length > 0){
                 setAssignedObjects(initialData.objects);
@@ -101,8 +103,14 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             setSelectedClient(preselectedClient);
             setFormData(prev => ({...prev, client_id: preselectedClient.id}));
         }
-        setSelectedState("Nový");
     }, [initialData, preselectedClient]);
+
+    // Fetch available users when component mounts or modal opens
+    useEffect(() => {
+        if (showUserModal && availableUsers.length === 0) {
+            fetchAvailableUsers();
+        }
+    }, [showUserModal]);
     
     const handleChange = (field: keyof Omit<Project, 'id'>, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
@@ -393,68 +401,37 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         setFormData(prev => ({...prev, state: state}));
     };
     
-    const handleScheduledDate = (date: Date) =>{
+    const handleScheduledDate = (date: Date | null) =>{
         setScheduledDate(date);
-        const convertDate2String = date.toISOString().split('T')[0]
+        const convertDate2String = date ? date.toISOString().split('T')[0] : null;
         setFormData(prev => ({...prev, scheduled_date: convertDate2String }));
     };
 
-    const handleStartdDate = (date: Date) =>{
+    const handleStartdDate = (date: Date | null) =>{
         setStartDate(date);
-        const convertDate2String1 = date.toISOString().split('T')[0]
+        const convertDate2String1 = date ? date.toISOString().split('T')[0] : null;
         setFormData(prev => ({...prev, start_date: convertDate2String1}));
     };
 
-    const handleCompletionDate = (date: Date) =>{
+    const handleCompletionDate = (date: Date | null) =>{
         setCompletionDate(date);
-        const convertDate2String2 = date.toISOString().split('T')[0]
+        const convertDate2String2 = date ? date.toISOString().split('T')[0] : null;
         setFormData(prev => ({...prev, completion_date: convertDate2String2 }));
     };
 
-    const handleSearchUsers = (text: string) => {
-        setSearchQueryUser(text);
-        
-        if(timerId2) {
-            clearTimeout(timerId2);
-        }
-        const timer = window.setTimeout(() => {
-            searchUsers(text);
-        }, 300);
 
-        setTimerId2(timer);
-    };
-
-    async function searchUsers(query: string) {
-        if (query.trim().length < 2){
-            setAssignedUsers([]);
+    const handleToggleUser = async (user_id: string) => {
+        const user = availableUsers.find(u => u.id === user_id);
+        if (!user) {
+            console.error("User not found in availableUsers");
             return;
         }
-        setLoadingUsers(true);
-        try{
-            const { data, error } = await supabase
-                .from("user_profiles")
-                .select("*")
-                .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
-                .limit(20);
 
-            if (error) throw error;
-            setAssignedUsers(data || []);
-        } 
-        catch(error: any){
-            console.error("Chyba: ", error.message);
-            setAssignedUsers([]);
-        }
-        finally{
-            setLoadingUsers(false);
-        }
-    }
-
-    const handleToggleUser = (user: User) => {
         setSelectedUsers(prev => {
-            const isSelected = prev.some(c => c.id === user.id);
+            const isSelected = prev.some(u => u.id === user_id);
             
             if (isSelected) {
-                return prev.filter(c => c.id !== user.id);
+                return prev.filter(u => u.id !== user_id);
             } else {
                 return [...prev, user];
             }
@@ -574,24 +551,32 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     };
 
     return (
-        <View>
+        <View className="flex-1">
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "android" ? "padding" : "height"}
+                className='flex-1'
+            >
             {/* header */}
-            <View className="mb-32 relative">
+            <View className="mb-12 relative">
+                
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    className="absolute top-4 left-6 w-10 h-10 items-center justify-center"
+                    className="absolute top-3 left-6 w-10 h-10 items-center justify-center z-10"
                 >
                   <MaterialIcons name="arrow-back" size={24} color="#d6d3d1" />
                 </TouchableOpacity>
-                <View className="absolute top-4 left-0 right-0 items-center justify-center">
-                    <Text className="font-bold text-4xl text-dark-text_color">
+                <Text className="font-bold text-3xl text-dark-text_color top-3 text-center">
                     {mode === "create" ? "Vytvoriť projekt" : "Upraviť projekt"}
-                    </Text>
-                </View>
+                </Text>
+                
             </View>
             
             {/* form */}
-            <ScrollView >
+            <ScrollView 
+              className="flex-1"
+              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100, marginBottom: 100 }}
+              keyboardShouldPersistTaps="handled"
+            >
             <View className="flex-1 justify-center px-10">
 
                 {/* Client field*/}
@@ -654,7 +639,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                   options={TYPE_OPTIONS}
                   selectedValue={selectedType}
                   onSelect={handleSelectedType}
-                  label="Typ projektu"
+                  label="Typ"
                   error={errors.type}
                 />
 
@@ -663,9 +648,10 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                   options={STATE_OPTIONS}
                   selectedValue={selectedState}
                   onSelect={handleSelectedState}
-                  label="Stav projektu"
+                  inDetailsModal={false}
+                  label="Stav"
                   error={errors.state}
-                  placeholder="Vyberte stav projektu"
+                  placeholder="Vyberte stav"
                 />
              
                 {/* Scheduled project start field */}
@@ -734,13 +720,31 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                 {/* Users Field */}
                 <View className="mb-3">
-                    <Text className="mb-2 ml-1 font-semibold text-dark-text_color">
-                        Priradený používatelia
-                    </Text>
+                    <View className="flex-row justify-between mb-2">
+                        <Text className="ml-1 mt-3 font-semibold text-dark-text_color">
+                            Priradený používatelia
+                        </Text>
+                        {/* Assign User Button */}
+                        <TouchableOpacity
+                          onPress={() => setShowUserModal(true)}
+                          className={'border-2 bg-gray-500 rounded-xl px-4 py-2'}
+                        >
+                            <Text className="text-white font-semibold text-center">
+                                + Priradiť
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                     
-                    {/* Selected Chimneys Display */}
+                    {selectedUsers.length === 0 && (
+                         <View className="mb-3">
+                            <Text className="text-red-400 ml-1">
+                                Nie je priradený žiadny používateľ
+                            </Text>
+                        </View>
+                    )}
+                    {/* Selected Users Display */}
                     {selectedUsers.length > 0 && (
-                        <View className="mb-3">
+                        <View>
                             {selectedUsers.map((user) => (
                                 <View 
                                     key={user.id}
@@ -761,15 +765,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                             ))}
                         </View>
                     )}
-                    {/* Assign User Button */}
-                    <TouchableOpacity
-                        onPress={() => setShowUserModal(true)}
-                        className={`border-2 ${errors.users ? 'border-red-400' : 'border-gray-300'} bg-neutral-700 rounded-xl p-4`}
-                    >
-                        <Text className="text-white font-semibold text-center">
-                            + Priradiť používateľa
-                        </Text>
-                    </TouchableOpacity>
                     {errors.users && (
                         <Text className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.users}
@@ -780,10 +775,34 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                 {/* Objects Field */}
                 <View className="mb-3">
-                    <Text className="mb-2 ml-1 font-semibold text-dark-text_color">
+                    <View className="flex-row justify-between mb-2">
+                    <Text className="mt-3 ml-1 font-semibold text-dark-text_color">
                         Priradené objekty
                     </Text>
+                    {/* Assign Object Button */}
+                    <TouchableOpacity
+                        onPress={async () => {
+                          const success = await getAssignedObjects();
+                          if (success) {
+                              setShowObjectModal(true);
+                          }
+                        }}
+                          className={'border-2 bg-gray-500 rounded-xl px-4 py-2'}
+                        >
+                            <Text className="text-white font-semibold text-center">
+                                + Priradiť
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                     
+                    {selectedObjects.length === 0 && (
+                         <View className="mb-3">
+                            <Text className="text-red-400 ml-1">
+                                Nie je priradený žiadny objekt
+                            </Text>
+                        </View>
+                    )}
+
                     {/* Selected Chimneys Display */}
                     {selectedObjects.length > 0 && (
                         <View className="mb-3">
@@ -808,20 +827,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         </View>
                     )}
 
-                    {/* Assign Object Button */}
-                    <TouchableOpacity
-                        onPress={async () => {
-                            const success = await getAssignedObjects();
-                            if (success) {
-                                setShowObjectModal(true);
-                            }
-                        }}
-                        className={`border-2 ${errors.objects ? 'border-red-400' : 'border-gray-300'} bg-neutral-700 rounded-xl p-4`}
-                    >
-                        <Text className="text-white font-semibold text-center">
-                            + Priradiť objekt
-                        </Text>
-                    </TouchableOpacity>
                     {errors.objects && (
                         <Text className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.objects}
@@ -830,173 +835,103 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 </View>
             </View>
 
-            
-            {/* submit button */}
-            <View className="flex-1 mt-16 border bg-blue-600 rounded-2xl items-center py-5 mx-24">
-                <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={handleSubmit}
-                    disabled={loading}>
-                    <Text className="color-primary font-bold">
-                        {mode === "create" ? (loading ? "Vytvaram..." : "Vytvoriť projekt") : (loading ? "Upravujem..." : "Upraviť projekt")}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-        </ScrollView>
-
+            </ScrollView>
         
-            {/* User Selection Modal */}
-            <Modal
-                visible={showUserModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowUserModal(false)}
-            >
-                <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-dark-bg rounded-t-3xl h-3/4">
-                        <View className="p-6 border-b border-gray-200">
-                            <View className="flex-row items-center justify-between mb-4">
-                                <View className="flex-1">
-                                    <Text className="text-xl font-bold text-dark-text_color">Vyhľadajte používateľa</Text>
-                                    <Text className="text-sm text-gray-500">
-                                        {selectedUsers.length} vybraných
-                                    </Text>
-                                </View>
-                                <TouchableOpacity
-                                    onPress={() => setShowUserModal(false)}
-                                    className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
-                                >
-                                    <Text className="text-white">✓</Text>
-                                </TouchableOpacity>
-                            </View>
-                            <TextInput
-                                placeholder="Vyhľadať pouzivatela..."
-                                value={searchQueryUser}
-                                onChangeText={handleSearchUsers}
-                                className="bg-gray-100 rounded-xl p-4"
-                                autoFocus
-                            />
-                        </View>
 
-                        {loadingUsers ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">Vyhľadávám...</Text>
-                            </View>
-                        ) : searchQueryUser.length < 2 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-6xl mb-4">🔍</Text>
-                                <Text className="text-gray-500">Zadajte aspoň 2 znaky</Text>
-                            </View>
-                        ) : assignedUsers.length === 0 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">Žiadny používatelia neboli nájdený</Text>
-                            </View>
-                        ) : (
-                            <FlatList
-                                data={assignedUsers}
-                                keyExtractor={(item) => item.id}
-                                renderItem={({ item }) => {
-                                    const selected = isUserSelected(item.id);
-                                    return (
-                                        <TouchableOpacity
-                                            onPress={() => handleToggleUser(item)}
-                                            className={`px-6 py-4 border-b border-gray-100 ${selected ? 'bg-blue-50' : ''}`}
-                                        >
-                                            <View className="flex-row items-center justify-between">
-                                                <View className="flex-1">
-                                                    <Text className="text-base font-semibold text-gray-900">
-                                                        {item.name}
-                                                    </Text>
-                                                    {item.email && (
-                                                        <Text className="text-sm text-gray-500 mt-1">
-                                                            {item.email}
-                                                        </Text>
-                                                    )}
-                                                </View>
-                                                {selected && (
-                                                    <View className="w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
-                                                        <Text className="text-white text-xs">✓</Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                }}
-                            />
-                        )}
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Object Selection Modal */}
-            <Modal
-                visible={showObjectModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowObjectModal(false)}
-            >
-                <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-dark-bg rounded-t-3xl h-3/4">
-                        <View className="p-6 border-b border-gray-600">
-                            <View className="flex-row items-center justify-between mb-4">
-                                <View className="flex-1">
-                                    <Text className="text-xl font-bold text-dark-text_color">Vyhľadajte objekty</Text>
-                                    <Text className="text-sm text-gray-500">
-                                        {selectedObjects.length} vybraných
-                                    </Text>
-                                </View>
-                                <TouchableOpacity
-                                    onPress={() => setShowObjectModal(false)}
-                                    className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
-                                >
-                                    <Text className="text-white">✓</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                        {loadingObjects ? 
-                        (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">Vyhľadávám...</Text>
-                            </View>
-                        ) : assignedObjects.length === 0 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Text className="text-gray-500">Žiadne objekty neboli nájdene</Text>
-                            </View>
-                        ) : (
-                            <FlatList
-                                data={assignedObjects}
-                                keyExtractor={(item) => item.object.id}
-                                renderItem={({ item }) => {
-                                    const selected = isObjectSelected(item.object.id);
-                                    return (
-                                        <TouchableOpacity
-                                            onPress={() => handleToggleObject(item)}
-                                            className={`px-6 py-4 border-b border-gray-100 ${selected ? 'bg-blue-50' : ''}`}
-                                        >
-                                            <View className="flex-row items-center justify-between">
-                                                <View className="flex-1">
-                                                    
-                                                    {item.object.address && (
-                                                        <Text className="text-sm text-gray-500 mt-1">
-                                                            {item.object.address}
-                                                        </Text>
-                                                    )}
-                                                </View>
-                                                {selected && (
-                                                    <View className="w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
-                                                        <Text className="text-white text-xs">✓</Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                }}
-                            />
-                        )}
-                    </View>
-                </View>
-            </Modal>
+        {/* submit button */}
+        <View className="absolute bottom-10 left-0 right-0 items-center">
+            <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleSubmit}
+                disabled={loading}
+                className="bg-blue-600 rounded-xl py-4 items-center px-12">
+                <Text className="color-primary font-bold">
+                    {mode === "create" 
+                    ? (loading 
+                        ? "Vytvaram..." 
+                        : "Vytvoriť projekt") 
+                    : (loading 
+                        ? "Upravujem..." : "Upraviť projekt")}
+                </Text>
+            </TouchableOpacity>
         </View>
+        </KeyboardAvoidingView>
+        {/* User Selection Modal */}     
+        <UserPickerModal
+          visible={showUserModal}
+          onClose={() => setShowUserModal(false)}
+          selectedUsers={selectedUsers.map(u => u.id)}
+          onToggle={handleToggleUser}
+        />
+
+        {/* Object Selection Modal */}
+        <Modal
+            visible={showObjectModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowObjectModal(false)}
+        >
+            <View className="flex-1 bg-black/50 justify-end">
+                <View className="bg-dark-bg rounded-t-3xl h-3/4">
+                    <View className="p-6 border-b border-gray-600">
+                        <View className="flex-row items-center justify-between mb-4">
+                            <View className="flex-1">
+                                <Text className="text-xl font-bold text-dark-text_color">Vyhľadajte objekty</Text>
+                                <Text className="text-sm text-gray-500">
+                                    {selectedObjects.length} vybraných
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => setShowObjectModal(false)}
+                                className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
+                            >
+                                <Text className="text-white">✓</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    {loadingObjects ? 
+                    (
+                        <View className="flex-1 items-center justify-center">
+                            <Text className="text-gray-500">Vyhľadávám...</Text>
+                        </View>
+                    ) : assignedObjects.length === 0 ? (
+                        <View className="flex-1 items-center justify-center">
+                            <Text className="text-gray-500">Žiadne objekty neboli nájdene</Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={assignedObjects}
+                            keyExtractor={(item) => item.object.id}
+                            renderItem={({ item }) => {
+                                const selected = isObjectSelected(item.object.id);
+                                return (
+                                    <TouchableOpacity
+                                        onPress={() => handleToggleObject(item)}
+                                        className={`px-6 py-4 border-b border-gray-100 ${selected ? 'bg-blue-50' : ''}`}
+                                    >
+                                        <View className="flex-row items-center justify-between">
+                                            <View className="flex-1">
+                                                
+                                                {item.object.address && (
+                                                    <Text className="text-sm text-gray-500 mt-1">
+                                                        {item.object.address}
+                                                    </Text>
+                                                )}
+                                            </View>
+                                            {selected && (
+                                                <View className="w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
+                                                    <Text className="text-white text-xs">✓</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    )}
+                </View>
+            </View>
+        </Modal>
+    </View>
     )
 }

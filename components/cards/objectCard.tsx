@@ -15,27 +15,27 @@ export default function ObjectCard({ object, chimneys, onPress } : ObjectCardPro
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onPress}
-          className="flex-1 ml-2 py-2 px-4 bg-slate-400 rounded-lg mr-2"
+          className="flex-1 ml-2 py-2 px-4 border-t border-gray-400 mr-2"
         >
           <View className="flex-row items-center justify-between mb-1">
             {object.streetNumber && object.city &&
               <View>
-                <Text className="font-semibold text-slate-900">
-                  {object.streetNumber}, {object.city}
+                <Text className="text-dark-text_color text-sm">
+                 📍 {object.streetNumber}, {object.city}
                 </Text>
               </View>
             } 
 
             {object.address && (!object.streetNumber || !object.city) &&
               <View className="max-w-64">
-                <Text className="font-semibold text-slate-900">
-                  {object.address}
+                <Text className="text-dark-text_color text-sm">
+                  📍 {object.address}
                 </Text>
               </View>
             } 
 
             {chimneys.length > 0 && (
-              <Text className="text-slate-900 font-semibold">
+              <Text className="text-dark-text_color text-sm">
                   {chimneys.length} {chimneys.length === 1 ? "komín" : (chimneys.length > 4 ? "komínov" : "komíny")}
                 </Text>
             )}

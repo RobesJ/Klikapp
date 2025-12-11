@@ -1,6 +1,6 @@
 import { Client } from "@/types/generics";
-import { Image, Text, TouchableOpacity, View } from "react-native";
-import { icons } from "../../constants/icons";
+import { Feather } from "@expo/vector-icons";
+import { Text, TouchableOpacity, View } from "react-native";
 
 interface ClientCardProps {
     client: Client,
@@ -19,16 +19,14 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
         <TouchableOpacity
             activeOpacity={0.8}
             onPress={handlePress}
-            className="rounded-2xl mb-3 border border-dark-card-border_color p-3 bg-dark-card-bg"
+            className="rounded-2xl mb-3 border-2 border-dark-card-border_color p-3 bg-dark-card-bg"
         >   
         <View className="flex-row items-center">
             <View className="flex-row">
-                <Image
-                    source={icons.personIcon}
-                    tintColor="#d6d3d1"
-                    className="size-10"
-                />
-                <View className="flex-1 ml-5 ">
+                <View className="mt-1">
+                    <Feather name="user" size={32} color={"#d6d3d1"}/>
+                </View>
+                <View className="flex-1 ml-4 ">
                     <View>
                         <Text className="text-lg font-bold text-dark-text_color">
                             {client.name}

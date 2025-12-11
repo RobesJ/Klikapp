@@ -101,6 +101,7 @@ interface ModalSelectorProps {
   selectedValue: string;
   onSelect: (value: string) => void;
   label: string;
+  inDetailsModal: boolean;
   error?: string;
   placeholder?: string;
 }
@@ -110,6 +111,7 @@ export const ModalSelector: React.FC<ModalSelectorProps> = ({
   selectedValue,
   onSelect,
   label,
+  inDetailsModal,
   error,
   placeholder = 'Vyberte...'
 }) => {
@@ -119,37 +121,59 @@ export const ModalSelector: React.FC<ModalSelectorProps> = ({
 
   return (
     <>
-      <View className="mb-4">
-        <Text className="mb-2 ml-1 font-medium text-dark-text_color">{label}</Text>
-        <TouchableOpacity
-          onPress={() => setShowModal(true)}
-          className={`border-2 
-            ${error 
-                ? 'border-red-400' 
-                : showModal 
-                    ? 'border-blue-500'
-                    : 'border-gray-600'
-            } bg-gray-800 rounded-2xl p-3`}
-        >
-          <View className="flex-row items-center justify-between">
-            {selectedOption ? (
-              <View className={`${selectedOption.colors[1]} ${selectedOption.colors[0]} bg-opacity-20 rounded-full px-4 py-1`}>
-                <Text className={`${selectedOption.colors[0]} font-semibold`}>
-                  {selectedOption.value}
-                </Text>
-              </View>
-            ) : (
-              <Text style={{ color: '#ABABAB' }}>{placeholder}</Text>
-            )}
-            <Text className="text-gray-400">▼</Text>
-          </View>
-        </TouchableOpacity>
-        {error && (
-          <Text className="text-red-500 text-xs mt-1 ml-1">
-            {error}
-          </Text>
-        )}
-      </View>
+      {!inDetailsModal && (
+        <View className="mb-4">
+          <Text className="mb-2 ml-1 font-medium text-dark-text_color">{label}</Text>
+          <TouchableOpacity
+            onPress={() => setShowModal(true)}
+            className={`border-2 
+              ${error 
+                  ? 'border-red-400' 
+                  : showModal 
+                      ? 'border-blue-500'
+                      : 'border-gray-600'
+              } bg-gray-800 rounded-2xl p-3`}
+          >
+            <View className="flex-row items-center justify-between">
+              {selectedOption ? (
+                <View className={`${selectedOption.colors[1]} ${selectedOption.colors[0]} bg-opacity-20 rounded-full px-4 py-1`}>
+                  <Text className={`${selectedOption.colors[0]} font-semibold`}>
+                    {selectedOption.value}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ color: '#ABABAB' }}>{placeholder}</Text>
+              )}
+              <Text className="text-gray-400">▼</Text>
+            </View>
+          </TouchableOpacity>
+          {error && (
+            <Text className="text-red-500 text-xs mt-1 ml-1">
+              {error}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {inDetailsModal && (
+        <View className="p-4 items-start justify-center">
+          
+          {selectedOption && (
+            <ProjectBadge
+              value={selectedOption.value}
+              isSelected={true}
+              colors={STATE_OPTIONS.find(s => s.value === selectedOption.value)?.colors ?? ["text-white", "border-gray-500"]}
+              size = "medium"
+              onPress={() => setShowModal(true)}
+            />
+          )}
+          {error && (
+            <Text className="text-red-500 text-xs mt-1 ml-1">
+              {error}
+            </Text>
+          )}
+        </View>
+      )}
 
       {/* Selection Modal */}
       <Modal
@@ -237,11 +261,7 @@ export const STATE_OPTIONS = [
   },
   {
     value: "Naplánovaný",
-    colors: ["text-dark-project-state-naponovany", "border-2 border-dark-project-state-naponovany"],
-  },
-  {
-    value: "Aktívny", 
-    colors: ["text-dark-project-state-aktivny", "border-2 border-dark-project-state-aktivny"],
+    colors: ["text-dark-project-state-naplanovany", "border-2 border-dark-project-state-naplanovany"],
   },
   {
     value: "Prebieha", 
@@ -258,5 +278,20 @@ export const STATE_OPTIONS = [
   {
     value: "Zrušený", 
     colors: ["text-dark-project-state-zruseny", "border-2 border-dark-project-state-zruseny"]
+  }
+];
+
+export const STATE_OPTIONS_HOME = [
+  {
+    value: "Naplánovaný",
+    colors: ["text-dark-project-state-naplanovany", "border-2 border-dark-project-state-naplanovany"],
+  },
+  {
+    value: "Prebieha", 
+    colors: ["text-dark-project-state-prebieha", "border-2 border-dark-project-state-prebieha"],
+  },
+  {
+    value: "Pozastavený", 
+    colors: ["text-dark-project-state-pozastaveny", "border-2 border-dark-project-state-pozastaveny"],
   }
 ];

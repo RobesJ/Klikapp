@@ -202,6 +202,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         }
     };
 
+    
     function parseAddressComponents(components: any[]) {
         let street: string | null = null;
         let number: string | null = null;
@@ -221,7 +222,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
             if (types.includes('street_number')) {
                 number = component.long_name;
             }
-            if (types.includes('sublocality')) {
+            if (types.includes('sublocality') || types.includes('locality')) {
                 handleChange("city",component.long_name)
             }
             if (types.includes('country')) {
@@ -241,27 +242,27 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
 
     return (
         <View className="flex-1">
-            <View className="mb-32 relative">
-                <TouchableOpacity
-                  onPress={() => router.back()}
-                  className="absolute top-4 left-6 w-10 h-10 items-center justify-center z-10"
-                >
-                    <MaterialIcons name="arrow-back" size={24} color="#d6d3d1"/>
-                </TouchableOpacity>
-                <View className="absolute top-4 left-0 right-0 items-center justify-center">
-                    <Text className="font-bold text-4xl text-dark-text_color">
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "android" ? "padding" : "height"}
+              className='flex-1'
+            >
+            
+                <View className="mb-12 relative">
+                    <TouchableOpacity
+                      onPress={() => router.back()}
+                      className="absolute top-3 left-6 w-10 h-10 items-center justify-center z-10"
+                    >
+                        <MaterialIcons name="arrow-back" size={24} color="#d6d3d1"/>
+                    </TouchableOpacity>
+
+                    <Text className="font-bold text-3xl text-dark-text_color top-3 text-center">
                         {mode === "create" ? "Vytvoriť klienta" : "Upraviť klienta"}
                     </Text>
                 </View>
-            </View>
-            
-            <KeyboardAvoidingView
-            behavior={Platform.OS === "android" ? "padding" : "height"}
-            className='flex-1'
-            >
+                
             <ScrollView 
               className="flex-1"
-              contentContainerStyle={{paddingBottom: 100}}
+              contentContainerStyle={{paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100}}
             >
             {/* Form */}
             <View className="flex-1 justify-center px-10">

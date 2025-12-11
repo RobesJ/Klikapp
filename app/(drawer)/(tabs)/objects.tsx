@@ -4,10 +4,10 @@ import { useObjectStore } from '@/store/objectStore';
 import { Client } from '@/types/generics';
 import { ObjectWithRelations } from '@/types/objectSpecific';
 import { EvilIcons, Feather } from '@expo/vector-icons';
-import { useFocusEffect } from "@react-navigation/native";
-import { useRouter } from 'expo-router';
+import { DrawerActions } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Objects() {
@@ -25,6 +25,7 @@ export default function Objects() {
   } = useObjectStore();
 
   const router = useRouter();
+  const navigation = useNavigation();
 
   useFocusEffect(
     useCallback(() => {
@@ -68,14 +69,14 @@ export default function Objects() {
     return Object.values(groups);
   }, [filteredObjects]);
   
+  
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-
       {/* Header */}
       <View className="flex-2 mt-4 px-6 mb-8">
         <View className="flex-row justify-between items-center">
           <TouchableOpacity
-            onPress={() => {}}
+            onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
             activeOpacity={0.8}
             className="justify-center"
           >
@@ -84,7 +85,7 @@ export default function Objects() {
           <Text className="font-bold text-4xl text-dark-text_color ml-4">Objekty</Text>
           <Text className="text-xl text-green-500">ONLINE</Text>
         </View>
-        
+
         <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4">
           <EvilIcons name="search" size={20} color="gray" />
           <TextInput
@@ -101,7 +102,7 @@ export default function Objects() {
         data={objectsGroupedByClient}
         keyExtractor={(group) => group.client.id}
         renderItem={({ item: group }) => (
-          <View className="mb-3 bg-dark-card-bg border rounded-2xl border-dark-card-border_color">
+          <View className="mb-3 pb-4 bg-dark-card-bg border-2 rounded-2xl border-dark-card-border_color">
             {/* Section Header */}
             <View className="rounded-t-xl px-4 py-2">
               <Text className="font-bold text-lg text-dark-text_color">
@@ -112,7 +113,7 @@ export default function Objects() {
             {/* Objects List */}
             <View className="mt-2 px-2">
               {group.objects.map((item) => (
-                <View key={item.object.id} className="mb-3">
+                <View key={item.object.id} >
                   <ObjectCard
                     object={item.object}
                     chimneys={item.chimneys}
@@ -128,32 +129,31 @@ export default function Objects() {
       />
 
       <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => router.push({
-        pathname: "/addObjectScreen",
-        params: { mode: "create" }
-      })}
-      style={{
-        position: 'absolute',
-        bottom: 110,
-        right: 28,
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: '#777777',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-      }}
-    >
-      <Text 
-        className='text-white text-3xl'>
-        +
-      </Text>
+        activeOpacity={0.8}
+        onPress={() => router.push({
+          pathname: "/addObjectScreen",
+          params: { mode: "create" }
+        })}
+        style={{
+          position: 'absolute',
+          bottom: 110,
+          right: 28,
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: '#1174EE',
+          borderColor: '#FFFFFF',
+          borderWidth: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
+      >
+        <Text className='text-white text-3xl'>+</Text>
       </TouchableOpacity>
 
       <Modal
@@ -163,9 +163,9 @@ export default function Objects() {
         onRequestClose={() => setShowDetails(false)}
       >
         <View className="flex-1 bg-black/50 justify-center items-center">
-          <View className="w-3/4 bg-dark-bg rounded-2xl overflow-hidden">
+        <View className="w-10/12 h-fit bg-dark-bg border-2 border-gray-300 rounded-2xl overflow-hidden">
             {/* Header */}
-            <View className="px-4 py-6 border-b border-gray-200">
+            <View className="px-4 py-6 border-b border-gray-400">
               <View className="flex-row items-center justify-between">
                 {selectedObject?.object.city ? (
                   <View className='flex-1'>
@@ -181,9 +181,47 @@ export default function Objects() {
                     {selectedObject?.object.address}
                   </Text>
                 )}
+                <TouchableOpacity
+                  onPress={() => setShowDetails(false)}
+                  className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+                >
+                  <EvilIcons name="close" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+            </View>
+                  
+            <ScrollView className="max-h-screen-safe-offset-12 p-4">
+              {selectedObject && (
+                <ObjectDetails 
+                  object={selectedObject.object}
+                  client={selectedObject.client}
+                  chimneys={selectedObject.chimneys} />
+              )}
+            </ScrollView>
+
+            <View className="flex-row justify-between px-4 py-6 border-t border-gray-400">
                 
                 {/* Object detail card action buttons*/}
-                <View className="flex-row gap-2">
+                <TouchableOpacity
+                    onPress={() => {
+                      if(selectedObject){
+                        try{
+                          deleteObject(selectedObject?.object.id);
+                          setShowDetails(false);
+                        }
+                        catch (error){
+                          console.error("Delete failed:", error);
+                        }
+                        setSelectedObject(null);
+                      }
+                    }}
+                    activeOpacity={0.8}
+                    className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
+                >
+                  <EvilIcons name="trash" size={24} color="white" />
+                  <Text className='text-white'>Odstrániť</Text>
+                </TouchableOpacity>
+
                   <TouchableOpacity
                     onPress={() => {
                       setShowDetails(false);
@@ -197,50 +235,12 @@ export default function Objects() {
                       });
                     }}
                     activeOpacity={0.8}
-                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                  >
-                    <Feather name="edit-2" size={16} color="white" />
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    onPress={() => {
-                      if(selectedObject){
-                        try{
-                          deleteObject(selectedObject?.object.id);
-                          setShowDetails(false);
-
-                        }
-                        catch (error){
-                          console.error("Delete failed:", error);
-                        }
-                        Alert.alert("Objekt bol uspesne odstraneny");
-                        setSelectedObject(null);
-                      }
-                    }}
-                    activeOpacity={0.8}
-                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                  >
-                    <EvilIcons name="trash" size={24} color="white" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => setShowDetails(false)}
-                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                  >
-                    <EvilIcons name="close" size={24} color="white" />
-                  </TouchableOpacity>
-                </View>
-              </View>
+                    className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
+                >
+                  <Feather name="edit-2" size={16} color="white" />
+                  <Text className='text-white'>Upraviť</Text>
+                </TouchableOpacity>
             </View>
-                  
-            <ScrollView className="max-h-96 p-4">
-              {selectedObject && (
-                <ObjectDetails 
-                  object={selectedObject.object}
-                  client={selectedObject.client}
-                  chimneys={selectedObject.chimneys} />
-              )}
-            </ScrollView>
           </View>
         </View>
       </Modal>

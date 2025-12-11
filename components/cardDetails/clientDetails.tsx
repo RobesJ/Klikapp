@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { Client, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -151,56 +152,50 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
     return (
         <ScrollView className="flex-1">
             {/* Client Info */}
-            <View className="mb-2">
+            <View className="mb-3">
                 {client.email && (
                     <View className="flex-row items-center mb-2">
-                        <Text className="mr-2 text-base overflow-hidden">📧</Text>
-                        <Text className="text-dark-text_color">{client.email}</Text>
+                        <MaterialIcons name="email" size={20} color={"white"}/>
+                        <Text className="text-dark-text_color ml-2">{client.email}</Text>
                     </View>
                 )}
 
                 {client.phone && (
                     <View className="flex-row items-center mb-2">
-                        <Text className="mr-2 text-lg">📱</Text>
-                        <Text className="text-dark-text_color">{client.phone}</Text>
+                        <MaterialIcons name="phone" size={20} color={"white"}/>
+                        <Text className="text-dark-text_color ml-2 text-lg">{client.phone}</Text>
                     </View>
                 )}
 
                 {client.address && (
                     <View className="flex-row items-center mb-2">
-                        <Text className="mr-2 text-lg">📍</Text>
-                        <Text className="text-dark-text_color">{client.address}</Text>
+                        <MaterialIcons name="location-pin" size={20} color={"white"}/>
+                        <Text className="text-dark-text_color ml-2">{client.address}</Text>
                     </View>
                 )}
-                {client.type && (
-                    <View className="flex-row items-center mb-2">
-                        <Text className="mr-2 text-lg">{client.type === "Právnická osoba" ? "🏢" : "👤"}</Text>
-                        <Text className="text-dark-text_color">{client.type}</Text>
-                    </View>
-                )}
+                
                 {client.note && (
                     <View className="flex-row items-center mb-2">
-                        <Text className="mr-2 text-lg">📝</Text>
-                        <Text className="text-dark-text_color w-80">{client.note}</Text>
+                        <MaterialIcons name="notes" size={20} color={"white"}/>
+                        <Text className="text-dark-text_color w-80 ml-2">{client.note}</Text>
                     </View>
                 )}
             </View>
 
             {/* Objects Section */}
-            <View className="mb-8">
-                <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-lg font-bold text-dark-text_color">
-                    Objekty ({objectsWithRelations.length})
-                </Text>
+            <View className="mb-3">
+                <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-gray-400 mt-2">OBJEKTY ({objectsWithRelations.length})</Text>
 
                 <TouchableOpacity
                     activeOpacity={0.8}
-                    className="bg-blue-600 py-2 px-4 rounded-lg "
+                    className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg "
                     onPress={() => router.push({
                         pathname: "/addObjectScreen",
                         params: { mode: "create", preselectedClient: JSON.stringify(client) }
                     })}>
-                    <Text className="text-white text-center font-semibold">Pridať objekt</Text>
+                    <Text className="text-white text-center font-semibold">+</Text>
+                    <Text className="text-white text-center font-semibold">Pridať</Text>
                 </TouchableOpacity>
                 </View>
 
@@ -233,7 +228,7 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
                                     {item.object.streetNumber}, {item.object.city}
                                 </Text> 
                             )}
-                            <Text className="text-sm text-dark-text_color mt-1">
+                            <Text className="text-sm text-dark-text_color">
                                 Komíny: {item.chimneys.length}
                             </Text>
                         </TouchableOpacity>
@@ -242,19 +237,19 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
             </View>
 
             {/* Projects Section */}
-            <View className="mb-4 pb-4">
-                <View className="flex-row items-center justify-between mb-4">
-                    <Text className="text-lg font-bold text-dark-text_color">
-                        Projekty ({projectsWithRelations.length})
-                    </Text>
+            <View className="mb-3">
+                <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-gray-400 mt-2">PROJEKTY ({projectsWithRelations.length})</Text>
+                        
                     <TouchableOpacity
                         activeOpacity={0.8}
-                        className="bg-blue-600 py-2 px-4 rounded-lg"
+                        className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg"
                         onPress={() => router.push({
                             pathname: "/addProjectScreen",
                             params: { mode: "create", preselectedClient: JSON.stringify(client) }
                         })}>
-                        <Text className="text-white text-center font-semibold">Pridať projekt</Text>
+                        <Text className="text-white text-center font-semibold">+</Text>
+                        <Text className="text-white text-center font-semibold">Pridať</Text>
                     </TouchableOpacity>
                 </View>
                 {projectsWithRelations.length === 0 ? (
@@ -275,11 +270,6 @@ export default function ClientDetails({client} : ClientCardDetailsProps) {
                             >
                             <Text className="font-semibold text-dark-text_color">{item.project.type}</Text>
                             <Text className="text-sm text-dark-text_color">{item.project.state}</Text>
-                            {/*item.project.scheduled_date && (
-                                <Text className="text-xs text-gray-500 mt-1">
-                                    {new Date(item.project.scheduled_date).toLocaleDateString()}
-                                </Text>
-                            )*/}
                         </TouchableOpacity>
                     ))
                 )}

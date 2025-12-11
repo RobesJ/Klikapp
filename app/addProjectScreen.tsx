@@ -2,7 +2,6 @@ import ProjectForm from '@/components/forms/projectForm';
 import { useProjectStore } from "@/store/projectStore";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -26,17 +25,12 @@ export default function AddProjectScreen() {
 
   return (
     <SafeAreaView className= "flex-1 bg-dark-bg">
-        <KeyboardAvoidingView
-            behavior={Platform.OS === "android" ? "padding" : "height"}
-            className='flex-1'
-        >
-          <ProjectForm
-            mode={(mode as "create" | "edit") || "create"}
-            initialData={parsedProject}
-            onSuccess={handleSuccess}
-            preselectedClient={parsedClient}
-          />
-      </KeyboardAvoidingView>
+      <ProjectForm
+        mode={(mode as "create" | "edit") || "create"}
+        initialData={parsedProject}
+        onSuccess={handleSuccess}
+        preselectedClient={parsedClient}
+      />
     </SafeAreaView>
   );
 }

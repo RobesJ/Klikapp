@@ -3,10 +3,10 @@ import ClientCard from "@/components/cards/clientCard";
 import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
 import { EvilIcons, Feather } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { DrawerActions, useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useRouter } from "expo-router";
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Clients() {
@@ -23,7 +23,7 @@ export default function Clients() {
   } = useClientStore();
 
   const router = useRouter();
-
+  const navigation = useNavigation();
   useFocusEffect(
     useCallback(() => {
       fetchClients(100);
@@ -50,7 +50,7 @@ export default function Clients() {
       <View className="flex-2 mt-4 px-6 mb-8 ">
         <View className="flex-row justify-between items-center">
           <TouchableOpacity
-            onPress={() => {}}
+            onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
             activeOpacity={0.8}
             className="justify-center"
           >
@@ -106,22 +106,24 @@ export default function Clients() {
         activeOpacity={0.8}
         style={{
           position: 'absolute',
-          bottom: 100,
-          right: 20,
+          bottom: 110,
+          right: 28,
           width: 64,
           height: 64,
           borderRadius: 32,
-          backgroundColor: '#3182ce',
+          backgroundColor: '#1174EE',
+          borderColor: '#FFFFFF',
+          borderWidth: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          shadowColor: '#FFF',
+          shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,
           elevation: 8,
         }}
       >
-        <Text className="text-dark-text_color text-4xl">+</Text>
+        <Text className='text-white text-3xl'>+</Text>
       </TouchableOpacity>
       
 
@@ -133,64 +135,25 @@ export default function Clients() {
         onRequestClose={()=> setShowDetails(false)}
         >
           <View className="flex-1 bg-black/50 justify-center items-center">
-            <View className="w-3/4 bg-dark-bg rounded-2xl overflow-hidden">
+            <View className="w-10/12 h-fit bg-dark-bg border-2 border-gray-300 rounded-2xl overflow-hidden">
               {/* header */}
-              <View className="px-4 py-6 border-b border-gray-200">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold text-dark-text_color">{selectedClient?.name}</Text>
-
-                  {/* Edit selected client */}
-                  <View className="flex-row gap-2">
-                    <TouchableOpacity
-                        onPress={() => {
-                          setShowDetails(false);
-                          router.push({
-                          pathname: "/addClientScreen",
-                          params: { 
-                            client: JSON.stringify(selectedClient),
-                            mode: "edit" 
-                          }
-                        });
-                      }}
-                        activeOpacity={0.8}
-                        className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                    >
-                        <Feather name="edit-2" size={16} color="white" />
-                    </TouchableOpacity>
-
-                    {/* Delete selected client */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        if(selectedClient){
-                          try{
-                            deleteClient(selectedClient?.id);
-                            setShowDetails(false);
-
-                          }
-                          catch (error){
-                            console.error("Delete failed:", error);
-                          }
-                          Alert.alert("Klient bol uspesne odstraneny");
-                          setSelectedClient(null);
-                        }
-                      }}
-                      activeOpacity={0.8}
-                      className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                    >
-                      <EvilIcons name="trash" size={24} color="white" />
-
-                    </TouchableOpacity>
-                    
-                    {/* Close details modal */}
-                    <TouchableOpacity
-                        onPress={() => setShowDetails(false)}
-                        className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                    >
-                        <EvilIcons name="close" size={24} color="white" />
-                    </TouchableOpacity>
+              
+              <View className="px-4 py-6 border-b border-gray-400">
+                <View className="flex-row items-center justify-between">
+                  <View>
+                    <Text className="text-xl font-bold text-dark-text_color">{selectedClient?.name}</Text>   
+                    <Text className="text-sm text-dark-text_color">{selectedClient?.type}</Text>
                   </View>
+                  {/* Close details modal */}
+                  <TouchableOpacity
+                      onPress={() => setShowDetails(false)}
+                      className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+                  >
+                      <EvilIcons name="close" size={24} color="white" />
+                  </TouchableOpacity>
+                </View>
               </View>
-          </View> 
+              
 
           {/* Details Card */}
           <ScrollView className="max-h-screen-safe-offset-12 p-4">
@@ -198,10 +161,52 @@ export default function Clients() {
               <ClientDetails client={selectedClient} />
             )}
           </ScrollView>
+
+          {/* FOOTER */}  
+          <View className="flex-row justify-between px-4 py-6 border-t border-gray-400">
+            {/* Delete selected client */}
+            <TouchableOpacity
+              onPress={() => {
+                if(selectedClient){
+                  try{
+                    deleteClient(selectedClient?.id);
+                    setShowDetails(false);
+                  }
+                  catch (error){
+                    console.error("Delete failed:", error);
+                  }
+                  setSelectedClient(null);
+                }
+              }}
+              activeOpacity={0.8}
+              className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
+            >
+              <EvilIcons name="trash" size={24} color="white" />
+              <Text className='text-white'>Odstrániť</Text>
+            </TouchableOpacity>
+                    
+            {/* Edit selected client */}     
+            <TouchableOpacity
+                onPress={() => {
+                  setShowDetails(false);
+                  router.push({
+                  pathname: "/addClientScreen",
+                  params: { 
+                    client: JSON.stringify(selectedClient),
+                    mode: "edit" 
+                  }
+                });
+              }}
+                activeOpacity={0.8}
+                className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
+              >
+                <Feather name="edit-2" size={16} color="white" />
+                <Text className='text-white'>Upraviť</Text>
+              </TouchableOpacity>   
+            </View>
         </View>
-        </View>
+        </View> 
       </Modal>
-      
     </SafeAreaView>
   );
 }

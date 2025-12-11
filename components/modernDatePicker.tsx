@@ -18,7 +18,7 @@ LocaleConfig.defaultLocale = 'sk';
 
 interface ModernDatePickerProps {
   value: Date | null;
-  onChange: (date: Date) => void;
+  onChange: (date: Date | null) => void;
   error?: string;
 }
 
@@ -57,7 +57,10 @@ export default function ModernDatePicker({
 
   const handleDayPress = (day: any) => {
     const selectedDate = new Date(day.year, day.month - 1, day.day);
-    onChange(selectedDate);
+    const isSameAsCurrent =
+      value && selectedDate.toDateString() === value.toDateString();
+
+    onChange(isSameAsCurrent ? null : selectedDate);
     setShow(false);
   };
 
@@ -121,13 +124,17 @@ export default function ModernDatePicker({
                 current={formatDateForCalendar(value)}
                 firstDay={1}
                 onDayPress={handleDayPress}
-                markedDates={{
-                  [formatDateForCalendar(value)]: {
-                    selected: true,
-                    selectedColor: '#2563EB',
-                    selectedTextColor: '#FFFFFF'
-                  }
-                }}
+                markedDates={
+                  value
+                    ? {
+                        [formatDateForCalendar(value)]: {
+                          selected: true,
+                          selectedColor: '#2563EB',
+                          selectedTextColor: '#FFFFFF'
+                        }
+                      }
+                    : undefined
+                }
                 theme={{
                   backgroundColor: '#ffffff',
                   calendarBackground: '#ffffff',

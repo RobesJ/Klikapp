@@ -29,11 +29,11 @@ module.exports = {
           project:{
             state: {
               novy: "#38bdf8",
-              aktivny: "#22c55e",
+              naplanovany: "#22c55e",
               prebieha: "#f59e0b",
               pozastaveny: "#ef4444",
               ukonceny: "#a855f7",
-              zruseny: "#a855f7"
+              zruseny: "#ef4444"
             },
             type: {
               obhliadka: "#22c55e",
