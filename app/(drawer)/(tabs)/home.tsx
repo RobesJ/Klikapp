@@ -45,15 +45,11 @@ export default function Home() {
   } = useProjectStore();
 
   useEffect(() => {
-    async function initApp() {
-      await fetchActiveProjects();
-      
-      setAppReady(true);
-
+      //setAppReady(true);
+      fetchActiveProjects();
       setTimeout(() => {
         loadRemamianinData();
       }, 500);
-    }
 
     async function loadRemamianinData() {
       await Promise.all([
@@ -63,8 +59,6 @@ export default function Home() {
         fetchPlannedProjects()
       ]);
     }
-
-    initApp();
   }, []);
   
   useFocusEffect(
@@ -164,7 +158,7 @@ export default function Home() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-      {appReady && (
+      {/*appReady && (*/}
         <View className='flex-1'>       
           {/* Header */}   
           <View className="flex-2 mt-4 mx-4 mb-8">
@@ -291,7 +285,6 @@ export default function Home() {
             scrollEnabled={true}
           />
         </View>
-      )}
 
       {/* Project details modal */}
       <Modal

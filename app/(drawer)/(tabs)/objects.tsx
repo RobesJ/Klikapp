@@ -5,8 +5,8 @@ import { Client } from '@/types/generics';
 import { ObjectWithRelations } from '@/types/objectSpecific';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
-import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,7 +20,7 @@ export default function Objects() {
     loadMore,
     fetchObjects,
     setFilters,
-    filters,
+    //filters,
     deleteObject,
     filteredObjects
   } = useObjectStore();
@@ -28,11 +28,11 @@ export default function Objects() {
   const router = useRouter();
   const navigation = useNavigation();
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchObjects(50);
-    }, [])
-  );
+  //useFocusEffect(
+  //  useCallback(() => {
+  //    fetchObjects(50);
+  //  }, [])
+  //);
  
   const handleModalVisibility = (objectData: ObjectWithRelations, value: boolean) =>{
     setShowDetails(value);
@@ -91,7 +91,7 @@ export default function Objects() {
           <EvilIcons name="search" size={20} color="gray" />
           <TextInput
             className="flex-1 ml-2 text-dark-text_color"
-            placeholder='Vyhladajte klienta...'
+            placeholder='Vyhladajte klienta alebo mesto...'
             placeholderTextColor="#9CA3AF"
             value={searchText}
             onChangeText={handleSearchText}
@@ -128,6 +128,7 @@ export default function Objects() {
         )}
         contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
         onEndReached={loadMore}
+        //onRefresh={handleRefresh}
       />
 
       <TouchableOpacity

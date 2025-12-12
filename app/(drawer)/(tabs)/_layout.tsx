@@ -81,6 +81,7 @@ const _Layout = () => {
                 name="clients"
                 options={{
                     title: "Klienti",
+                    lazy: true,
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -95,6 +96,7 @@ const _Layout = () => {
                 name="objects"
                 options={{
                     title: "Objekty",
+                    lazy: true,
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -109,6 +111,7 @@ const _Layout = () => {
                 name="projects"
                 options={{
                     title: "Projekty",
+                    lazy: true,
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -124,6 +127,7 @@ const _Layout = () => {
                 name="planning"
                 options={{
                     title: "Planovanie",
+                    lazy: true,
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 

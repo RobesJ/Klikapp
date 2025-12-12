@@ -73,8 +73,9 @@ interface ProjectStore {
   deleteProject: (id: string) => Promise<void>;
 
   // Planning functions
-  assignProjectToDate: (projectId: string, date: Date) => Promise<void>; 
-  unassignProject: (projectId: string) => Promise<void>;                 
+  assignProjectToDate: (projectId: string, date: Date) => void; 
+  unassignProject: (projectId: string) => Promise<void>;   
+  changeStateOfAssignedProject: (projectId: string, date: Date) => Promise<void>; 
 }
 
 const initialFilters: ProjectFilters = {
@@ -344,10 +345,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         )
       );
     }
-    //if (results.length <  30){
-    //  const amountToFetch = 30 - results.length;
-    //  get().applySmartFilters(filters, amountToFetch);
-    //}
     return results;
   },
   
@@ -492,7 +489,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
   },
 
-  getAssignedProjects: (date: Date) => {
+  getAssignedProjects(date: Date) {
     const {projects, metadata} = get();
     const dateString = format(date, "yyyy-MM-dd");
     
@@ -500,25 +497,27 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                     ? format(addDays(parseISO(metadata.planned.dateRange.start), 15),"yyyy-MM-dd") 
                     : null;
     if(midpoint && dateString >= midpoint){
-      get().fetchPlannedProjects();
+      //fetchPlannedProjects();
+      console.log("Fetching planned projects");
     }
     return Array.from(projects.values()).filter(p =>
-      p.project.state === "Naplánovaný" &&
+      p?.project?.state === "Naplánovaný" &&
       p.project.start_date === dateString
     );
   },
 
-  getUnassignedProjects: (date: Date) => {
-    const {projects} = get();
+  getUnassignedProjects(date: Date)  {
+    const { projects } = get();
     const futureDate = format(addDays(date, 30), "yyyy-MM-dd");
 
-    const unassignedProjects =  Array.from(projects.values()).filter(p =>
-      p.project.state === "Nový" &&
-      p.project.scheduled_date &&
-      p.project.scheduled_date <= futureDate 
-    ).sort((a,b) =>
-      (a.project.scheduled_date || "").localeCompare(b.project.scheduled_date || "")
-    );
+    const unassignedProjects =  Array.from(projects.values()).filter(p => 
+        p?.project?.state === "Nový" &&
+        p.project.scheduled_date &&
+        p.project.scheduled_date <= futureDate 
+      )
+      .sort((a,b) =>
+        (a.project.scheduled_date || "").localeCompare(b.project.scheduled_date || "")
+      );
     return unassignedProjects;
   },
 
@@ -677,27 +676,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   // ======== PLANNING FUNCTIONS ========
-  assignProjectToDate: async(projectId: string, date: Date) => {
+  assignProjectToDate: (projectId: string, date: Date) => {
     try{
       const dateStr = format(date, 'yyyy-MM-dd');
-      const today = new Date();
-      let newState;
-
-      if(isBefore(date, today)){
-        newState = "Prebieha"
-      }
-      else{
-        newState= "Naplánovaný"
-      }
-
-      const {error} = await supabase
-        .from("projects")
-        .update({
-          state: newState,
-          start_date: dateStr
-        })
-        .eq("id", projectId);
-      if(error) throw error;
       
       const project = get().projects.get(projectId);
       if (project) {
@@ -705,7 +686,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           ...project,
           project: {
             ...project.project,
-            state: newState,
+            state: "Naplánovaný",
             start_date: dateStr
           }
         };
@@ -751,7 +732,55 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       throw error;
     }
   },
-}));
+
+    changeStateOfAssignedProject: async(projectId: string, date: Date) => {
+      try{
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const today = new Date();
+        
+        const project = get().projects.get(projectId);
+        if(isBefore(date, today)){
+          const {error} = await supabase
+            .from("projects")
+            .update({
+              state: "Prebieha",
+              start_date: dateStr
+            })
+            .eq("id", projectId);
+          if(error) throw error;
+          
+          if (project) {
+            const updated = {
+              ...project,
+              project: {
+                ...project.project,
+                state: "Prebieha",
+                start_date: dateStr
+              }
+            };
+            console.log('Updated project in store:', updated.project.start_date);
+            get().updateProject(projectId, updated);
+          }
+        }
+        else{
+          const {error} = await supabase
+            .from("projects")
+            .update({
+              state: "Naplánovaný",
+              start_date: dateStr
+            })
+            .eq("id", projectId);
+          if(error) throw error;
+          console.log('Updated project in store:');
+        }
+      }
+      catch(error: any){
+        console.error("Error assigning project:", error);
+        throw error;
+      }
+    },
+  }
+));
 
 function transformProjects(data: any): ProjectWithRelations[]{
   const projectWithRelations: ProjectWithRelations[] = data

@@ -420,7 +420,7 @@ export default function ProjectDetails({
         .from('projects')
         .update({ 
           state: newState,
-          completion_date: completionDate 
+          //completion_date: completionDate 
         })
         .eq('id', project.id);
 
@@ -466,7 +466,7 @@ export default function ProjectDetails({
       }
       // Update store
       updateProject(project.id, {
-        project: { ...project, state: newState, completion_date: completionDate },
+        project: { ...project, state: newState}, //completion_date: completionDate },
         client,
         users,
         objects

@@ -48,13 +48,16 @@ export default function Planning() {
   const {
     backgroundLoading,
     availableUsers,
-    projects,
+    //projects,
     clearFilters,
+    //fetchPlannedProjects,
+    assignProjectToDate,
     getAssignedProjects,
     getUnassignedProjects,
-    assignProjectToDate,
+    changeStateOfAssignedProject,
     unassignProject
   } = useProjectStore();
+
   const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const selectedDateRef = useRef(selectedDate);
@@ -62,7 +65,9 @@ export default function Planning() {
   const [showFilterModalAssigned,  setShowFilterModalAssigned] = useState(false);
   const [showFilterModalUnassigned,  setShowFilterModalUnassigned] = useState(false);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
-  
+  const [currentAssingments, setCurrentAssingments] = useState<Record<string, Date>>({});
+  const currentAssingmentsRef = useRef(currentAssingments);
+
   const [filtersUnassigned, setFiltersUnassigned] = useState<ProjectFilters>({
     type: [],
     state: [],
@@ -88,11 +93,22 @@ export default function Planning() {
   useFocusEffect(
     useCallback(() => {
       return () => {
+        const assignments = currentAssingmentsRef.current;
+  
+        if (Object.keys(assignments).length > 0) {
+          Promise.all(
+            Object.entries(assignments).map(async ([projectId, assignedDate]) => {
+              await changeStateOfAssignedProject(projectId, assignedDate);
+            })
+          );
+          currentAssingmentsRef.current = {};
+        }
+  
         clearFilters();
         clearFiltersUnassigned();
         clearFiltersAssigned();
-      }
-    }, [clearFilters])
+      };
+    }, [changeStateOfAssignedProject])
   );
   
   useEffect(() => {
@@ -103,10 +119,10 @@ export default function Planning() {
         if(ob.object.city){
           citiesSet.add(ob.object.city);
         }
-      })
+      });
     });
     setAvailableCities(Array.from(citiesSet).sort());
-  }, [selectedDate, getUnassignedProjects]);
+  }, [selectedDate]);
   
   const toggleTypeFilterAssigned = (type: string) => {
     setFiltersAssigned(prev => ({
@@ -116,6 +132,7 @@ export default function Planning() {
         : [...prev.type, type]
     }));
   };
+
 
   const toggleTypeFilterUnassigned = (type: string) => {
     setFiltersUnassigned(prev => ({
@@ -270,15 +287,18 @@ export default function Planning() {
       onToggle: toggleUserFilterAssigned,
     },
   ];
-
   
+  const assignedRaw = getAssignedProjects(selectedDate);
+
   const assignedProjects = useMemo(() => {
-    return applyFilters(getAssignedProjects(selectedDate), filtersAssigned);
-  }, [selectedDate, filtersAssigned, projects, getAssignedProjects]);
+    return applyFilters(assignedRaw, filtersAssigned);
+  }, [assignedRaw, filtersAssigned]);
+
+  const unassignedRaw = getUnassignedProjects(selectedDate);
 
   const unassignedProjects = useMemo(() => {
-    return applyFilters(getUnassignedProjects(selectedDate), filtersUnassigned);
-  }, [selectedDate, filtersUnassigned, projects, getUnassignedProjects]);
+    return applyFilters(unassignedRaw, filtersUnassigned);
+  }, [selectedDate, filtersUnassigned]);
   
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
@@ -287,7 +307,16 @@ export default function Planning() {
   const handleAssignProject = async (projectId: string) => {
     try{
       const dateToAssign = selectedDateRef.current;
-      await assignProjectToDate(projectId, dateToAssign);
+      assignProjectToDate(projectId, dateToAssign);
+      console.log("setting current assignment with projectID", projectId);
+      currentAssingmentsRef.current = {
+        ...currentAssingmentsRef.current,
+        [projectId]: dateToAssign
+      };
+      //setCurrentAssingments(prev => ({
+      //  ...prev,
+      //  [projectId]: dateToAssign
+      //}));
       Vibration.vibrate(50);
     }
     catch(error: any){
@@ -299,6 +328,12 @@ export default function Planning() {
   const handleUnassignProject = async (projectId: string) => {
     try{
       await unassignProject(projectId);
+      delete currentAssingmentsRef.current[projectId];
+      //setCurrentAssingments(prev => {
+      //  const copy = {...prev};
+      //  delete copy[projectId];
+      //  return copy;
+      //});
       getAssignedProjects(selectedDate);
       getUnassignedProjects(selectedDate);
       Vibration.vibrate(50);

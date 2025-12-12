@@ -2,7 +2,6 @@ import { supabase } from '@/lib/supabase';
 import { Client } from '@/types/generics';
 import { Alert } from 'react-native';
 import { create } from 'zustand';
-import { useObjectStore } from './objectStore';
 
 interface ClientFilters {
   searchQuery: string;
@@ -15,9 +14,11 @@ interface ClientStore {
   
   loading: boolean;
   lastFetch: number;
+  hasMore: boolean;
   pageSize: number;
   offset: number;
   error: string | null;
+  success: string | null;
   
   fetchClients: (limit: number) => Promise<void>;
   setFilters: (filters: Partial<ClientFilters>) => void;
@@ -29,7 +30,7 @@ interface ClientStore {
   loadMore: () => Promise<void>;
 }
 
-const CACHE_DURATION = 30000; // 30 seconds
+const CACHE_DURATION = 300000; // 5 min
 
 const initialFilters: ClientFilters = {
   searchQuery: '',
@@ -41,10 +42,12 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   filteredClients: [],
   filters: initialFilters,
   loading: false,
+  hasMore: true,
   lastFetch: 0,
   error: null,
   pageSize: 30,
   offset: 0,
+  success: null,
 
   fetchClients: async (limit = 50) => {
     const { clients, lastFetch, loading } = get();
@@ -64,7 +67,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     try {
       console.log('Fetching clients from database...');
       
-      const { data: clientsData, error: clientsError } = await supabase
+      const { data: clientsData, error: clientsError} = await supabase
         .from("clients")
         .select(`
             *,
@@ -82,13 +85,15 @@ export const useClientStore = create<ClientStore>((set, get) => ({
           objectsCount: item.objects[0]?.count || 0
       }));
       
+      const hasMoreLoc = (clients.length < limit) ? false : true; 
       set({ 
         clients: clients,
         lastFetch: now,
-        loading: false 
+        offset: clients.length,
+        loading: false, 
+        hasMore: hasMoreLoc
       });
       
-      get().applyFilters();
       console.log(`Fetched ${clients.length} clients`);
     } 
     catch (error: any) {
@@ -109,7 +114,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     get().applyFilters();
   },
 
-  
+
   applyFilters: () => {
     const { clients, filters } = get();
     let filtered = [...clients];
@@ -123,16 +128,16 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     }
 
     set({ filteredClients: filtered });
-    console.log(` Filtered: ${filtered.length}/${clients.length} clients`);
+    console.log(`Filtered: ${filtered.length}/${clients.length} clients`);
   },
 
   loadMore: async () => {
-    const {offset, pageSize, loading } = get();
+    const {clients, offset, pageSize, loading, hasMore } = get();
 
-    if (loading) {
+    if (loading || !hasMore) {
       return;
     }
-
+    console.log("Fetching more clients...");
     set({ loading: true });
     try{
       const { data: clientsData, error: clientsError } = await supabase
@@ -147,14 +152,14 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
       if (clientsError) throw clientsError;
           
-      const clients: Client[] = clientsData.map(item => ({
+      const nextClients: Client[] = clientsData.map(item => ({
         ...item,
         projectsCount: item.projects[0]?.count || 0,
         objectsCount: item.objects[0]?.count || 0
       }));
 
       set({ 
-        clients: clients,
+        clients: [...clients, ...nextClients],
         offset: offset + pageSize,
         loading: false 
       });
@@ -171,9 +176,8 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   addClient: (client) => {
     set((state) => ({
       clients: [client, ...state.clients],
-      offset: 50
+      offset: state.offset + 1,
     }));
-    get().applyFilters();
   },
 
   updateClient: (id, updatedClient) => {
@@ -182,7 +186,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         client.id === id ? updatedClient : client
       )
     }));
-    get().applyFilters();
   },
 
   deleteClient: async (id: string) => {
@@ -199,7 +202,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
             set((state) => ({
               clients: state.clients.filter(client => client.id !== id)
             }));    
-            get().applyFilters();
 
             try{
               const { data, error} = await supabase
@@ -212,14 +214,17 @@ export const useClientStore = create<ClientStore>((set, get) => ({
               if (data){
                 console.log("Client was deleted successfuly");
               }
-              useObjectStore.getState().lastFetch = 0;
-              Alert.alert('Úspech', 'Klient bol odstránený');
+              //useObjectStore.getState().lastFetch = 0;
+              set({
+                success: "Klient bol úspešne odstránený"
+              });
             }
             catch(error){
               console.error("error deleting client:",error);
-              Alert.alert('Chyba', 'Nepodarilo sa odstrániť klienta');
-              set({clients: previousClients});
-              get().applyFilters();
+              set({
+                clients: previousClients,
+                error: "Nepodarilo sa odstrániť klienta"
+              });
               throw error;
             }
           }

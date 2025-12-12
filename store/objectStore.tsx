@@ -2,11 +2,8 @@ import { supabase } from '@/lib/supabase';
 import { Chimney, ObjectWithRelations } from '@/types/objectSpecific';
 import { Alert } from 'react-native';
 import { create } from 'zustand';
-import { useClientStore } from './clientStore';
 
 interface ObjectFilters {
-  city: string | null;
-  clientId: string | null;
   searchQuery: string;
 }
 
@@ -16,7 +13,6 @@ interface ObjectStore {
   filters: ObjectFilters;
   
   loading: boolean;
-  initial_loading: boolean;
   lastFetch: number;
   offset: number;
   pageSize: number;
@@ -32,11 +28,9 @@ interface ObjectStore {
   loadMore: () => void;
 }
 
-const CACHE_DURATION = 30000; // 30 seconds
+const CACHE_DURATION = 300000; // 5 min
 
 const initialFilters: ObjectFilters = {
-  city: null,
-  clientId: null,
   searchQuery: '',
 };
 
@@ -46,7 +40,6 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   filteredObjects: [],
   filters: initialFilters,
   loading: false,
-  initial_loading: true,
   lastFetch: 0,
   offset: 0,
   pageSize: 30,
@@ -107,12 +100,11 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         objects: objectWithRelations,
         lastFetch: now,
         loading: false,
-        offset: limit,
-        initial_loading: false 
+        offset: objectWithRelations.length
       });
 
-      get().applyFilters();
-      console.log(` Fetched ${objectWithRelations.length} objects`);
+      //get().applyFilters();
+      console.log(`Fetched ${objectWithRelations.length} objects`);
     } catch (error: any) {
       console.error('Error fetching objects:', error.message);
       set({ error: error.message, loading: false });
@@ -128,7 +120,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
 
   clearFilters: () => {
     set({ filters: initialFilters });
-    get().applyFilters();
+    //get().applyFilters();
   },
 
   applyFilters: () => {
@@ -136,13 +128,9 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     
     let filtered = [...objects];
 
-    if (filters.city) {
-      filtered = filtered.filter(o => o.object.city === filters.city);
-    }
-
-    if (filters.clientId) {
-      filtered = filtered.filter(o => o.object.client_id === filters.clientId);
-    }
+    //if (filters.city) {
+    //  filtered = filtered.filter(o => o.object.city === filters.city);
+    //}
 
     if (filters.searchQuery.trim()) {
       const query = filters.searchQuery.toLowerCase();
@@ -220,9 +208,10 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     }
 
     set((state) => ({
-      objects: [object, ...state.objects]
+      objects: [object, ...state.objects],
+      offset: state.offset +1
     }));
-    get().applyFilters();
+    //get().applyFilters();
   },
 
   updateObject: (id: string, updatedObject) => {
@@ -231,7 +220,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         o.object.id === id ? updatedObject : o
       )
     }));
-    get().applyFilters();
+    //get().applyFilters();
   },
 
   deleteObject: async (id: string) => {
@@ -248,7 +237,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
             set((state) => ({
               objects: state.objects.filter(o => o.object.id !== id)
             }));
-            get().applyFilters();
+            //get().applyFilters();
           
             try{
               const { data, error } = await supabase
@@ -262,7 +251,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
                 console.log("Deleted object with id:", id);
               }
             
-              useClientStore.getState().lastFetch = 0;
+              //useClientStore.getState().lastFetch = 0;
               //useProjectStore.getState().lastFetch = 0;
               Alert.alert('Úspech', 'Objekt bol odstránený');
             }
@@ -270,7 +259,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
               console.error("Chyba pri mazani objektu:", error);
               Alert.alert('Chyba', 'Nepodarilo sa odstrániť objekt');
               set({objects:previousObjects});
-              get().applyFilters();
+              //get().applyFilters();
               throw error;
             }
           }
