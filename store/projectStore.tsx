@@ -17,22 +17,21 @@ export interface ProjectFilters {
 }
 
 interface ProjectsMetadata {
-  active: {
-    allLoaded: boolean,
-    lastFetch: number,
-    count: number
+  filtered: {
+    offset: number;
+    hasMore: boolean;
   },
   planned: {
-    allLoaded: boolean,
     lastFetch: number,
     dateRange: {start: string, end: string} | null,
     futureDate: string,
     count: number,
   },
   projects: {
-    currentOffset: number;
+    //currentOffset: number;
     hasMore: boolean;
-    totalCount: number | null;
+    totalCount: number;
+    futureDate: string;
   }
 }
 
@@ -93,22 +92,20 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Initial state
   projects: new Map(),
   metadata: {
-    active: {
-      allLoaded: false,
-      lastFetch: 0,
-      count: 0
+    filtered: {
+      offset: 0,
+      hasMore: true
     },
     planned: {
-      allLoaded: false,
       lastFetch: 0,
       dateRange: null,
-      futureDate: format(new Date(), "yyyy-MM-dd"),
+      futureDate: format(addDays(new Date(),30), "yyyy-MM-dd"),
       count: 0
     },
     projects: {
-      currentOffset: 0,
       hasMore: true,
-      totalCount: null
+      totalCount: 0,
+      futureDate: format(addDays(new Date(),30), "yyyy-MM-dd")
     }
   },
 
@@ -120,13 +117,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   // ======== FETCHING FUNCTIONS ========
 
-  // Fetch all the projects that has state "Aktivny" | "Prebieha" | "Pozastaveny" ("should be less then 100")
+  // Fetch all the projects that has state "Naplanovany dnes" | "Prebieha" | "Pozastaveny" ("should be less then 100")
   // this function is called during initial loading
   fetchActiveProjects: async() => {
-    const {metadata} = get();
-    const now = Date.now();
+    const {initialLoading} = get();
+    const today = format(new Date(), "yyyy-MM-dd");
 
-    if (metadata.active.allLoaded && (now - metadata.active.lastFetch) < CACHE_DURATION){
+    if (initialLoading){
       console.log("Using cached active projects");
       return;
     }
@@ -137,7 +134,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     });
 
     try {
-      const { data, error, count } = await supabase
+      const { data, error} = await supabase
         .from("projects")
         .select(`
           *,
@@ -162,31 +159,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               )
             )
           )
-        `, {count: "exact"})
-        .in("state", ["Naplánovaný", "Prebieha", "Pozastavený"])
+        `)
+        .or(`state.eq.Prebieha,state.eq.Pozastavený,and(state.eq.Naplánovaný,start_date.eq.${today})`)
         .order("created_at", {ascending: false});
         
         if (error) throw error;
 
-        
         const transformedProjects = transformProjects(data || []);
         const projectsMap = new Map(get().projects);
-        //console.log(transformedProjects);
-        transformedProjects.forEach(p => projectsMap.set(p.project.id, p));
 
+        transformedProjects.forEach(p => projectsMap.set(p.project.id, p));
+        
         set({
           projects: projectsMap,
-          metadata: {
-            ...get().metadata,
-            active: {
-              allLoaded: true,
-              lastFetch: now,
-              count: count || 0
-            }
-          },
           initialLoading: false,
         });
-        console.log(`Loaded ${transformedProjects.length} active projects`);
+        console.log(`Fetched ${transformedProjects.length} active projects`);
     }
     catch (error: any){
       console.error('Error fetching active projects:', error);
@@ -200,11 +188,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Fetch all the projects that has state "Novy" | "Naplanovany"
   // This function is called during background loading
   fetchPlannedProjects: async() => {
-    const {metadata} = get();
+    const {metadata, backgroundLoading} = get();
     const now = Date.now();
     const today = format(new Date(), "yyyy-MM-dd");
 
-    if (metadata.planned.allLoaded && (now - metadata.planned.lastFetch) < CACHE_DURATION){
+    if (backgroundLoading && (now - metadata.planned.lastFetch) < CACHE_DURATION){
       if(metadata.planned.dateRange){
         const rangeStart = metadata.planned.dateRange.start;
         const midpoint = format(addDays(parseISO(rangeStart),15), "yyyy-MM-dd");
@@ -222,8 +210,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     });
 
     try {
-      const today      = format(new Date(), "yyyy-MM-dd");
-      const futureDate = format(addDays(new Date(),30), "yyyy-MM-dd");
+      // const futureDate = format(addDays(new Date(),30), "yyyy-MM-dd");
 
       const { data, error, count } = await supabase
         .from("projects")
@@ -251,7 +238,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             )
           )
         `, {count: "exact"})
-        .or(`state.eq.Nový,and(state.eq.Naplánovaný,start_date.lte.${futureDate})`)
+        .or(`and(state.eq.Nový,scheduled_date.lte.${metadata.planned.futureDate}),and(state.eq.Naplánovaný,start_date.lte.${metadata.planned.futureDate})`)
         .order("scheduled_date", {ascending: true});
         
         if (error) throw error;
@@ -259,23 +246,30 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         const transformedProjects = transformProjects(data || []);
         const projectsMap = new Map(get().projects);
 
-        transformedProjects.forEach(p => projectsMap.set(p.project.id, p));
+        transformedProjects.forEach(p => {
+          projectsMap.set(p.project.id, p);
+        });
+        //console.log(projectsMap.size);
 
         set({
           projects: projectsMap,
           metadata: {
             ...get().metadata,
             planned: {
-              allLoaded: true,
               lastFetch: now,
-              dateRange: {start: today, end: futureDate},
-              futureDate: futureDate,
+              dateRange: {start: today, end: metadata.planned.futureDate},
+              futureDate: metadata.planned.futureDate,
               count: count || 0
+            },
+            projects:{
+              hasMore: true,
+              totalCount: projectsMap.size,
+              futureDate: metadata.planned.futureDate,
             }
           },
           backgroundLoading: false,
         });
-        console.log(`Loaded ${transformedProjects.length} planned projects`);
+        console.log(`Fetched ${transformedProjects.length} planned projects`);
     }
     catch (error: any){
       console.error('Error fetching planned projects:', error);
@@ -350,17 +344,18 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   
   applySmartFilters: async (filters: ProjectFilters, amount: number) => {
     const {metadata, backgroundLoading} = get();
-    if(backgroundLoading) return;
+    
+    if(backgroundLoading || !metadata.projects.hasMore) return;
+    
     set({backgroundLoading: true});
-
+    console.log("Running smart filters...");
     try{
-      const currentOffset = metadata.projects.currentOffset;
+      const isInitial = isInitialFilter(filters);
     
       const {data, error, count} = isInitialFilter(filters)
-        ? await buildQuery(metadata.planned.futureDate, 0, amount)
-        : await buildFilteredQuery(filters, currentOffset, amount);
+        ? await buildQuery(metadata.planned.futureDate, amount)
+        : await buildFilteredQuery(filters,  metadata.filtered.offset, amount);
       
-
       if (error) throw error;
 
       let transformed = transformProjects(data);
@@ -383,22 +378,42 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const projectsMap = new Map(get().projects);
       transformed.forEach(p => projectsMap.set(p.project.id, p));
 
-      const newOffset = currentOffset + transformed.length;
-      const hasMore = newOffset < (count || 0);
-
-      set({
-        projects: projectsMap,
-        backgroundLoading: false,
-        metadata: {
-          ...get().metadata,
-          projects: {
-            ...metadata.projects,
-            currentOffset: newOffset,
-            hasMore: hasMore,
-            totalCount: count
+      if (isInitial) {
+        const newFutureDate = transformed.length > 0
+          ? transformed.reduce((max, project) => {
+              const schedDate = project.project.scheduled_date;
+              return schedDate && schedDate > max ? schedDate : max;
+            }, metadata.projects.futureDate)
+          : metadata.projects.futureDate;
+  
+        set({
+          projects: projectsMap,
+          backgroundLoading: false,
+          metadata: {
+            ...get().metadata,
+            projects: {
+              ...get().metadata.projects,
+              hasMore: transformed.length === amount,
+              futureDate: newFutureDate
+            }
           }
-        }
-      })
+        });
+      } else {
+        const newOffset = metadata.filtered.offset + transformed.length;
+        
+        set({
+          projects: projectsMap,
+          backgroundLoading: false,
+          metadata: {
+            ...get().metadata,
+            filtered: {
+              offset: newOffset,
+              hasMore: newOffset < (count || 0)
+            }
+          }
+        });
+      }
+      console.log(`Fetched ${transformed.length} projects via filter`);
     }
     catch (error: any){
       console.error("SmartFilters error:", error);
@@ -412,9 +427,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Load more projects (pagination)
   loadMore: async (filters: ProjectFilters) => {
     const { backgroundLoading, metadata } = get();
+    const isInitial = isInitialFilter(filters);
 
-    if(backgroundLoading) return;
-    if(!metadata.projects.hasMore) return;
+    const hasMore = isInitial ? metadata.projects.hasMore : metadata.filtered.hasMore;
+    if(backgroundLoading || !hasMore) return;
+  
+    console.log("Fetching more projects...");
 
     set({
       backgroundLoading: true
@@ -422,63 +440,57 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     try {
       const limit = 30;
-      const previousFutureDay = metadata.planned.futureDate;
+      // const previousFutureDay = metadata.planned.futureDate;
 
-      let query;
-      if (isInitialFilter(filters)){
-        query = buildQuery(metadata.planned.futureDate, metadata.projects.currentOffset, limit);
-      }
-      else {
-        query = buildFilteredQuery(filters, metadata.projects.currentOffset, limit);
-      }
+      const query = isInitial
+        ? buildQuery(metadata.planned.futureDate, limit)
+        : buildFilteredQuery(filters, metadata.filtered.offset, limit);
   
       const { data, error, count } = await query;
+      //console.log(`Count is: ${count}`);
       if (error) throw error;
   
-      let transformed = transformProjects(data || []);
+      let transformed = transformProjects(data || []); 
       const projectsMap = new Map(get().projects);
       transformed.forEach(p => projectsMap.set(p.project.id, p));
 
-      let newOffset = metadata.projects.currentOffset + transformed.length;
-      let hasMore = newOffset < (count || 0);
-      let updatedFutureDate = previousFutureDay;
-
-      const isToday = updatedFutureDate === format(new Date(), "yyyy-MM-dd");
-
-      // if the updatedFutureDate is today, the fetch planned projects was never called
-      // first query gets values that are les then today within a range of offset and limit
-      // after that offset is reset, the new future date is highest value found in col scheduled date
-      // and the query gets values that are higher than this future date
-      if (isToday){
-        newOffset = 0;
-        hasMore = true
-      }
-      if(isInitialFilter(filters) && transformed.length > 0){
-        updatedFutureDate = transformed.reduce((max, project) => {
-          const schedDate = project.project.scheduled_date;
-          if(!schedDate) return max;
-          return schedDate > max ? schedDate : max;
-        }, metadata.planned.futureDate);
-      }
-
-      set({
-        projects: projectsMap,
-        metadata: {
-          ...get().metadata,
-          projects: {
-            ...metadata.projects,
-            currentOffset: newOffset,
-            hasMore: hasMore,
-            totalCount: count
+      if (isInitial) {
+        const newFutureDate = transformed.length > 0
+          ? transformed.reduce((max, project) => {
+              const schedDate = project.project.scheduled_date;
+              return schedDate && schedDate > max ? schedDate : max;
+            }, metadata.projects.futureDate)
+          : metadata.projects.futureDate;
+  
+        set({
+          projects: projectsMap,
+          metadata: {
+            ...get().metadata,
+            projects: {
+              ...get().metadata.projects,
+              hasMore: transformed.length === limit,
+              futureDate: newFutureDate
+            }
           },
-          planned: {
-            ...metadata.planned,
-            futureDate: updatedFutureDate
-          }
-        },
-        backgroundLoading: false
-      });
-      
+          backgroundLoading: false
+        });
+      } else {
+        const newOffset = metadata.filtered.offset + transformed.length;
+        
+        set({
+          projects: projectsMap,
+          metadata: {
+            ...get().metadata,
+            filtered: {
+              offset: newOffset,
+              hasMore: newOffset < (count || 0)
+            }
+          },
+          backgroundLoading: false
+        });
+      }
+  
+      console.log(`Loaded ${transformed.length} more projects`);
       return transformed;
     } catch (error: any) {
       console.error('Load more error:', error);
@@ -524,16 +536,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // ======== FILTER MANAGEMENT FUNCTIONS ========
   setFilters: (newFilters) => {
     set(state => {
-      const filtersChanged = JSON.stringify(state.filters) !== JSON.stringify({...state.filters, ...newFilters});
-      return {
-        filters: { ...state.filters, ...newFilters },
+      const oldFilters = state.filters;
+      const updatedFilters = { ...oldFilters, ...newFilters };
+      const filtersChanged = JSON.stringify(oldFilters) !== JSON.stringify(updatedFilters);
+    return {
+        filters: updatedFilters,
         metadata: {
           ...state.metadata,
-          projects: {
-            ...state.metadata.projects,
-            currentOffset: filtersChanged ? 0 : state.metadata.projects.currentOffset,
-            hasMore: filtersChanged ? true : state.metadata.projects.hasMore,
-            totalCount: filtersChanged ? null : state.metadata.projects.totalCount,
+          filtered: {
+            offset: filtersChanged ? 0 : state.metadata.filtered.offset,
+            hasMore: filtersChanged ? true : state.metadata.filtered.hasMore
           }
         }
       }
@@ -544,10 +556,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set({ filters: initialFilters,
         metadata: {
           ...get().metadata,
-          projects: {
-            currentOffset: 0,
+          filtered: {
+            offset: 0,
             hasMore: true,
-            totalCount: null
           }
         }
      });
@@ -560,7 +571,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           : [...state.filters.type, type];              // Add new type to filter
 
         return {
-          filters: { ...state.filters, type: types}
+          filters: { ...state.filters, type: types},
+          metadata: {
+            ...state.metadata,
+            filtered: {
+              offset: 0,
+              hasMore: true
+            }
+          }
         };
       });
   },
@@ -572,7 +590,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         : [...currentState.filters.state, state];              // Add new state to filter
 
       return {
-        filters: { ...currentState.filters, state: states}
+        filters: { ...currentState.filters, state: states},
+        metadata: {
+          ...currentState.metadata,
+          filtered: {
+            offset: 0,
+            hasMore: true
+          }
+        }
       };
     });
   },
@@ -584,7 +609,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         : [...state.filters.users, userId];
 
       return {
-        filters: { ...state.filters, users: users}
+        filters: { ...state.filters, users: users},
+        metadata: {
+          ...state.metadata,
+          filtered: {
+            offset: 0,
+            hasMore: true
+          }
+        }
       };
     });
   },
@@ -595,6 +627,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         filters: {
           ...state.filters,
           [filterType]: state.filters[filterType].filter((v: string) => v !== value)
+        },
+        metadata: {
+          ...state.metadata,
+          filtered: {
+            offset: 0, 
+            hasMore: true     
+          }
         }
       }
     });
@@ -606,9 +645,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const newMap = new Map(state.projects);
       newMap.set(project.project.id, project);
       return {projects: newMap};
-      //projects: [project, ...state.projects]
     });
-    //get().applySmartFilters(get().filters);
   },
   
   updateProject: (id: string, updatedProject) => {
@@ -652,7 +689,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               set(state => ({
                 metadata:{
                   ...get().metadata,
-                  active: {...state.metadata.active, lastFetch: 0},
                   planned: {...state.metadata.planned, lastFetch: 0}
                 }
               }));
@@ -733,52 +769,52 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
   },
 
-    changeStateOfAssignedProject: async(projectId: string, date: Date) => {
-      try{
-        const dateStr = format(date, 'yyyy-MM-dd');
-        const today = new Date();
+  changeStateOfAssignedProject: async(projectId: string, date: Date) => {
+    try{
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const today = new Date();
+      
+      const project = get().projects.get(projectId);
+      if(isBefore(date, today)){
+        const {error} = await supabase
+          .from("projects")
+          .update({
+            state: "Prebieha",
+            start_date: dateStr
+          })
+          .eq("id", projectId);
+        if(error) throw error;
         
-        const project = get().projects.get(projectId);
-        if(isBefore(date, today)){
-          const {error} = await supabase
-            .from("projects")
-            .update({
+        if (project) {
+          const updated = {
+            ...project,
+            project: {
+              ...project.project,
               state: "Prebieha",
               start_date: dateStr
-            })
-            .eq("id", projectId);
-          if(error) throw error;
-          
-          if (project) {
-            const updated = {
-              ...project,
-              project: {
-                ...project.project,
-                state: "Prebieha",
-                start_date: dateStr
-              }
-            };
-            console.log('Updated project in store:', updated.project.start_date);
-            get().updateProject(projectId, updated);
-          }
-        }
-        else{
-          const {error} = await supabase
-            .from("projects")
-            .update({
-              state: "Naplánovaný",
-              start_date: dateStr
-            })
-            .eq("id", projectId);
-          if(error) throw error;
-          console.log('Updated project in store:');
+            }
+          };
+          console.log('Updated project in store:', updated.project.start_date);
+          get().updateProject(projectId, updated);
         }
       }
-      catch(error: any){
-        console.error("Error assigning project:", error);
-        throw error;
+      else{
+        const {error} = await supabase
+          .from("projects")
+          .update({
+            state: "Naplánovaný",
+            start_date: dateStr
+          })
+          .eq("id", projectId);
+        if(error) throw error;
+        console.log('Updated project in store:');
       }
-    },
+    }
+    catch(error: any){
+      console.error("Error assigning project:", error);
+      throw error;
+    }
+  },
   }
 ));
 
@@ -835,10 +871,7 @@ function isInitialFilter(filters: ProjectFilters) : boolean {
 
 // Query building functions
 // query with initial filters
-async function buildQuery (startDate: string, offset: number, limit: number) {
-  const isToday = startDate === format(new Date(), "yyyy-MM-dd");
-  const gOrl = isToday ? "lte" : "gte";
-  
+async function buildQuery (startDate: string, limit: number) {      
   return supabase
       .from("projects")
       .select(`
@@ -865,9 +898,9 @@ async function buildQuery (startDate: string, offset: number, limit: number) {
           )
         )
       `, {count: "exact"})
-      .or(`state.eq.Ukončený,state.eq.Zrušený,and(state.eq.Nový,scheduled_date.${gOrl}.${startDate})`)
-      .range(offset, offset + limit -1)
-      .order('scheduled_date', { ascending: isToday ? false : true })
+      .or(`and(state.eq.Nový,scheduled_date.gte.${startDate}),state.eq.Ukončený,state.eq.Zrušený`)
+      .limit(limit)
+      .order('scheduled_date', {ascending: true });
 }
 
 async function buildFilteredQuery(filters: ProjectFilters, offset: number, limit: number) {
@@ -897,7 +930,7 @@ async function buildFilteredQuery(filters: ProjectFilters, offset: number, limit
           )
         )
       `, {count: "exact"})
-      .range(offset, offset + limit -1 )
+      .range(offset, offset + limit - 1)
       .order('created_at', { ascending: false });
 
       if (filters.type.length > 0){

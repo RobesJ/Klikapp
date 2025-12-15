@@ -42,4 +42,6 @@ export interface PDF {
   storage_path: string;
   modified_at: string;
   generated_at: string;
+  amount?: number | null;
+  amountByWords?: string | null;
 }

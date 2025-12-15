@@ -15,34 +15,48 @@ export default function RootLayout() {
           <Stack.Screen
             name="addClientScreen"
             options={{   
-              headerShown: false
-
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              presentation: 'modal'
           }}
           />
           <Stack.Screen
             name="addObjectScreen"
             options={{   
-              headerShown: false
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              presentation: 'modal'
           }}
           />
           <Stack.Screen 
             name="addProjectScreen"
             options={{   
-              headerShown: false
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              presentation: 'modal'
           }}
           />
 
           <Stack.Screen
             name="(auth)/login"
-            options={{ headerShown: false }}
+            options={{ 
+              headerShown: false,
+              animation: 'slide_from_right'
+             }}
           />
           <Stack.Screen
             name="(auth)/register"
-            options={{ headerShown: false }}
+            options={{ 
+              headerShown: false,
+              animation: 'slide_from_right'
+             }}
           />
           <Stack.Screen 
             name="(auth)/forgot-pwd" 
-            options={{ headerShown: false }}
+            options={{ 
+              headerShown: false,
+              animation: 'slide_from_right'
+            }}
           />
           <Stack.Screen 
             name="(auth)/reset-pwd" 

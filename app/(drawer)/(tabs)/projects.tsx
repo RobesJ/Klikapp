@@ -8,7 +8,7 @@ import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Projects() {
@@ -22,6 +22,7 @@ export default function Projects() {
   const {
     backgroundLoading,
     projects,
+    metadata,
     availableUsers,
     fetchActiveProjects,
     fetchPlannedProjects,
@@ -34,9 +35,10 @@ export default function Projects() {
     toggleStateFilter,
     toggleTypeFilter,
     toggleUserFilter,
-    removeFilter,
-    deleteProject
+    removeFilter
   } = useProjectStore();
+  
+  const MINIMUM_RESULTS = 20;
 
   useFocusEffect(
     useCallback(() => {
@@ -48,12 +50,17 @@ export default function Projects() {
   );
 
   useEffect(() => {
-    const filtered = getFilteredProjects(filters);
-    if(filteredProjects.length < 30 && !backgroundLoading){
-      const amountToFetch = 30 - filtered.length;
-      applySmartFilters(filters, amountToFetch);
+    const shouldFetch = 
+      filteredProjects.length < MINIMUM_RESULTS &&
+      !backgroundLoading &&
+      metadata.projects.hasMore && 
+      (hasActiveFilters || filteredProjects.length === 0);
+  
+    if (shouldFetch) {
+      const amountToFetch = MINIMUM_RESULTS - filteredProjects.length;
+      applySmartFilters(filters, Math.max(amountToFetch, 30));
     }
-  }, [filters]);
+  }, [filters, getFilteredProjects]);
 
   const filterSections = [
     {
@@ -93,7 +100,7 @@ export default function Projects() {
 
   const filteredProjects = useMemo(() => {
     return getFilteredProjects(filters);
-  }, [filters, getFilteredProjects, projects]);
+  }, [filters, getFilteredProjects, projects.size]);
 
   const handleRefresh = () => {
     fetchActiveProjects();
@@ -277,89 +284,18 @@ export default function Projects() {
       </TouchableOpacity>
 
       {/* Project details modal */}
-      <Modal
-        visible={showDetails}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowDetails(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center">
-          <View className="w-10/12 h-fit bg-dark-bg border-2 border-gray-300 rounded-2xl overflow-hidden">
-            {/* Header */}
-            <View className="px-4 py-6 border-b border-gray-400">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold text-dark-text_color">
-                  {selectedProject?.project.type}
-                </Text>
-              
-                <TouchableOpacity
-                  onPress={() => setShowDetails(false)}
-                  className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                >
-                  <EvilIcons name="close" size={24} color="white" />
-                </TouchableOpacity>
-                
-              </View>
-            </View>
-                  
-            <ScrollView className="max-h-screen-safe-offset-12 p-4">
-              {selectedProject && (
-                <ProjectDetails 
-                  project={selectedProject.project}
-                  client={selectedProject.client}
-                  assignedUsers={selectedProject.users} 
-                  objects={selectedProject.objects}/>
-              )}
-            </ScrollView>
-
-            {/* FOOTER */}  
-            <View className="flex-row justify-between px-4 py-6 border-t border-gray-400">
-              
-                <TouchableOpacity
-                  onPress={() => {
-                    if(selectedProject){
-                      try{
-                        deleteProject(selectedProject?.project.id);
-                        setShowDetails(false);
-                      }
-                      catch (error){
-                        console.error("Delete failed:", error);
-                      }
-                      setSelectedProject(null);
-                    }
-                  }}
-                  activeOpacity={0.8}
-                  className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
-                >
-                  <EvilIcons name="trash" size={24} color="white" />
-                  <Text className='text-white'>Odstrániť</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowDetails(false);
-                    router.push({
-                      pathname: "/addProjectScreen",
-                      params: { 
-                        project: JSON.stringify(selectedProject), 
-                        mode: "edit", 
-                        preselectedClient: JSON.stringify(selectedProject?.client)
-                      }
-                    });
-                  }}
-                  activeOpacity={0.8}
-                  className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
-                >
-                  <Feather name="edit-2" size={16} color="white" />
-                  <Text className='text-white'>Upraviť</Text>
-                </TouchableOpacity>
-                  
-            </View>
-              
-          </View>
-        </View>  
-      </Modal>
-
+      {selectedProject && (
+        <ProjectDetails 
+          key={selectedProject.project.id}
+          projectWithRelations={selectedProject}
+          visible={showDetails}
+          onClose={()=> {
+            setShowDetails(false);
+            setSelectedProject(null);
+          }}
+        />
+      )}
+ 
       {/* Filters modal */}
       <FilterModal
         visible={showFilterModal}

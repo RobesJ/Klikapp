@@ -874,7 +874,7 @@ export const generateRecord = async(
   watermarkBase64: string,
   footerImageBase64: string,
   recordType: "cleaning" | "inspection" | "cleaningWithPaymentReceipt",
-  sums?: string[]
+  sums: string[] | null
 ): Promise<string | undefined> => {
   try {
     let uri: string;
@@ -888,7 +888,8 @@ export const generateRecord = async(
         watermarkBase64,
         footerImageBase64
       );
-    } else if (recordType === "inspection") {
+    } 
+    else if (recordType === "inspection") {
       uri = await generateInspectionRecord(
         project,
         client,

@@ -13,6 +13,7 @@ interface ObjectStore {
   filters: ObjectFilters;
   
   loading: boolean;
+  hasMore: boolean;
   lastFetch: number;
   offset: number;
   pageSize: number;
@@ -40,6 +41,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   filteredObjects: [],
   filters: initialFilters,
   loading: false,
+  hasMore: true,
   lastFetch: 0,
   offset: 0,
   pageSize: 30,
@@ -100,10 +102,11 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         objects: objectWithRelations,
         lastFetch: now,
         loading: false,
+        hasMore: limit < (objectWithRelations.length),
         offset: objectWithRelations.length
       });
 
-      //get().applyFilters();
+      get().applyFilters();
       console.log(`Fetched ${objectWithRelations.length} objects`);
     } catch (error: any) {
       console.error('Error fetching objects:', error.message);
@@ -128,26 +131,23 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     
     let filtered = [...objects];
 
-    //if (filters.city) {
-    //  filtered = filtered.filter(o => o.object.city === filters.city);
-    //}
-
     if (filters.searchQuery.trim()) {
       const query = filters.searchQuery.toLowerCase();
       filtered = filtered.filter(o => 
         o.client.name.toLowerCase().includes(query) ||
-        o.object.city?.toLowerCase().includes(query)
+        o.object.city?.toLowerCase().includes(query) ||
+        o.object.address?.toLowerCase().includes(query)
       );
     }
 
     set({ filteredObjects: filtered });
-    console.log(`Filtered: ${filtered.length}/${objects.length} projects`);
+    console.log(`Filtered: ${filtered.length}/${objects.length} objects`);
   },
   
   loadMore: async () => {
-    const {offset, pageSize, loading } = get();
+    const {objects, offset, hasMore, pageSize, loading } = get();
 
-    if (loading) {
+    if (loading && !hasMore) {
       return;
     }
 
@@ -176,6 +176,11 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
 
       if (objectError) throw objectError;
 
+      if (!objectsData || objectsData.length === 0) {
+        set({ loading: false });
+        console.log('No more objects to load');
+        return;
+      }
       const objectWithRelations: ObjectWithRelations[] = objectsData.map((objectItem: any) => {
         const chimneys: Chimney[] = objectItem.chimneys || [];
 
@@ -187,10 +192,11 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
       });
 
       set({ 
-        objects: objectWithRelations,
-        offset: offset + pageSize,
+        objects: [...objects, ...objectWithRelations],
+        offset: offset + objectWithRelations.length,
         loading: false 
       });
+      console.log(`Loaded ${objectWithRelations.length} more objects, total: ${objects.length + objectWithRelations.length}`);
     }
     catch (error: any) {
       console.error('Load more objects error:', error);

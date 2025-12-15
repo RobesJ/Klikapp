@@ -10,8 +10,8 @@ import { DrawerActions } from "@react-navigation/native";
 import { format, parseISO } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Dimensions, Modal, PanResponder, ScrollView, Text, TouchableOpacity, Vibration, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Dimensions, PanResponder, ScrollView, Text, TouchableOpacity, Vibration, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -48,7 +48,6 @@ export default function Planning() {
   const {
     backgroundLoading,
     availableUsers,
-    //projects,
     clearFilters,
     //fetchPlannedProjects,
     assignProjectToDate,
@@ -65,9 +64,7 @@ export default function Planning() {
   const [showFilterModalAssigned,  setShowFilterModalAssigned] = useState(false);
   const [showFilterModalUnassigned,  setShowFilterModalUnassigned] = useState(false);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
-  const [currentAssingments, setCurrentAssingments] = useState<Record<string, Date>>({});
-  const currentAssingmentsRef = useRef(currentAssingments);
-
+  const currentAssingmentsRef = useRef<Record<string, Date>>({});
   const [filtersUnassigned, setFiltersUnassigned] = useState<ProjectFilters>({
     type: [],
     state: [],
@@ -132,7 +129,6 @@ export default function Planning() {
         : [...prev.type, type]
     }));
   };
-
 
   const toggleTypeFilterUnassigned = (type: string) => {
     setFiltersUnassigned(prev => ({
@@ -289,17 +285,13 @@ export default function Planning() {
   ];
   
   const assignedRaw = getAssignedProjects(selectedDate);
-
-  const assignedProjects = useMemo(() => {
-    return applyFilters(assignedRaw, filtersAssigned);
-  }, [assignedRaw, filtersAssigned]);
-
   const unassignedRaw = getUnassignedProjects(selectedDate);
 
-  const unassignedProjects = useMemo(() => {
-    return applyFilters(unassignedRaw, filtersUnassigned);
-  }, [selectedDate, filtersUnassigned]);
-  
+  const assignedProjects = applyFilters(assignedRaw, filtersAssigned);
+
+  const unassignedProjects = applyFilters(unassignedRaw, filtersUnassigned);
+
+
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
   };
@@ -313,10 +305,6 @@ export default function Planning() {
         ...currentAssingmentsRef.current,
         [projectId]: dateToAssign
       };
-      //setCurrentAssingments(prev => ({
-      //  ...prev,
-      //  [projectId]: dateToAssign
-      //}));
       Vibration.vibrate(50);
     }
     catch(error: any){
@@ -329,11 +317,6 @@ export default function Planning() {
     try{
       await unassignProject(projectId);
       delete currentAssingmentsRef.current[projectId];
-      //setCurrentAssingments(prev => {
-      //  const copy = {...prev};
-      //  delete copy[projectId];
-      //  return copy;
-      //});
       getAssignedProjects(selectedDate);
       getUnassignedProjects(selectedDate);
       Vibration.vibrate(50);
@@ -678,44 +661,19 @@ function SwipeableProjectCard({
           />
       </Animated.View>
     
-    {/* Project details modal */}
-    <Modal
-        visible={showDetails}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowDetails(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center">
-          <View className="w-10/12 h-fit bg-dark-bg rounded-2xl overflow-hidden">
-            {/* Header */}
-            <View className="px-4 py-6 border-b border-gray-200">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold text-dark-text_color">
-                  {selectedProject?.project.type}
-                </Text>
-
-                  <TouchableOpacity
-                    onPress={() => setShowDetails(false)}
-                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                  >
-                    <EvilIcons name="close" size={24} color="white" />
-                  </TouchableOpacity>
-               
-              </View>
-            </View>
-                  
-            <ScrollView className="max-h-screen-safe-offset-12 p-4">
-              {selectedProject && (
-                <ProjectDetails 
-                  project={selectedProject.project}
-                  client={selectedProject.client}
-                  assignedUsers={selectedProject.users} 
-                  objects={selectedProject.objects}/>
-              )}
-            </ScrollView>
-          </View>
-        </View>  
-      </Modal>
+      {/* Project details modal */}
+      {selectedProject && (
+        <ProjectDetails 
+          key={selectedProject.project.id}
+          projectWithRelations={selectedProject}
+          visible={showDetails}
+          onClose={()=> {
+            setShowDetails(false);
+            setSelectedProject(null);
+          }}
+      />
+      )}
+            
     </View>
   );
 }

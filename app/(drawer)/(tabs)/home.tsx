@@ -13,11 +13,10 @@ import { format, isBefore, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
-  const [appReady, setAppReady] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithRelations | null>(null);
@@ -27,7 +26,6 @@ export default function Home() {
   const navigation = useNavigation();
   
   const {
-    initialLoading,
     backgroundLoading,
     fetchAvailableUsers,
     fetchActiveProjects,
@@ -41,25 +39,25 @@ export default function Home() {
     toggleTypeFilter,
     toggleStateFilter,
     toggleUserFilter,
-    deleteProject
   } = useProjectStore();
 
   useEffect(() => {
-      //setAppReady(true);
+    if(projects.size === 0){
       fetchActiveProjects();
       setTimeout(() => {
         loadRemamianinData();
       }, 500);
 
-    async function loadRemamianinData() {
-      await Promise.all([
-        fetchAvailableUsers(),
-        useClientStore.getState().fetchClients(100),
-        useObjectStore.getState().fetchObjects(100),
-        fetchPlannedProjects()
-      ]);
+      async function loadRemamianinData() {
+        await Promise.all([
+          fetchAvailableUsers(),
+          useClientStore.getState().fetchClients(30),
+          useObjectStore.getState().fetchObjects(10),
+          fetchPlannedProjects()
+        ]);
+      }
     }
-  }, []);
+  }, [projects.size]);
   
   useFocusEffect(
     useCallback(() => {
@@ -158,7 +156,6 @@ export default function Home() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-      {/*appReady && (*/}
         <View className='flex-1'>       
           {/* Header */}   
           <View className="flex-2 mt-4 mx-4 mb-8">
@@ -287,84 +284,18 @@ export default function Home() {
         </View>
 
       {/* Project details modal */}
-      <Modal
-        visible={showDetails}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowDetails(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center">
-          <View className="w-3/4 bg-dark-bg rounded-2xl overflow-hidden">
-            {/* Header */}
-            <View className="px-4 py-6 border-b border-gray-200">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold text-dark-text_color">
-                  {selectedProject?.project.type}
-                </Text>
-                
-                <View className="flex-row gap-2">
-                 
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowDetails(false);
-                      router.push({
-                        pathname: "/addProjectScreen",
-                        params: { 
-                          project: JSON.stringify(selectedProject), 
-                          mode: "edit", 
-                          preselectedClient: JSON.stringify(selectedProject?.client)
-                        }
-                      });
-                    }}
-                    activeOpacity={0.8}
-                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                  >
-                    <Feather name="edit-2" size={16} color="white" />
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    onPress={() => {
-                      if(selectedProject){
-                        try{
-                          deleteProject(selectedProject?.project.id);
-                          setShowDetails(false);
-                        }
-                        catch (error){
-                          console.error("Delete failed:", error);
-                        }
-                        setSelectedProject(null);
-                      }
-                    }}
-                    activeOpacity={0.8}
-                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                  >
-                    <EvilIcons name="trash" size={24} color="white" />
-                  </TouchableOpacity>
-
-
-                  <TouchableOpacity
-                    onPress={() => setShowDetails(false)}
-                    className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                  >
-                    <EvilIcons name="close" size={24} color="white" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-                  
-            <ScrollView className="max-h-screen-safe-offset-12 p-4">
-              {selectedProject && (
-                <ProjectDetails 
-                  project={selectedProject.project}
-                  client={selectedProject.client}
-                  assignedUsers={selectedProject.users} 
-                  objects={selectedProject.objects}/>
-              )}
-            </ScrollView>
-          </View>
-        </View>  
-      </Modal>
-
+      {selectedProject && (
+        <ProjectDetails 
+          key={selectedProject.project.id}
+          projectWithRelations={selectedProject}
+          visible={showDetails}
+          onClose={()=> {
+            setShowDetails(false);
+            setSelectedProject(null);
+          }}
+        />
+      )}
+            
       {/* Filters modal */}
       <FilterModal
         visible={showFilterModal}

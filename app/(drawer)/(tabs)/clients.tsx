@@ -4,8 +4,8 @@ import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
 import { EvilIcons } from "@expo/vector-icons";
 import { DrawerActions } from "@react-navigation/native";
-import { useNavigation, useRouter } from "expo-router";
-import { useState } from 'react';
+import { useFocusEffect, useNavigation, useRouter } from "expo-router";
+import { useCallback, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -26,11 +26,11 @@ export default function Clients() {
   const router = useRouter();
   const navigation = useNavigation();
   
-  //  useFocusEffect(
-  //    useCallback(() => {
-  //      fetchClients(100);
-  //    }, [])
-  //  );
+  useFocusEffect(
+    useCallback(() => {
+      fetchClients(100);
+    }, [])
+  );
   
   const handleModalVisibility = (client: Client, value: boolean) => {
     setShowDetails(value);
@@ -131,12 +131,12 @@ export default function Clients() {
       
 
       {/* Client details modal*/}
-            {selectedClient && (
-              <ClientDetails 
-              client={selectedClient}
-              visible={showDetails}
-              onClose={()=>setShowDetails(false)} />
-            )}
+      {selectedClient && (
+        <ClientDetails 
+        client={selectedClient}
+        visible={showDetails}
+        onClose={()=>setShowDetails(false)} />
+      )}
     </SafeAreaView>
   );
 }

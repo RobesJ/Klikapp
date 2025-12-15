@@ -60,7 +60,8 @@ const _Layout = () => {
                     borderWidth: 1, 
                     borderColor: "#0c1022"
                     //"#0c1026f0",
-                }
+                },
+                animation: 'shift' // Built-in directional animation!
             }}
         >
             <Tabs.Screen
@@ -74,14 +75,15 @@ const _Layout = () => {
                             icon={icons.homeIcon}
                             title="DOMOV"
                         />   
-                    )
+                    ),
+                    //animation: "shift"
                 }}
             />
             <Tabs.Screen
                 name="clients"
                 options={{
                     title: "Klienti",
-                    lazy: true,
+                    // lazy: true,
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -89,14 +91,15 @@ const _Layout = () => {
                             icon={icons.clientsIcon}
                             title="KLIENTI"
                         />   
-                    )
+                    ),
+                    //animation: "shift"
                 }}
             />
             <Tabs.Screen
                 name="objects"
                 options={{
                     title: "Objekty",
-                    lazy: true,
+                    // lazy: true,
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -104,14 +107,15 @@ const _Layout = () => {
                             icon={icons.chimneyIcon}
                             title="OBJEKTY"
                         />   
-                    )
+                    ),
+                    //animation: "shift"
                 }}
             />
             <Tabs.Screen
                 name="projects"
                 options={{
                     title: "Projekty",
-                    lazy: true,
+                    // lazy: true,
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -119,7 +123,8 @@ const _Layout = () => {
                             icon={icons.projectsIcon}
                             title="PROJEKTY"
                         />   
-                    )
+                    ),
+                    //animation: "shift"
                 }}
             />
 
@@ -127,7 +132,7 @@ const _Layout = () => {
                 name="planning"
                 options={{
                     title: "Planovanie",
-                    lazy: true,
+                    // lazy: true,
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -135,7 +140,8 @@ const _Layout = () => {
                             icon={icons.planningIcon}
                             title="PLÁNOVANIE"
                         />   
-                    )
+                    ),
+                    //animation: "shift"
                 }}
             />
         </Tabs>

@@ -1,5 +1,6 @@
 import { Client, Project, User } from "@/types/generics";
 import { ObjectWithRelations } from "@/types/projectSpecific";
+import { format } from "date-fns";
 import { Text, TouchableOpacity, View } from "react-native";
 import { STATE_OPTIONS } from "../badge";
 
@@ -50,7 +51,7 @@ export default function ProjectCard({ project, client, users, objects, onPress }
                 <View className="flex-row items-center mb-2">
                     <Text className="text-gray-400 text-sm">Plánované na: </Text>
                     <Text className="text-dark-text_color font-medium">
-                        {project.scheduled_date}
+                        {format(project.scheduled_date, "dd.MM.yyyy")}
                     </Text>
                 </View>
             )}
@@ -59,7 +60,7 @@ export default function ProjectCard({ project, client, users, objects, onPress }
                 <View className="flex-row items-center mb-2">
                     <Text className="text-gray-400 text-sm">Začiatok: </Text>
                     <Text className="text-dark-text_color font-medium">
-                        {project.start_date}
+                        {format(project.start_date, "dd.MM.yyyy")}
                     </Text>
                 </View>
             )}
@@ -68,7 +69,7 @@ export default function ProjectCard({ project, client, users, objects, onPress }
                 <View className="flex-row items-center mb-2">
                     <Text className="text-gray-400 text-sm">Ukončenie: </Text>
                     <Text className="text-dark-text_color font-medium">
-                        {project.completion_date}
+                        {format(project.completion_date, "dd.MM.yyyy")}
                     </Text>
                 </View>
             )}

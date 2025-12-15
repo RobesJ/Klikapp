@@ -49,7 +49,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   offset: 0,
   success: null,
 
-  fetchClients: async (limit = 50) => {
+  fetchClients: async (limit) => {
     const { clients, lastFetch, loading } = get();
     const now = Date.now();
 
@@ -114,7 +114,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     get().applyFilters();
   },
 
-
   applyFilters: () => {
     const { clients, filters } = get();
     let filtered = [...clients];
@@ -160,8 +159,9 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
       set({ 
         clients: [...clients, ...nextClients],
-        offset: offset + pageSize,
-        loading: false 
+        offset: offset + nextClients.length,
+        loading: false, 
+        hasMore: pageSize === nextClients.length
       });
     }
     catch (error: any) {

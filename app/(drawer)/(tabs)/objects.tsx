@@ -20,7 +20,6 @@ export default function Objects() {
     loadMore,
     fetchObjects,
     setFilters,
-    //filters,
     deleteObject,
     filteredObjects
   } = useObjectStore();
@@ -31,7 +30,7 @@ export default function Objects() {
   //useFocusEffect(
   //  useCallback(() => {
   //    fetchObjects(50);
-  //  }, [])
+  //  }, [fetchObjects])
   //);
  
   const handleModalVisibility = (objectData: ObjectWithRelations, value: boolean) =>{
@@ -128,7 +127,13 @@ export default function Objects() {
         )}
         contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
         onEndReached={loadMore}
-        //onRefresh={handleRefresh}
+        onRefresh={handleRefresh}
+        refreshing={loading}
+        ListEmptyComponent={
+          loading 
+          ? ( <Text className="text-center text-gray-500 mt-10">Načítavam...</Text>)
+          : ( <Text className="text-center text-gray-500 mt-10">Žiadne objekty</Text>)
+        }
       />
 
       <TouchableOpacity
