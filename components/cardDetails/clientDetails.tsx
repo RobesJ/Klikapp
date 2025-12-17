@@ -21,6 +21,7 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const {deleteClient}= useClientStore();
+
     useEffect(() => {
         fetchRelations(client);
     }, [client.id]);
@@ -152,6 +153,13 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
         );
     }
 
+    const handleNavigateAndRefresh = async (pathname: any, params: any) => {
+        onClose(); // Close modal first
+        router.push({ pathname, params });
+        // Refetch clients to update counts
+        //setTimeout(() => fetchClients(100), 500); // Small delay to ensure DB is updated
+    };
+
     return (
         <Modal
           visible={visible}
@@ -223,16 +231,11 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                             <TouchableOpacity
                                 activeOpacity={0.8}
                                 className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg "
-                                onPress={() => {
-                                    onClose;
-                                    router.push({
-                                        pathname: "/addObjectScreen",
-                                        params: { 
-                                            mode: "create", 
-                                            preselectedClient: JSON.stringify(client) 
-                                        }
-                                    });
-                                }}>
+                                onPress={() => handleNavigateAndRefresh("/addObjectScreen", {
+                                    mode: "create", 
+                                    preselectedClient: JSON.stringify(client)
+                                })}
+                                >
                                 <Text className="text-white text-center font-semibold">+</Text>
                                 <Text className="text-white text-center font-semibold">Pridať</Text>
                             </TouchableOpacity>
@@ -245,19 +248,12 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                                     <TouchableOpacity 
                                         key={item.object.id} 
                                         className="bg-dark-details-o_p_bg p-3 rounded-lg mb-2"
-                                        onPress={()=> {
-                                        onClose;
-                                        router.push({
-                                            pathname: "/addObjectScreen",
-                                            params: { 
-                                              object: JSON.stringify(item),
-                                              mode: "edit", 
-                                              preselectedClient: JSON.stringify(client)
-                                            }
-                                          });
-
-                                        }}
-                                        >
+                                        onPress={() => handleNavigateAndRefresh("/addObjectScreen", {
+                                            object: JSON.stringify(item),
+                                            mode: "edit", 
+                                            preselectedClient: JSON.stringify(client)
+                                        })}
+                                    >
                                         {!item.object.streetNumber 
                                         ? (
                                             <Text className="font-semibold text-dark-text_color">
@@ -284,17 +280,11 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                                 <TouchableOpacity
                                     activeOpacity={0.8}
                                     className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg"
-                                    onPress={() => {
-                                        onClose;
-                                        router.push({
-                                            pathname: "/addProjectScreen",
-                                            params: { 
-                                                mode: "create", 
-                                                preselectedClient: JSON.stringify(client) 
-                                            }
-                                        });
-
-                                    }}>
+                                    onPress={() => handleNavigateAndRefresh("/addProjectScreen", {
+                                        mode: "create", 
+                                        preselectedClient: JSON.stringify(client)
+                                    })}
+                                >
                                     <Text className="text-white text-center font-semibold">+</Text>
                                     <Text className="text-white text-center font-semibold">Pridať</Text>
                                 </TouchableOpacity>
@@ -304,18 +294,12 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                             ) : (
                                 projectsWithRelations.map((item) => (
                                     <TouchableOpacity key={item.project.id} className="bg-dark-details-o_p_bg p-3 rounded-lg mb-2"
-                                    onPress={()=> {
-                                        onClose;
-                                        router.push({
-                                            pathname: "/addProjectScreen",
-                                            params: { 
-                                              project: JSON.stringify(item),
-                                              mode: "edit", 
-                                              preselectedClient: JSON.stringify(client)
-                                            }
-                                          });
-                                        }}
-                                        >
+                                        onPress={() => handleNavigateAndRefresh("/addProjectScreen", {
+                                            project: JSON.stringify(item),
+                                            mode: "edit", 
+                                            preselectedClient: JSON.stringify(client)
+                                        })}
+                                    >
                                         <Text className="font-semibold text-dark-text_color">{item.project.type}</Text>
                                         <Text className="text-sm text-dark-text_color">{item.project.state}</Text>
                                     </TouchableOpacity>
@@ -332,7 +316,7 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                       onPress={() => {
                           try{
                             deleteClient(client.id);
-                            onClose;
+                            onClose();
                           }
                           catch (error){
                             console.error("Delete failed:", error);
@@ -348,7 +332,7 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                     {/* Edit selected client */}     
                     <TouchableOpacity
                         onPress={() => {
-                          onClose;
+                          onClose();
                           router.push({
                           pathname: "/addClientScreen",
                           params: { 

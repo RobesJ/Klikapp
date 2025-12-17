@@ -1,3 +1,4 @@
+import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
@@ -371,6 +372,7 @@ export default function Planning() {
   
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
+      <AnimatedScreen tabIndex={4}>
       <ScrollView>
         <View className="flex-1 px-6 mt-4">
           {/* Header */}
@@ -383,7 +385,7 @@ export default function Planning() {
                 <EvilIcons name="navicon" size={36} color="white" />
               </TouchableOpacity>
               <View className='items-center justify-center ml-6'>
-            <Text className="font-bold text-4xl text-dark-text_color">
+            <Text allowFontScaling={false} className="font-bold text-4xl text-dark-text_color">
               Plánovanie projektov
             </Text>
             <Text className="text-dark-text_color mb-4">
@@ -543,7 +545,7 @@ export default function Planning() {
           </View>
         </View>
       </ScrollView>
-
+      </AnimatedScreen>
       {/* Filters modal */}
       <FilterModal
         visible={showFilterModalUnassigned}

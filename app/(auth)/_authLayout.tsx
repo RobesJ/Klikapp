@@ -11,7 +11,7 @@ export default function AuthLayout() {
       // Handle deep links
       const handleDeepLink = (event: { url: string }) => {
         const url = event.url;
-        console.log("Deep link received:", url);
+        //console.log("Deep link received:", url);
 
         if (url.includes('reset-pwd') || url.includes("type=recovery")) {
           router.push('/(auth)/reset-pwd');
@@ -24,7 +24,7 @@ export default function AuthLayout() {
       // Check if app was opened with a deep link
       Linking.getInitialURL().then((url) => {
         if (url){
-            console.log("Initial url:", url);
+            //console.log("Initial url:", url);
             if (url.includes('reset-pwd') || url.includes('reset-password') || url.includes('type=recovery')) {
                 router.push('/(auth)/reset-pwd');
               }
@@ -38,11 +38,17 @@ export default function AuthLayout() {
 
 
     if (!loading && user) {
-       return <Redirect href="/(tabs)/home"/>;
+       return <Redirect href="/(drawer)/(tabs)/home"/>
     }
 
     return (
-        <Stack>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: '#FFFFFF'},
+          animation: 'slide_from_right',
+        }}
+      >
             <Stack.Screen name="login"/> 
             <Stack.Screen name="register"/>
             <Stack.Screen name="forgot-pwd" />

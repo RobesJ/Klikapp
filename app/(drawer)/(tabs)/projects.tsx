@@ -1,3 +1,4 @@
+import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
@@ -138,7 +139,7 @@ export default function Projects() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-
+      <AnimatedScreen tabIndex={3}>
       {/* HEADER */}
       <View className="flex-2 mt-4 px-6 mb-4">
         <View className="flex-row justify-between">
@@ -149,7 +150,7 @@ export default function Projects() {
           >
             <EvilIcons name="navicon" size={32} color="white" />
           </TouchableOpacity>
-          <Text className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Text>
+          <Text allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Text>
           
             <View className='flex-2 justify-between items-center '>
               <Text className="text-xl text-green-500">ONLINE</Text>
@@ -282,7 +283,7 @@ export default function Projects() {
         +
       </Text>
       </TouchableOpacity>
-
+      </AnimatedScreen>
       {/* Project details modal */}
       {selectedProject && (
         <ProjectDetails 

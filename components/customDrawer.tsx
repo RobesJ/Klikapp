@@ -17,8 +17,7 @@ export default function CustomDrawerContent(props: any) {
 
   const handleSettings = () => {
     // TODO: Navigate to settings
-    console.log("Settings");
-    // router.push('/settings');
+    router.push('/settings');
   };
 
   return (

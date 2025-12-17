@@ -20,7 +20,7 @@ export default function DrawerLayout() {
                options={{
                   drawerLabel: ()=> null,
                   drawerItemStyle: { display: 'none' },
-                  headerShown: false,
+                  headerShown: false
                }}
              />
         </Drawer>

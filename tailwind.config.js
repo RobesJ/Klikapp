@@ -1,8 +1,10 @@
 /** @type {import('tailwindcss').Config} */
+
 module.exports = {
-  content: ["./app/**/*.{js,jsx,ts,tsx}",
-            "./components/**/*.{js,jsx,ts,tsx}",
-          ],
+  content: [
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
+  ],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
@@ -11,7 +13,6 @@ module.exports = {
         secondary: "#2563EB",
         light_mode: {
           bg: "#0c1026f0",
-
           100: "#D6C6FF",
           200: "#A8B5DB",
           300: "#9CA4AB",
@@ -23,10 +24,10 @@ module.exports = {
             bg: "#353b59cc", 
             border_color: "#9ca3af"
           },
-          details:{
+          details: {
             o_p_bg: "#717db2cc"
           },
-          project:{
+          project: {
             state: {
               novy: "#38bdf8",
               naplanovany: "#22c55e",
@@ -49,5 +50,4 @@ module.exports = {
     },
   },
   plugins: [],
-}
-
+};

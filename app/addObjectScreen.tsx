@@ -13,7 +13,9 @@ export default function AddObjectScreen() {
   const handleSuccess = (objectData: any) => {
 
     if (mode === "create"){
-      addObject(objectData);
+      if(objectData.object){
+        addObject(objectData);
+      }
     }
     else{
       updateObject(objectData.object.id, objectData);

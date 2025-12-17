@@ -15,9 +15,13 @@ export default function AddProjectScreen() {
 
   const handleSuccess = (projectData: ProjectWithRelations) => {
     if (mode === "create"){
-      addProject(projectData);
+      console.log("trying to create project");
+      if(projectData.project){
+        addProject(projectData);
+      }
     }
     else{
+        console.log("trying to update project");
         updateProject(projectData.project?.id , projectData);
     }
     router.back();

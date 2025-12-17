@@ -57,7 +57,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [completionDate, setCompletionDate] = useState<Date | null>(null);
 
-    const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
+    // const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<User[]>(initialData?.users ?? [] );
     const [showUserModal, setShowUserModal] = useState(false);
 
@@ -67,7 +67,8 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [showObjectModal, setShowObjectModal] = useState(false);
     const router = useRouter();
     const { availableUsers, fetchAvailableUsers } = useProjectStore();
-    
+    let oldState: string | null = initialData ? initialData.project.state : null;
+
     useEffect(() => {
         if (initialData){
             setFormData({
@@ -220,7 +221,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
         setLoading(true);
         try {
-
             const cleanedFormData = {
                 ...formData,
                 scheduled_date: formData.scheduled_date || null,
@@ -229,6 +229,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             }
             let projectID : string; 
             if (mode === "create"){
+                console.log("creating project");
                 const {data: projectData, error: projectError} = await supabase
                 .from('projects')
                 .insert([cleanedFormData])
@@ -237,7 +238,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 
                 if (projectError) throw projectError;
                 projectID = projectData.id;
-                
+                console.log(projectID);
                 if(selectedUsers.length > 0){
                     const usersProjectRelations = selectedUsers.map(user => ({
                         project_id: projectID,
@@ -298,6 +299,27 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 onSuccess?.(completeProject);
             }
             else { 
+                // check the oldState and check/change date values
+                if(oldState && oldState !== cleanedFormData.state){
+                    if (cleanedFormData.state === "Nový"){
+                        cleanedFormData.start_date = null;
+                        cleanedFormData.completion_date = null;
+                    }
+                    else if (["Prebieha", "Pozastavený", "Naplánovaný"].includes(cleanedFormData.state)){
+                        if (oldState === "Nový"){
+                            cleanedFormData.start_date ? cleanedFormData.start_date : new Date().toISOString().split('T')[0]; 
+                        }
+                        else if (["Ukončený","Zrušený"].includes(oldState)){
+                          cleanedFormData.completion_date = null;
+                        }
+                    }
+                    else if (["Ukončený","Zrušený"].includes(cleanedFormData.state)){
+                      if (!["Ukončený","Zrušený"].includes(oldState)){
+                          cleanedFormData.completion_date ? cleanedFormData.completion_date : new Date().toISOString().split('T')[0]; 
+                      }
+                    }
+                }
+
                 const {data: projectData, error: projectError} = await supabase
                 .from('projects')
                 .update(cleanedFormData)
@@ -438,9 +460,9 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         });
     };
 
-    const isUserSelected = (userId: string): boolean => {
-        return selectedUsers.some(c => c.id === userId);
-    };
+    //const isUserSelected = (userId: string): boolean => {
+    //    return selectedUsers.some(c => c.id === userId);
+    //};
 
     const handleRemoveUser = (userId: string) => {
         setSelectedUsers(prev => prev.filter(c => c.id !== userId));
@@ -557,8 +579,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 className='flex-1'
             >
             {/* header */}
-            <View className="mb-12 relative">
-                
+            <View className="mb-12 relative">                
                 <TouchableOpacity
                     onPress={() => router.back()}
                     className="absolute top-3 left-6 w-10 h-10 items-center justify-center z-10"

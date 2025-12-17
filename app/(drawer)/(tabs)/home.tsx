@@ -1,7 +1,9 @@
+import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS_HOME, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
+import { PlatformText } from '@/components/typografy';
 import WeekCalendar from '@/components/weekCalendar';
 import { useClientStore } from '@/store/clientStore';
 import { useObjectStore } from '@/store/objectStore';
@@ -156,7 +158,7 @@ export default function Home() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-        <View className='flex-1'>       
+        <AnimatedScreen tabIndex={0}>       
           {/* Header */}   
           <View className="flex-2 mt-4 mx-4 mb-8">
             <View className="flex-row justify-between">
@@ -169,13 +171,13 @@ export default function Home() {
             </TouchableOpacity>
   
               <View className='ml-6 items-center justify-center'>
-                <Text className="font-bold text-4xl text-dark-text_color">Aktuálne projekty</Text>
-                <Text className=' text-dark-text_color'>
+                <PlatformText allowFontScaling={false} className="font-bold text-4xl text-dark-text_color">Aktuálne projekty</PlatformText>
+                <PlatformText className=' text-dark-text_color'>
                   {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
-                </Text>
+                </PlatformText>
              </View>
               <View className="flex-2 justify-between items-center">
-                <Text className="text-xl text-green-500">ONLINE</Text>
+                <PlatformText className="text-xl text-green-500">ONLINE</PlatformText>
                 <TouchableOpacity
                     onPress={() => {setShowFilterModal(true)}}
                     activeOpacity={0.8}
@@ -201,9 +203,9 @@ export default function Home() {
                 <TouchableOpacity
                   onPress={()=> handleClearFilters()}
                   >
-                  <Text className='color-red-600'>
+                  <PlatformText className='color-red-600'>
                    Zrušiť filtre
-                  </Text>
+                  </PlatformText>
                 </TouchableOpacity>
               )}
               </View>
@@ -237,8 +239,8 @@ export default function Home() {
                         onPress={() => removeFilter(filter.type, filter.value)}
                         className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
                       >
-                        <Text className={`${textColor} font-medium mr-1`}>{filter.value}</Text>
-                        <Text className={`${textColor} font-bold`}>✕</Text>
+                        <PlatformText className={`${textColor} font-medium mr-1`}>{filter.value}</PlatformText>
+                        <PlatformText className={`${textColor} font-bold`}>✕</PlatformText>
                       </TouchableOpacity>
                     );
                   })}
@@ -281,7 +283,8 @@ export default function Home() {
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
             scrollEnabled={true}
           />
-        </View>
+      
+        </AnimatedScreen>
 
       {/* Project details modal */}
       {selectedProject && (

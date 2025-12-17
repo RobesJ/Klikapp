@@ -51,10 +51,10 @@ export default function ProjectDetails({
   const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
   type PdfFlowStep =
-  | "choice"          // initial decision
-  | "selectOne"       // pick chimney
-  | "inputAll"        // inputs for all chimneys
-  | "inputOne";       // input for one chimney
+  | "choice"         
+  | "selectOne"       
+  | "inputAll"        
+  | "inputOne";       
 
   const [pdfStep, setPdfStep] = useState<PdfFlowStep>("choice");
   const [selectedChimneyId, setSelectedChimneyId] = useState<string | null>(null);
@@ -1091,7 +1091,7 @@ export default function ProjectDetails({
                   onPress={() => {
                       try{
                         deleteProject(projectWithRelations.project.id);
-                        onClose;
+                        onClose();
                       }
                       catch (error){
                         console.error("Delete failed:", error);
@@ -1106,7 +1106,7 @@ export default function ProjectDetails({
 
                 <TouchableOpacity
                   onPress={() => {
-                    onClose;
+                    onClose();
                     router.push({
                       pathname: "/addProjectScreen",
                       params: { 

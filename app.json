@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/chimney-sweep-holding-sweeper-logo-vector.jpg",
+    "main" : "expo-router/entry",
     "scheme": "klikoncrm",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

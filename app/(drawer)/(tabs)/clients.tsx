@@ -1,3 +1,4 @@
+import { AnimatedScreen } from "@/components/animatedScreen";
 import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/cards/clientCard";
 import { useClientStore } from "@/store/clientStore";
@@ -29,7 +30,7 @@ export default function Clients() {
   useFocusEffect(
     useCallback(() => {
       fetchClients(100);
-    }, [])
+    }, [fetchClients])
   );
   
   const handleModalVisibility = (client: Client, value: boolean) => {
@@ -45,11 +46,17 @@ export default function Clients() {
     setSearchText(text);
     setFilters({ searchQuery: text});
   };
+  
+  const handleOnClose = () => {
+    setShowDetails(false);
+    setSelectedClient(null);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
       {/* header */}
-      <View className="flex-2 mt-4 px-6 mb-8 ">
+      <AnimatedScreen tabIndex={1}>
+      <View className="flex-2 mt-4 px-6 mb-8">
         <View className="flex-row justify-between items-center">
           <TouchableOpacity
             onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
@@ -58,7 +65,7 @@ export default function Clients() {
           >
             <EvilIcons name="navicon" size={32} color="white" />
           </TouchableOpacity>
-          <Text className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Text>
+          <Text allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Text>
 
           {/* online / offline indicator */}
           <Text className="text-xl text-green-500">ONLINE</Text>
@@ -81,8 +88,10 @@ export default function Clients() {
       <FlatList
         data={searchText.length > 0 ? filteredClients : clients }
         keyExtractor={(item) => item.id}
+        extraData={clients}
         renderItem={({item}) =>(
           <ClientCard
+              key={item.id}
               client={item}
               onPress={() => handleModalVisibility(item, true)}
           />
@@ -133,10 +142,13 @@ export default function Clients() {
       {/* Client details modal*/}
       {selectedClient && (
         <ClientDetails 
-        client={selectedClient}
-        visible={showDetails}
-        onClose={()=>setShowDetails(false)} />
+          key={selectedClient.id}
+          client={selectedClient}
+          visible={showDetails}
+          onClose={handleOnClose} 
+        />
       )}
+      </AnimatedScreen>
     </SafeAreaView>
   );
 }

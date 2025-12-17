@@ -1,3 +1,4 @@
+import { PlatformText } from '@/components/typografy';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -86,23 +87,24 @@ export default function Login() {
                 contentContainerClassName='flex-grow'
                 keyboardShouldPersistTaps='handled'
             >
-                <View className="flex-1 px-28 justify-center">
+                <View className="flex-1 px-28 items-center justify-center bg-white">
                     {/* header */}
                     <View className='items-center mb-8'>
-                        <Text className='text-4xl font-bold mb-2'>
+                        <PlatformText className='text-4xl font-bold mb-2'>
                             Vitajte späť
-                        </Text>
-                        <Text className='text-base'>
+                        </PlatformText>
+                        <PlatformText className='text-base'>
                             Prihláste sa do vášho účtu
-                        </Text>
+                        </PlatformText>
                     </View>
 
                     {/* form */}
                     <View className='mb-6 rounded-3xl p-6 items-start'>
                         <View className='mb-3'>
                             <TextInput
-                                className='border-2 rounded-2xl w-64 pl-3'
-                                placeholder='Email'
+                                className='border-2 rounded-2xl w-64 pl-3 py-3'
+                                placeholderTextColor="#9CA3AF"
+                                placeholder='Email'                
                                 value={formData.email}
                                 onChangeText={(value) => handleChange("email", value)}
                                 keyboardType='email-address'
@@ -118,12 +120,14 @@ export default function Login() {
                         </View>
                         <View>                                                
                             <TextInput
-                                className='border-2 rounded-2xl w-64 pl-3'
+                                className='border-2 rounded-2xl w-64 pl-3 py-3'
+                                placeholderTextColor="#9CA3AF"
                                 placeholder='Heslo'
                                 value={formData.password}
                                 onChangeText={(value) => handleChange("password", value)}
                                 secureTextEntry
                                 editable={!loading}
+                               
                             />
                             {errors.password &&
                             (
@@ -150,36 +154,39 @@ export default function Login() {
                         onPress={SignIn}
                         disabled={loading}
                         activeOpacity={0.8}
-                        className={`${loading ? 'bg-blue-400' : 'bg-blue-600'} rounded-2xl py-5 items-center justify-center shadow-lg mb-6`}
+                        className={Platform.OS ==="android" ? 'bg-blue-600 rounded-2xl py-5 items-center justify-center px-20 shadow-lg mb-6' : 'bg-blue-600 text-sm rounded-2xl py-5 items-center justify-center px-10 shadow-lg mb-6' }
+                        //className={`${loading ? 'bg-blue-400' : 'bg-blue-600'} rounded-2xl py-5 items-center justify-center px-20 shadow-lg mb-6`}
                     >
                         {loading ? 
                         (
                             <View className='flex-row items-center'>
-                                <Text className='font-bold text-white'>
+                                <PlatformText className='font-bold text-white'>
                                     Prihlasovanie
-                                </Text>
+                                </PlatformText>
                             </View>
                         ):
                         (   
                             <View className='flex-row items-center'>
-                                <Text className='font-bold text-white'>
+                                <PlatformText 
+                                    className={Platform.OS ==="android" ? 'font-bold text-white' : 'font-bold text-white'}
+                                >
                                     Prihlásiť sa
-                                </Text>
+                                </PlatformText>
                             </View>
                         )}
                     </TouchableOpacity>
 
                     <View className='flex-row justify-center items-center'>
-                        <Text className='text-base'>
+                        <PlatformText className='text-base'>
                             Nemáte účet?{'  '}
-                        </Text>
+                        </PlatformText>
                         <TouchableOpacity
                             onPress={() => router.push("/(auth)/register")}
                             disabled={loading}
                         >
-                            <Text className='font-semibold'>
+                            <PlatformText className='font-semibold'>
                                 Zaregistrujte sa
-                            </Text>
+                            </PlatformText>
                         </TouchableOpacity>
                     </View>
                 </View>

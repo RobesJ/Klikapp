@@ -1,25 +1,31 @@
 import { supabase } from "@/lib/supabase";
+import { useObjectStore } from "@/store/objectStore";
 import { Client, PDF } from "@/types/generics";
 import { Chimney, Object } from "@/types/objectSpecific";
-import { EvilIcons, MaterialIcons } from "@expo/vector-icons";
+import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { parseISO } from "date-fns";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Modal, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import WebView from "react-native-webview";
-
 
 interface ObjectCardDetailsProps {
   object: Object;
   client: Client;
   chimneys: Chimney[];
+  visible: boolean;
+  onClose: () => void;
 }
 
-export default function ObjectDetails({ object, chimneys, client } : ObjectCardDetailsProps) { 
+export default function ObjectDetails({ object, chimneys, client, visible, onClose } : ObjectCardDetailsProps) { 
 
   const [loadingPDFs, setLoadingPDFs] = useState(false);
   const [PDFs, setPDFs] = useState<PDF[]>([]);
   const [selectedPDF, setSelectedPDF] = useState<PDF | null>(null);
   const [showPDFReports, setShowPDFReports] = useState(false);
+  const [uploadingPDF, setUploadingPDF] = useState(false);
+  const router = useRouter();
+  const {deleteObject} = useObjectStore();
 
   useEffect(() => {
     fetchPDFs();
@@ -44,8 +50,200 @@ export default function ObjectDetails({ object, chimneys, client } : ObjectCardD
         setLoadingPDFs(false);
     }
   };
+  
+  /*
+  const handleGeneratePDF = async (pdf: PDF, type: "cleaning" | "inspection" | "cleaningWithPaymentReceipt") => {
+    try {
+      //setIsGenerating(true);
+      const {data: projectData, error: projectError} = await supabase
+        .from("projects")
+        .select()
+        .eq("id", pdf.project_id)
+        .single();
 
+      if (projectError) throw projectError;
+      
+      const watermarkBase64 = await getWatermarkBase64();
+      const footerBase64 = await getFooterImageBase64();
+  
+     
+      if (type === "cleaningWithPaymentReceipt") {
+        console.log("inside of this condition");
+  
+        try {
+          const uri = await generateRecord(
+            projectData,
+            users[0],
+            client,
+            object,
+            chimney,
+            watermarkBase64,
+            footerBase64,
+            type,
+            sums
+          
+          if (uri) {
+            await uploadPDF(
+              uri,
+              type,
+              object.object.id,
+              chimney,
+              sums
+            );
+          }
+        } catch (err) {
+          console.error("Failed uploading or generation of cleaning record with receipt", err);
+        }
+      }
+  
+      else {
+        try {
+          const uri = await generateRecord(
+            projectWithRelations.project,
+            users[0],
+            projectWithRelations.client,
+            object,
+            chimney,
+            watermarkBase64,
+            footerBase64,
+            type,
+            null
+          );
+  
+          if (uri) {
+            await uploadPDF(
+              uri,
+              type,
+              object.object.id,
+              chimney,
+              null
+            );
+          }
+        } catch (err) {
+          console.error("Generation of basic report failed", err);
+        }
+          }
+        }
+      }
+      Alert.alert("Úspech", "PDF dokumenty boli vygenerované");
+  
+    } catch (error) {
+      console.error("handleGeneratePDF failed:", error);
+      Alert.alert("Chyba", "Nepodarilo sa vygenerovať PDF");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+
+  const regeneratePDF = async (pdf: PDF, report_type: string, object_id: string, chimney: Chimney, sums: string[] | null) => {
+    const parts = pdf.storage_path.split("pdf-reports/");
+    const filename = parts[1];
+    setUploadingPDF(true);
+    try{
+      // Delete old version from storage
+      const { error: storageError } = await supabase.storage
+          .from("pdf-reports")
+          .remove([filename]);
+
+      if (storageError) throw storageError;
+    }
+    catch(err: any){
+      console.error("Error deleting object from storage: ", err);
+    }
+         
+    
+    try {
+      let filename;
+      if(report_type === "cleaning" ||  report_type === "cleaningWithPaymentReceipt"){
+        filename =`cleaning_${chimney.id}_${pdf.project_id}.pdf`;
+      }
+      else{
+        filename =`inspection_${chimney.id}_${pdf.project_id}.pdf`;
+      }
+      
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const arrayBuffer = await new Response(blob).arrayBuffer();
+  
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase
+        .storage
+        .from("pdf-reports")
+        .upload(filename, arrayBuffer, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("pdf-reports")
+        .getPublicUrl(filename);
+      
+      console.log(`PDF for chimney ${chimney.id} uploaded`);
+      
+      // Save to database
+      if( sums !== null){
+        const { data: pdfData, error: dbError } = await supabase
+          .from("pdfs")
+          .update({
+            project_id: pdf.project_id,
+            object_id: pdf.object_id,
+            chimney_id: pdf.chimney_id,
+            report_type: pdf.report_type,
+            file_name: filename,
+            file_size: blob.size,
+            file_type: blob.type.toString(),
+            storage_path: urlData.publicUrl,
+            amount: sums[0],
+            amountByWords: sums[1]
+          })
+          .select();
+
+          if (dbError) throw dbError;
+          // Update local state
+          setPDFs([pdfData, ...PDFs]);
+      }
+      else{
+        const { data: pdfData, error: dbError } = await supabase
+          .from("pdfs")
+          .insert({
+            project_id: projectWithRelations.project.id,
+            object_id: object_id,
+            chimney_id: chimney.id,
+            report_type: report_type,
+            file_name: filename,
+            file_size: blob.size,
+            file_type: blob.type.toString(),
+            storage_path: urlData.publicUrl
+          })
+          .select()
+          .single();
+
+          if (dbError) throw dbError;
+          // Update local state
+          setPDFs([pdfData, ...PDFs]);
+      }
+
+      await fetchPDFs();
+      Alert.alert('Úspech', 'PDF záznam bol pridaný');
+    } 
+    catch (error: any) {
+      console.error('Error uploading pdf', error);
+      Alert.alert('Chyba', 'Nepodarilo sa nahrať PDF');
+    } 
+    finally {
+      setUploadingPDF(false);
+    }
+  };
+  */
+ 
   const deletePdf = async (pdf: PDF) => {
+    const parts = pdf.storage_path.split("pdf-reports/");
+    const filename = parts[1];
+
     Alert.alert(
       'Odstrániť PDF',
       'Naozaj chcete odstrániť tento PDF záznam?',
@@ -56,8 +254,6 @@ export default function ObjectDetails({ object, chimneys, client } : ObjectCardD
           style: 'destructive',
           onPress: async () => {
             try {
-              // Use storage_path from database
-              const filename = pdf.storage_path;
 
               // Delete from storage
               const { error: storageError } = await supabase.storage
@@ -90,6 +286,42 @@ export default function ObjectDetails({ object, chimneys, client } : ObjectCardD
 
 
   return (
+
+    <Modal
+    visible={visible}
+    transparent={true}
+    animationType="slide"
+    onRequestClose={onClose}
+  >
+    <View className="flex-1 bg-black/50 justify-center items-center">
+    <View className="w-10/12 h-fit bg-dark-bg border-2 border-gray-300 rounded-2xl overflow-hidden">
+        {/* Header */}
+        <View className="px-4 py-6 border-b border-gray-400">
+          <View className="flex-row items-center justify-between">
+            {object.city ? (
+              <View className='flex-1'>
+                <Text className="text-xl font-bold text-dark-text_color">
+                  {object.streetNumber}
+                </Text>
+                <Text className="text-xl font-bold text-dark-text_color">
+                  {object.city}
+                </Text>
+              </View>
+            ): (
+              <Text className="text-xl font-bold text-dark-text_color">
+                {object.address}
+              </Text>
+            )}
+            <TouchableOpacity
+              onPress={onClose}
+              className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+            >
+              <EvilIcons name="close" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+              
+        <ScrollView className="max-h-screen-safe-offset-12 p-4">
       <View className="flex-1">
           
           <View className="flex-2 mb-3">
@@ -189,6 +421,7 @@ export default function ObjectDetails({ object, chimneys, client } : ObjectCardD
                   </View>
               ))
           )}
+
         {/* PDF Viewer Modal */}
         {selectedPDF && (
           <Modal
@@ -285,6 +518,13 @@ export default function ObjectDetails({ object, chimneys, client } : ObjectCardD
                     onPress={() => Linking.openURL(selectedPDF.storage_path)}
                     className="bg-blue-600 rounded-xl px-6 py-3 flex-row items-center flex-1 mr-2"
                   >
+                    <MaterialIcons name="refresh" size={20} color="white" />
+                    <Text className="text-white font-semibold ml-2">Vytvorit novu verziu</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(selectedPDF.storage_path)}
+                    className="bg-blue-600 rounded-xl px-6 py-3 flex-row items-center flex-1 mr-2"
+                  >
                     <MaterialIcons name="open-in-new" size={20} color="white" />
                     <Text className="text-white font-semibold ml-2">Otvoriť</Text>
                   </TouchableOpacity>
@@ -302,5 +542,49 @@ export default function ObjectDetails({ object, chimneys, client } : ObjectCardD
           </Modal>
         )}
       </View>
+      </ScrollView>
+
+      <View className="flex-row justify-between px-4 py-6 border-t border-gray-400">
+          
+          {/* Object detail card action buttons*/}
+          <TouchableOpacity
+              onPress={() => {
+                  try{
+                    deleteObject(object.id);
+                    onClose;
+                  }
+                  catch (error){
+                    console.error("Delete failed:", error);
+                  }
+              }}
+              activeOpacity={0.8}
+              className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
+          >
+            <EvilIcons name="trash" size={24} color="white" />
+            <Text className='text-white'>Odstrániť</Text>
+          </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                onClose;
+                router.push({
+                  pathname: "/addObjectScreen",
+                  params: { 
+                    object: JSON.stringify(object), 
+                    mode: "edit",
+                    preselectedClient: JSON.stringify(client)
+                  }
+                });
+              }}
+              activeOpacity={0.8}
+              className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
+          >
+            <Feather name="edit-2" size={16} color="white" />
+            <Text className='text-white'>Upraviť</Text>
+          </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
   );
 }

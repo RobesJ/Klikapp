@@ -3,34 +3,38 @@ import { Redirect, Tabs } from "expo-router"
 import { ActivityIndicator, Image, Text, View } from "react-native"
 import { icons } from "../../../constants/icons"
 
-
 const TabIcon = ({focused, icon, title} : any) => {
     if (focused){
         return (
-            //<View className="w-full overflow-hidden flex-1 min-w-[124px] min-h-16 mt-3 justify-center items-center rounded-full">
             <View className="flex-1 w-full overflow-hidden min-w-[124px] min-h-16 mt-8 justify-center items-center rounded-full">
                 <Image
-                    source={icon}
-                    tintColor="#ABABAB"
-                    className="size-6"/>
-                <Text className="text-base"
-                    style={{color: "#ABABAB"}}>{title}</Text>
+                  source={icon}
+                  tintColor="#ABABAB"
+                  className="size-6"
+                />
+                <Text 
+                  className="text-base"
+                  style={{color: "#ABABAB"}}
+                >
+                    {title}
+                </Text>
             </View>
         )
     }
     return (
         <View className="size-full justify-center items-center mt-4 rounded-full">
             <Image
-                source={icon}
-                tintColor="#ABABAB"
-                className="size-8"/>
+              source={icon}
+              tintColor="#ABABAB"
+              className="size-8"
+            />
         </View>
     )
 }
 
 const _Layout = () => {
     const {user, loading} = useAuth();
-
+    
     if (loading){
         <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" />
@@ -41,6 +45,7 @@ const _Layout = () => {
         return <Redirect href ="/(auth)/login" />
     }
 
+    
     return (
         <Tabs
             screenOptions={{
@@ -59,9 +64,8 @@ const _Layout = () => {
                     overflow: "hidden",
                     borderWidth: 1, 
                     borderColor: "#0c1022"
-                    //"#0c1026f0",
-                },
-                animation: 'shift' // Built-in directional animation!
+                }
+                
             }}
         >
             <Tabs.Screen
@@ -76,7 +80,7 @@ const _Layout = () => {
                             title="DOMOV"
                         />   
                     ),
-                    //animation: "shift"
+                
                 }}
             />
             <Tabs.Screen
@@ -91,8 +95,7 @@ const _Layout = () => {
                             icon={icons.clientsIcon}
                             title="KLIENTI"
                         />   
-                    ),
-                    //animation: "shift"
+                    )
                 }}
             />
             <Tabs.Screen
@@ -107,8 +110,7 @@ const _Layout = () => {
                             icon={icons.chimneyIcon}
                             title="OBJEKTY"
                         />   
-                    ),
-                    //animation: "shift"
+                    )
                 }}
             />
             <Tabs.Screen
@@ -123,8 +125,7 @@ const _Layout = () => {
                             icon={icons.projectsIcon}
                             title="PROJEKTY"
                         />   
-                    ),
-                    //animation: "shift"
+                    )
                 }}
             />
 
@@ -140,8 +141,7 @@ const _Layout = () => {
                             icon={icons.planningIcon}
                             title="PLÁNOVANIE"
                         />   
-                    ),
-                    //animation: "shift"
+                    )
                 }}
             />
         </Tabs>

@@ -1,13 +1,14 @@
+import { AnimatedScreen } from '@/components/animatedScreen';
 import ObjectDetails from '@/components/cardDetails/objectDetails';
 import ObjectCard from '@/components/cards/objectCard';
 import { useObjectStore } from '@/store/objectStore';
 import { Client } from '@/types/generics';
 import { ObjectWithRelations } from '@/types/objectSpecific';
-import { EvilIcons, Feather } from '@expo/vector-icons';
+import { EvilIcons } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
-import { useNavigation, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Objects() {
@@ -20,18 +21,17 @@ export default function Objects() {
     loadMore,
     fetchObjects,
     setFilters,
-    deleteObject,
     filteredObjects
   } = useObjectStore();
 
   const router = useRouter();
   const navigation = useNavigation();
 
-  //useFocusEffect(
-  //  useCallback(() => {
-  //    fetchObjects(50);
-  //  }, [fetchObjects])
-  //);
+  useFocusEffect(
+    useCallback(() => {
+      fetchObjects(50);
+    }, [fetchObjects])
+  );
  
   const handleModalVisibility = (objectData: ObjectWithRelations, value: boolean) =>{
     setShowDetails(value);
@@ -45,6 +45,11 @@ export default function Objects() {
   const handleSearchText = (text: string) => {
     setSearchText(text);
     setFilters({searchQuery: text});
+  };
+
+  const handleClose = () => {
+    setShowDetails(false);
+    setSelectedObject(null);
   };
 
   const objectsGroupedByClient = useMemo(() => {
@@ -72,6 +77,7 @@ export default function Objects() {
   
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
+      <AnimatedScreen tabIndex={2}>
       {/* Header */}
       <View className="flex-2 mt-4 px-6 mb-8">
         <View className="flex-row justify-between items-center">
@@ -82,7 +88,7 @@ export default function Objects() {
           >
             <EvilIcons name="navicon" size={32} color="white" />
           </TouchableOpacity>
-          <Text className="font-bold text-4xl text-dark-text_color ml-4">Objekty</Text>
+          <Text allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Objekty</Text>
           <Text className="text-xl text-green-500">ONLINE</Text>
         </View>
 
@@ -115,6 +121,7 @@ export default function Objects() {
               {group.objects.map((item) => (
                 <View key={item.object.id} >
                   <ObjectCard
+                    key={item.object.id}
                     object={item.object}
                     chimneys={item.chimneys}
                     client={item.client}
@@ -163,95 +170,19 @@ export default function Objects() {
       >
         <Text className='text-white text-3xl'>+</Text>
       </TouchableOpacity>
-
-      <Modal
-        visible={showDetails}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowDetails(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center">
-        <View className="w-10/12 h-fit bg-dark-bg border-2 border-gray-300 rounded-2xl overflow-hidden">
-            {/* Header */}
-            <View className="px-4 py-6 border-b border-gray-400">
-              <View className="flex-row items-center justify-between">
-                {selectedObject?.object.city ? (
-                  <View className='flex-1'>
-                    <Text className="text-xl font-bold text-dark-text_color">
-                      {selectedObject.object.streetNumber}
-                    </Text>
-                    <Text className="text-xl font-bold text-dark-text_color">
-                      {selectedObject.object.city}
-                    </Text>
-                  </View>
-                ): (
-                  <Text className="text-xl font-bold text-dark-text_color">
-                    {selectedObject?.object.address}
-                  </Text>
-                )}
-                <TouchableOpacity
-                  onPress={() => setShowDetails(false)}
-                  className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
-                >
-                  <EvilIcons name="close" size={24} color="white" />
-                </TouchableOpacity>
-              </View>
-            </View>
-                  
-            <ScrollView className="max-h-screen-safe-offset-12 p-4">
-              {selectedObject && (
-                <ObjectDetails 
-                  object={selectedObject.object}
-                  client={selectedObject.client}
-                  chimneys={selectedObject.chimneys} />
-              )}
-            </ScrollView>
-
-            <View className="flex-row justify-between px-4 py-6 border-t border-gray-400">
-                
-                {/* Object detail card action buttons*/}
-                <TouchableOpacity
-                    onPress={() => {
-                      if(selectedObject){
-                        try{
-                          deleteObject(selectedObject?.object.id);
-                          setShowDetails(false);
-                        }
-                        catch (error){
-                          console.error("Delete failed:", error);
-                        }
-                        setSelectedObject(null);
-                      }
-                    }}
-                    activeOpacity={0.8}
-                    className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
-                >
-                  <EvilIcons name="trash" size={24} color="white" />
-                  <Text className='text-white'>Odstrániť</Text>
-                </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowDetails(false);
-                      router.push({
-                        pathname: "/addObjectScreen",
-                        params: { 
-                          object: JSON.stringify(selectedObject), 
-                          mode: "edit",
-                          preselectedClient: JSON.stringify(selectedObject?.client)
-                        }
-                      });
-                    }}
-                    activeOpacity={0.8}
-                    className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
-                >
-                  <Feather name="edit-2" size={16} color="white" />
-                  <Text className='text-white'>Upraviť</Text>
-                </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      
+      {/* Object details modal */}
+      {selectedObject && (
+        <ObjectDetails 
+          key={selectedObject.object.id}
+          object={selectedObject.object}
+          client={selectedObject.client}
+          chimneys={selectedObject.chimneys} 
+          visible={showDetails}
+          onClose={handleClose}
+        />
+      )}
+      </AnimatedScreen>
     </SafeAreaView>
   );
 }
