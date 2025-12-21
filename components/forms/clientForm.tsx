@@ -1,9 +1,10 @@
 import { supabase } from "@/lib/supabase";
+import { useNotificationStore } from "@/store/notificationStore";
 import { Client } from "@/types/generics";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
 
 interface ClientFormProps{
@@ -113,7 +114,6 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                 .single();
                 
                 if (error) throw error;
-                Alert.alert('Success', 'Client created successfully!');
                 onSuccess?.(data);
             }
             else { 
@@ -125,13 +125,25 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                 .single();
 
                 if (error) throw error;
-                Alert.alert('Success', 'Client updated successfully!');
                 onSuccess?.(data);
             }
         }
         catch (error: any){
             console.error("Error saving client: ", error);
-            Alert.alert('Error', error.message || "Failed to save client's data");
+            if(mode === "create"){
+                useNotificationStore.getState().addNotification(
+                    'Nastala chyba pri vytváraní klienta',
+                    'error',
+                    3000
+                );
+            }
+            else{
+                useNotificationStore.getState().addNotification(
+                    'Nastala chyba pri úprave klienta',
+                    'error',
+                    3000
+                );
+            }
         }
         finally{
             setLoading(false);

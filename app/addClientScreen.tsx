@@ -27,7 +27,6 @@ export default function AddClientScreen(){
           mode={(mode as "create" | "edit") || "create"}
           initialData={parsedClient}
           onSuccess={handleSuccess}
-          onCancel={() =>router.back}
       />
     </SafeAreaView>
   );

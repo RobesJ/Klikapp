@@ -1,10 +1,12 @@
 import { supabase } from '@/lib/supabase';
 import { User } from "@/types/generics";
-import { Chimney, ObjectWithRelations, ProjectWithRelations } from '@/types/projectSpecific';
+import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
+import { ProjectWithRelations } from '@/types/projectSpecific';
 import { addDays, format, isBefore, parseISO } from 'date-fns';
 import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { useClientStore } from './clientStore';
+import { useNotificationStore } from './notificationStore';
 
 export interface ProjectFilters {
   type: string[];
@@ -182,6 +184,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         initialLoading: false, 
         error: error.message
       });
+      useNotificationStore.getState().addNotification(
+        'Nepodarilo sa načítať aktívne projekty',
+        'error',
+        4000
+      );
     }
   },
 
@@ -277,6 +284,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         backgroundLoading: false, 
         error: error.message
       });
+      useNotificationStore.getState().addNotification(
+        'Nepodarilo sa načítať plánované projekty',
+        'error',
+        4000
+      );
     }
   },
 
@@ -498,6 +510,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         backgroundLoading: false,
         error: error.message
        });
+       useNotificationStore.getState().addNotification(
+        'Nepodarilo sa načítať viac projektov',
+        'error',
+        4000
+      );
     }
   },
 
@@ -646,6 +663,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       newMap.set(project.project.id, project);
       return {projects: newMap};
     });
+    useNotificationStore.getState().addNotification(
+      'Projekt bol úspešne pridaný',
+      'success',
+      3000
+    );
   },
   
   updateProject: (id: string, updatedProject) => {
@@ -654,6 +676,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       newMap.set(id, updatedProject);
       return {projects: newMap};
     });
+    useNotificationStore.getState().addNotification(
+      'Projekt bol úspešne aktualizovaný',
+      'success',
+      3000
+    );
     //get().applySmartFilters(get().filters);
   },
 
@@ -694,16 +721,21 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               }));
             
               useClientStore.getState().lastFetch = 0;
-              Alert.alert('Úspech', 'Projekt bol odstránený');
+              useNotificationStore.getState().addNotification(
+                'Projekt bol úspešne odstránený',
+                'success',
+                3000
+              );
             }
             catch (error) {
               console.error("Error deleting project:", error);
-              Alert.alert('Chyba', 'Nepodarilo sa odstrániť projekt');
               // rollback if error
-              set({
-                  projects: previousProjects
-                });
-              throw error;
+              set({ projects: previousProjects });
+              useNotificationStore.getState().addNotification(
+                'Projekt sa nepodarilo odstrániť',
+                "error",
+                3000
+              );
             }
           }
         }

@@ -1,12 +1,14 @@
 import { AnimatedScreen } from '@/components/animatedScreen';
 import ObjectDetails from '@/components/cardDetails/objectDetails';
 import ObjectCard from '@/components/cards/objectCard';
+import { NotificationToast } from '@/components/notificationToast';
 import { useObjectStore } from '@/store/objectStore';
 import { Client } from '@/types/generics';
 import { ObjectWithRelations } from '@/types/objectSpecific';
 import { EvilIcons } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
+import debounce from 'lodash.debounce';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,9 +44,14 @@ export default function Objects() {
     fetchObjects(50);
   };
 
+  const debounceSearch = useMemo(() =>
+    debounce((text: string) => setFilters({searchQuery: text}),300),
+    []
+  );
+
   const handleSearchText = (text: string) => {
     setSearchText(text);
-    setFilters({searchQuery: text});
+    debounceSearch(text);
   };
 
   const handleClose = () => {
@@ -102,6 +109,7 @@ export default function Objects() {
             onChangeText={handleSearchText}
           />
         </View>
+        <NotificationToast/>
       </View>
 
       <FlatList
@@ -149,24 +157,7 @@ export default function Objects() {
           pathname: "/addObjectScreen",
           params: { mode: "create" }
         })}
-        style={{
-          position: 'absolute',
-          bottom: 110,
-          right: 28,
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          backgroundColor: '#1174EE',
-          borderColor: '#FFFFFF',
-          borderWidth: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-        }}
+        className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
       >
         <Text className='text-white text-3xl'>+</Text>
       </TouchableOpacity>

@@ -1,5 +1,5 @@
 import { Client, Project, User } from "@/types/generics";
-import { ObjectWithRelations } from "@/types/projectSpecific";
+import { ObjectWithRelations } from "@/types/objectSpecific";
 import { format } from "date-fns";
 import { Text, TouchableOpacity, View } from "react-native";
 import { STATE_OPTIONS } from "../badge";

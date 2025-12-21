@@ -1,12 +1,14 @@
 import { AnimatedScreen } from "@/components/animatedScreen";
 import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/cards/clientCard";
+import { NotificationToast } from "@/components/notificationToast";
 import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
 import { EvilIcons } from "@expo/vector-icons";
 import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from "expo-router";
-import { useCallback, useState } from 'react';
+import debounce from "lodash.debounce";
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,7 +31,7 @@ export default function Clients() {
   
   useFocusEffect(
     useCallback(() => {
-      fetchClients(100);
+      fetchClients(50);
     }, [fetchClients])
   );
   
@@ -42,9 +44,14 @@ export default function Clients() {
     fetchClients(50);
   };
 
+  const debounceSearch = useMemo(() =>
+    debounce((text: string) => setFilters({ searchQuery: text}), 300),
+    []
+  );
+
   const handleSearch = (text: string) => {
     setSearchText(text);
-    setFilters({ searchQuery: text});
+    debounceSearch(text);
   };
   
   const handleOnClose = () => {
@@ -82,8 +89,9 @@ export default function Clients() {
             onChangeText={handleSearch}
           />
         </View>
+        <NotificationToast/>
       </View>
-      
+
       {/* list of clients */}
       <FlatList
         data={searchText.length > 0 ? filteredClients : clients }
@@ -116,24 +124,7 @@ export default function Clients() {
           params: { mode: "create" }
         })}
         activeOpacity={0.8}
-        style={{
-          position: 'absolute',
-          bottom: 110,
-          right: 28,
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          backgroundColor: '#1174EE',
-          borderColor: '#FFFFFF',
-          borderWidth: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-        }}
+        className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
       >
         <Text className='text-white text-3xl'>+</Text>
       </TouchableOpacity>

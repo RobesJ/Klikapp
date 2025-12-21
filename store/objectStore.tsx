@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { Chimney, ObjectWithRelations } from '@/types/objectSpecific';
 import { Alert } from 'react-native';
 import { create } from 'zustand';
+import { useNotificationStore } from './notificationStore';
 
 interface ObjectFilters {
   searchQuery: string;
@@ -25,7 +26,8 @@ interface ObjectStore {
   addObject: (object: ObjectWithRelations) => void;
   updateObject: (id: string, object: ObjectWithRelations) => void;
   deleteObject: (id: string) => void;
-  applyFilters: () => void;
+  applyFilters: () => ObjectWithRelations[];
+  lookForObjectInDBS: () => void;
   loadMore: () => void;
 }
 
@@ -111,14 +113,24 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     } catch (error: any) {
       console.error('Error fetching objects:', error.message);
       set({ error: error.message, loading: false });
+      useNotificationStore.getState().addNotification(
+        'Nepodarilo sa načítať objekty',
+        'error',
+        4000
+      );
     }
   },
 
   setFilters: (newFilters) => {
-    set((state) => ({
-      filters: { ...state.filters, ...newFilters }
-    }));
-    get().applyFilters();
+    const { filters } = get();
+
+    set({filters: { ...filters, ...newFilters }});
+    const filtered = get().applyFilters();
+    set({filteredObjects: filtered});
+
+    if (newFilters.searchQuery?.trim() && newFilters.searchQuery?.trim().length > 3 && filtered.length === 0) {
+      get().lookForObjectInDBS();
+    }
   },
 
   clearFilters: () => {
@@ -140,8 +152,90 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
       );
     }
 
-    set({ filteredObjects: filtered });
+    //set({ filteredObjects: filtered });
     console.log(`Filtered: ${filtered.length}/${objects.length} objects`);
+    return filtered;
+  },
+
+  lookForObjectInDBS: async() => {
+    const { objects, filters, loading } = get();
+
+    if (loading) {
+      return;
+    }
+
+    set({ loading: true, error: null });
+    if (filters.searchQuery.trim()) {
+      try {
+        console.log("Looking for objects from database...");
+        const searchTerm = filters.searchQuery.trim();
+
+        const { data: clientsData, error: clientsError} = await supabase
+          .from("clients")
+          .select("*")
+          .or(`name.ilike.%${searchTerm}%`);
+
+        if (clientsError) throw clientsError;
+
+        const clientIDs = clientsData.map(c => c.id);
+
+        let query =  supabase
+          .from("objects")
+          .select(`
+            *,
+            clients (*),
+            chimneys (
+              id,
+              object_id,
+              chimney_type_id,
+              placement,
+              appliance,
+              note,
+              chimney_type:chimney_types (
+                id,
+                type,
+                labelling
+              )
+            )
+          `);
+        
+        if(clientIDs.length > 0){
+          query.or(`address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,client_id.in.(${clientIDs.join(',')})`);
+        }
+        else{
+          query.or(`address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
+        }
+
+        const { data: objectsData, error: objectError } = await query;
+        if (objectError) throw objectError;
+
+        const filtered: ObjectWithRelations[] = objectsData.map((objectItem: any) => {
+          const chimneys: Chimney[] = objectItem.chimneys || [];
+
+          return {
+            object: objectItem,
+            client: objectItem.clients,
+            chimneys: chimneys,
+          };
+        });
+
+        set({ 
+          objects: [...filtered, ...objects],
+          filteredObjects: filtered,
+          loading: false
+        });
+
+        console.log(`Found ${filtered.length} matching objects`);
+      } catch (error: any) {
+        console.error('Error searching for objects in dbs:', error.message);
+        set({ error: error.message, loading: false });
+        useNotificationStore.getState().addNotification(
+          'Nepodarilo sa vyhľadať viac objektov',
+          'error',
+          4000
+        );
+      }
+    }
   },
   
   loadMore: async () => {
@@ -204,6 +298,11 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         loading: false,
         error: error.message
        });
+       useNotificationStore.getState().addNotification(
+        'Nepodarilo sa načítať viac objektov',
+        'error',
+        4000
+      );
     }
   },
 
@@ -217,7 +316,12 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
       objects: [object, ...state.objects],
       offset: state.offset +1
     }));
-    //get().applyFilters();
+
+    useNotificationStore.getState().addNotification(
+      'Objekt bol úspešne pridaný',
+      'success',
+      3000
+    );
   },
 
   updateObject: (id: string, updatedObject) => {
@@ -226,7 +330,11 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         o.object.id === id ? updatedObject : o
       )
     }));
-    //get().applyFilters();
+    useNotificationStore.getState().addNotification(
+      'Objekt bol úspešne aktualizovaný',
+      'success',
+      3000
+    );
   },
 
   deleteObject: async (id: string) => {
@@ -255,18 +363,22 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
               if(error) throw error;
               if(data){
                 console.log("Deleted object with id:", id);
+                useNotificationStore.getState().addNotification(
+                  'Objekt bol úspešne odstránený',
+                  'success',
+                  3000
+                );
               }
-            
-              //useClientStore.getState().lastFetch = 0;
-              //useProjectStore.getState().lastFetch = 0;
-              Alert.alert('Úspech', 'Objekt bol odstránený');
             }
             catch(error){
               console.error("Chyba pri mazani objektu:", error);
-              Alert.alert('Chyba', 'Nepodarilo sa odstrániť objekt');
               set({objects:previousObjects});
               //get().applyFilters();
-              throw error;
+              useNotificationStore.getState().addNotification(
+                'Nepodarilo sa odstrániť objekt',
+                'error',
+                4000
+              );
             }
           }
         }

@@ -1,12 +1,13 @@
 import { supabase } from "@/lib/supabase";
+import { useNotificationStore } from "@/store/notificationStore";
 import { useProjectStore } from "@/store/projectStore";
 import { Client, Project, User } from "@/types/generics";
-import { Chimney, ObjectWithRelations, ProjectWithRelations } from "@/types/projectSpecific";
+import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
+import { ProjectWithRelations } from "@/types/projectSpecific";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    Alert,
     FlatList,
     KeyboardAvoidingView,
     Modal,
@@ -264,7 +265,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                     if (objectError) throw objectError;
                 }
-                Alert.alert('Uspech', 'Projekt bol vytvoreny!');
 
                 const { data: completeProject, error: fetchError } = await supabase
                     .from("projects")
@@ -367,8 +367,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     
                     if (objectsError) throw objectsError;
                 }
-                
-                Alert.alert('Úspech', 'Projekt bol upravený!');
 
                 const { data: completeProject, error: fetchError } = await supabase
                     .from("projects")
@@ -406,7 +404,20 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
         catch (error: any){
             console.error("Chyba pri ukladaní projektu: ", error);
-            Alert.alert('Chyba', error.message || "Nastal problém pri ukladaní projektu");
+            if (mode === "create"){
+                useNotificationStore.getState().addNotification(
+                    'Nepodarilo sa vytvoriť projekt',
+                    'error',
+                    4000
+                );
+            }
+            else{
+                useNotificationStore.getState().addNotification(
+                    'Nepodarilo sa upraviť projekt',
+                    'error',
+                    4000
+                );
+            }
         }
         finally{
             setLoading(false);
@@ -516,8 +527,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 const chimneys: Chimney[] = obj.chimneys
                   ?.map((c: any) => ({
                   id: c.id,
-                  type: c.chimney_types?.type || null,
-                  labelling: c.chimney_type?.labelling || null,
+                  chimney_type_id: c.chimney_types.id,
                   appliance: c.appliance,
                   placement: c.placement,
                   note: c.note
@@ -876,6 +886,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             </TouchableOpacity>
         </View>
         </KeyboardAvoidingView>
+
         {/* User Selection Modal */}     
         <UserPickerModal
           visible={showUserModal}

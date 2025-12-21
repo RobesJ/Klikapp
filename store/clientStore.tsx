@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { useNotificationStore } from "@/store/notificationStore";
 import { Client } from '@/types/generics';
 import { Alert } from 'react-native';
 import { create } from 'zustand';
@@ -18,7 +19,6 @@ interface ClientStore {
   pageSize: number;
   offset: number;
   error: string | null;
-  success: string | null;
   
   fetchClients: (limit: number) => Promise<void>;
   setFilters: (filters: Partial<ClientFilters>) => void;
@@ -26,8 +26,10 @@ interface ClientStore {
   addClient: (client: Client) => void;
   updateClient: (id: string, client: Client) => void;
   deleteClient: (id: string) => void;
-  applyFilters: () => void;
+  applyFilters: () => Client[];
+  lookForClientInDBS: () => void;
   loadMore: () => Promise<void>;
+  
 }
 
 const CACHE_DURATION = 300000; // 5 min
@@ -47,7 +49,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   error: null,
   pageSize: 30,
   offset: 0,
-  success: null,
 
   fetchClients: async (limit) => {
     const { clients, lastFetch, loading } = get();
@@ -99,19 +100,31 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     catch (error: any) {
       console.error('Error fetching clients:', error.message);
       set({ error: error.message, loading: false });
+      useNotificationStore.getState().addNotification(
+        'Nepodarilo sa načítať klientov',
+        'error',
+        4000
+      );
     }
   },
-
+  
   setFilters: (newFilters) => {
-    set((state) => ({
-      filters: { ...state.filters, ...newFilters }
-    }));
-    get().applyFilters();
+    const { filters } = get(); 
+    
+    set({ filters: { ...filters, ...newFilters } });
+    const filtered = get().applyFilters();
+    set({ filteredClients: filtered });
+  
+    // Change this line - use 'filtered' not 'filteredClients'
+    if (newFilters.searchQuery?.trim() && newFilters.searchQuery?.trim().length > 3 && filtered.length === 0) {
+      get().lookForClientInDBS();
+    }
   },
 
   clearFilters: () => {
     set({ filters: initialFilters });
-    get().applyFilters();
+    const filtered = get().applyFilters();
+    set({filteredClients: filtered});
   },
 
   applyFilters: () => {
@@ -126,8 +139,56 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       );
     }
 
-    set({ filteredClients: filtered });
+    //set({ filteredClients: filtered });
     console.log(`Filtered: ${filtered.length}/${clients.length} clients`);
+    return filtered;
+  },
+
+  lookForClientInDBS: async () =>{
+    const { clients, filters } = get();
+    //let filtered = [...clients];
+
+    if (filters.searchQuery.trim()) {
+      try {
+        console.log('Looking for clients in database...');
+        const searchTerm = filters.searchQuery.trim();
+
+        const { data: clientsData, error: clientsError} = await supabase
+          .from("clients")
+          .select(`
+              *,
+              projects:projects(count),
+              objects:objects(count)
+          `)
+          .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+          .limit(5);
+
+        if (clientsError) throw clientsError;
+          
+        const filtered: Client[] = clientsData.map(item => ({
+            ...item,
+            projectsCount: item.projects[0]?.count || 0,
+            objectsCount: item.objects[0]?.count || 0
+        }));
+
+        set({ 
+          clients: [...filtered, ...clients],
+          filteredClients: filtered,
+          //offset: get().offset +1
+        });
+        console.log(`Found: ${filtered.length} matching clients`);
+      } 
+      catch (error: any) {
+        console.error('Error searching for clients in dbs:', error.message);
+        set({ error: error.message, loading: false });
+
+        useNotificationStore.getState().addNotification(
+          'Nepodarilo sa vyhľadať klientov',
+          'error',
+          4000
+        );
+      }
+    }
   },
 
   loadMore: async () => {
@@ -170,6 +231,12 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         loading: false,
         error: error.message
        });
+
+       useNotificationStore.getState().addNotification(
+        'Nepodarilo sa načítať viac klientov',
+        'error',
+        4000
+      );
     }
   },
   
@@ -178,6 +245,12 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       clients: [client, ...state.clients],
       offset: state.offset + 1,
     }));
+
+    useNotificationStore.getState().addNotification(
+      'Klient bol úspešne pridaný',
+      'success',
+      3000
+    );
   },
 
   updateClient: (id, updatedClient) => {
@@ -186,6 +259,12 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         client.id === id ? updatedClient : client
       )
     }));
+    
+    useNotificationStore.getState().addNotification(
+      'Klient bol úspešne aktualizovaný',
+      'success',
+      3000
+    );
   },
 
   deleteClient: async (id: string) => {
@@ -213,11 +292,13 @@ export const useClientStore = create<ClientStore>((set, get) => ({
               if (error) throw error;
               if (data){
                 console.log("Client was deleted successfuly");
+                useNotificationStore.getState().addNotification(
+                  'Klient bol úspešne odstránený',
+                  'success',
+                  3000
+                );
               }
-              //useObjectStore.getState().lastFetch = 0;
-              set({
-                success: "Klient bol úspešne odstránený"
-              });
+              
             }
             catch(error){
               console.error("error deleting client:",error);
@@ -225,7 +306,12 @@ export const useClientStore = create<ClientStore>((set, get) => ({
                 clients: previousClients,
                 error: "Nepodarilo sa odstrániť klienta"
               });
-              throw error;
+              
+              useNotificationStore.getState().addNotification(
+                'Nepodarilo sa odstrániť klienta',
+                'error',
+                4000
+              );
             }
           }
         }

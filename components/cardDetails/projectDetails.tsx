@@ -1,18 +1,20 @@
 import { getFooterImageBase64, getWatermarkBase64 } from '@/constants/icons';
 import { supabase } from "@/lib/supabase";
 import { generateRecord } from "@/services/pdfService";
+import { useNotificationStore } from '@/store/notificationStore';
 import { useProjectStore } from "@/store/projectStore";
 import { PDF, User } from "@/types/generics";
-import { Chimney, Photo, ProjectWithRelations } from "@/types/projectSpecific";
+import { Chimney } from "@/types/objectSpecific";
+import { Photo, ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { format, parseISO } from 'date-fns';
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Image, Linking, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { WebView } from 'react-native-webview';
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { ModalSelector, STATE_OPTIONS } from "../badge";
 import { FormInput } from "../formInput";
+import { PDF_Viewer } from '../pdfViewer';
 import UserPickerModal from '../userPickerModal';
 
 interface ProjectCardDetailsProps {
@@ -136,7 +138,11 @@ export default function ProjectDetails({
     }
     catch(error: any){
         console.log("Error taking photos:", error);
-        Alert.alert("Chyba", "Nepodarilo sa otvotiť fotoaparát");
+        useNotificationStore.getState().addNotification(
+            'Nepodarilo sa otvorit fotoaparát',
+            'error',
+            4000
+        );
     }
   };
 
@@ -185,10 +191,18 @@ export default function ProjectDetails({
       
       // Update local state
       setPhotos([photoData, ...photos]);
-      Alert.alert('Úspech', 'Fotografia bola pridaná');
+      useNotificationStore.getState().addNotification(
+          'Fotografia bola pridaná',
+          "success",
+          3000
+      );
     } catch (error: any) {
       console.error('Error uploading photo:', error);
-      Alert.alert('Chyba', 'Nepodarilo sa nahrať fotografiu');
+      useNotificationStore.getState().addNotification(
+        'Nepodarilo sa nahrať fotografiu',
+        "error",
+        4000
+    );
     } finally {
       setUploadingPhotos(false);
     }
@@ -226,10 +240,19 @@ export default function ProjectDetails({
               // Update local state
               setPhotos(photos.filter(p => p.id !== photo.id));
               setSelectedPhoto(null);
-              Alert.alert('Úspech', 'Fotografia bola odstránená');
+              
+              useNotificationStore.getState().addNotification(
+                "Fotografia bola odstránená",
+                "success",
+                3000
+              );
             } catch (error: any) {
               console.error('Error deleting photo:', error);
-              Alert.alert('Chyba', 'Nepodarilo sa odstrániť fotografiu');
+              useNotificationStore.getState().addNotification(
+                "Nepodarilo sa odstrániť fotografiu",
+                "error",
+                4000
+              );
             }
           }
         }
@@ -385,11 +408,18 @@ export default function ProjectDetails({
           }
         }
       }
-      Alert.alert("Úspech", "PDF dokumenty boli vygenerované");
-  
+      useNotificationStore.getState().addNotification(
+        "PDF dokumenty boli vygenerované",
+        "success",
+        3000
+      );
     } catch (error) {
       console.error("handleGeneratePDF failed:", error);
-      Alert.alert("Chyba", "Nepodarilo sa vygenerovať PDF");
+      useNotificationStore.getState().addNotification(
+        "Nepodarilo sa vygenerovať PDF",
+        "error",
+        3000
+      );
     } finally {
       setIsGenerating(false);
       setChimneySums({});
@@ -478,11 +508,19 @@ export default function ProjectDetails({
       }
 
       await fetchPDFs();
-      Alert.alert('Úspech', 'PDF záznam bol pridaný');
+      useNotificationStore.getState().addNotification(
+        "PDF záznam bol pridaný",
+        "success",
+        3000
+      );
     } 
     catch (error: any) {
       console.error('Error uploading pdf', error);
-      Alert.alert('Chyba', 'Nepodarilo sa nahrať PDF');
+      useNotificationStore.getState().addNotification(
+        "Nepodarilo sa nahrať PDF",
+        "error",
+        4000
+      );
     } 
     finally {
       setUploadingPDFs(false);
@@ -521,10 +559,18 @@ export default function ProjectDetails({
               // Update local state
               setPDFs(PDFs.filter(p => p.id !== pdf.id));
               setSelectedPDF(null);
-              Alert.alert('Úspech', 'PDF záznam bol odstránený');
+              useNotificationStore.getState().addNotification(
+                "PDF záznam bol odstránený",
+                "success",
+                3000
+              );
             } catch (error: any) {
               console.error('Error deleting pdf:', error);
-              Alert.alert('Chyba', 'Nepodarilo sa odstrániť PDF dokument');
+              useNotificationStore.getState().addNotification(
+                "Nepodarilo sa odstrániť PDF záznam",
+                "error",
+                4000
+              );
             }
           }
         }
@@ -688,10 +734,14 @@ export default function ProjectDetails({
         objects: projectWithRelations.objects
       });
       setSuccess(`Stav projektu bol zmenený na: ${newState}`);
-      //Alert.alert('Úspech', `Stav projektu bol zmenený na: ${newState}`);
+  
     } catch (error: any) {
       console.error('Error updating project state:', error);
-      //Alert.alert('Chyba', 'Nepodarilo sa aktualizovať stav projektu');
+      useNotificationStore.getState().addNotification(
+        "Nepodarilo sa upraviť stav projektu",
+        "error",
+        4000
+      );
     } finally {
       setUpdatingState(false);
     }
@@ -700,7 +750,11 @@ export default function ProjectDetails({
   const handleAddUser = async (user: User) => {
     // Check if already assigned
     if (users.some(u => u.id === user.id)) {
-      Alert.alert('Upozornenie', 'Tento používateľ je už priradený');
+      useNotificationStore.getState().addNotification(
+        "Tento používateľ je už priradený",
+        "error",
+        4000
+      );
       return;
     }
 
@@ -727,10 +781,18 @@ export default function ProjectDetails({
       });
 
       setShowUserModal(false);
-      Alert.alert('Úspech', `${user.name} bol priradený k projektu`);
+      useNotificationStore.getState().addNotification(
+        "Úspech', `${user.name} bol priradený k projektu",
+        "success",
+        3000
+      );
     } catch (error: any) {
       console.error('Error adding user:', error);
-      Alert.alert('Chyba', 'Nepodarilo sa priradiť používateľa');
+      useNotificationStore.getState().addNotification(
+        "Nepodarilo sa priradiť používateľa",
+        "error",
+        4000
+      );
     }
   };
 
@@ -756,10 +818,13 @@ export default function ProjectDetails({
         objects: projectWithRelations.objects 
       });
 
-      Alert.alert('Úspech', 'Používateľ bol odstránený z projektu');
     } catch (error: any) {
       console.error('Error removing user:', error);
-      Alert.alert('Chyba', 'Nepodarilo sa odstrániť používateľa');
+      useNotificationStore.getState().addNotification(
+        "Nepodarilo sa odstrániť používateľa z projektu",
+        "error",
+        4000
+      );
     }
   };
   
@@ -804,6 +869,11 @@ export default function ProjectDetails({
     setPdfStep("choice");
     setSelectedChimneyId(null);
     setFocusedField(null);
+  };
+
+  const handleClosePdfViewer = () => {
+    setShowPDFReports(false);
+    setSelectedPDF(null);
   };
 
   return (
@@ -1206,117 +1276,15 @@ export default function ProjectDetails({
               </Modal>
             )}
 
-
             {/* PDF Viewer Modal */}
             {selectedPDF && (
-                <Modal
-                  visible={showPDFReports}
-                  transparent={false}
-                  animationType="slide"
-                  onRequestClose={() => {
-                    setShowPDFReports(false);
-                    setSelectedPDF(null);
-                  }}
-                >
-                  <View className="flex-1 bg-dark-bg">
-                    {/* Header */}
-                    <View 
-                      className="pt-12 pb-4 px-6 border-b border-gray-700 bg-dark-bg"
-                    >
-                      <View className="flex-row items-center justify-between">
-                        <View className="flex-1">
-                          <Text className="text-xl font-bold text-white">
-                            {selectedPDF.report_type === "cleaning" ? "Čistenie" : "Revízna správa"}
-                          </Text>
-                          <Text className="text-gray-400 text-sm">
-                            {new Date(selectedPDF.generated_at).toLocaleDateString('sk-SK')}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => {
-                            setShowPDFReports(false);
-                            setSelectedPDF(null);
-                          }}
-                          className="w-10 h-10 rounded-full items-center justify-center"
-                          style={{ backgroundColor: '#334155' }}
-                        >
-                          <EvilIcons name="close" size={28} color="white" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                        
-                    {/* PDF Viewer using WebView with Google Docs Viewer */}
-                    <View className="flex-1">
-                      <WebView
-                        source={{ 
-                          uri: `https://docs.google.com/viewer?url=${encodeURIComponent(selectedPDF.storage_path)}&embedded=true`
-                        }}
-                        style={{ 
-                          flex: 1,
-                          alignItems: 'center',
-                          justifyContent: 'center'      
-                         }}
-                        startInLoadingState={true}
-                        renderLoading={() => (
-                          <View className="flex-1 items-center justify-center bg-dark-bg">
-                            <ActivityIndicator size="large" color="#3b82f6" />
-                            <Text className="text-gray-400 mt-4">Načítavam PDF...</Text>
-                          </View>
-                        )}
-                      />
-                    </View>
-                      
-                    {/* Navigation Arrows for multiple PDFs */}
-                    {PDFs.length > 1 && (
-                      <>
-                        <TouchableOpacity
-                          onPress={() => {
-                            const currentIndex = PDFs.findIndex(p => p.id === selectedPDF.id);
-                            const previousIndex = currentIndex === 0 ? PDFs.length - 1 : currentIndex - 1;
-                            setSelectedPDF(PDFs[previousIndex]);
-                          }}
-                          className="absolute left-4 top-1/2 bg-black/70 rounded-full p-3"
-                          style={{ transform: [{ translateY: -20 }] }}
-                        >
-                          <MaterialIcons name="chevron-left" size={32} color="white" />
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity
-                          onPress={() => {
-                            const currentIndex = PDFs.findIndex(p => p.id === selectedPDF.id);
-                            const nextIndex = (currentIndex + 1) % PDFs.length;
-                            setSelectedPDF(PDFs[nextIndex]);
-                          }}
-                          className="absolute right-4 top-1/2 bg-black/70 rounded-full p-3"
-                          style={{ transform: [{ translateY: -20 }] }}
-                        >
-                          <MaterialIcons name="chevron-right" size={32} color="white" />
-                        </TouchableOpacity>
-                      </>
-                    )}
-
-                    {/* Bottom Actions */}
-                    <View className="absolute bottom-0 left-0 right-0 p-6 bg-dark-bg border-t border-gray-700">
-                      <View className="flex-row justify-around">
-                        <TouchableOpacity
-                          onPress={() => Linking.openURL(selectedPDF.storage_path)}
-                          className="bg-blue-600 rounded-xl px-6 py-3 flex-row items-center flex-1 mr-2"
-                        >
-                          <MaterialIcons name="open-in-new" size={20} color="white" />
-                          <Text className="text-white font-semibold ml-2">Otvoriť</Text>
-                        </TouchableOpacity>
-                  
-                        <TouchableOpacity
-                          onPress={() => deletePdf(selectedPDF)}
-                          className="bg-red-600 rounded-xl px-6 py-3 flex-row items-center flex-1 ml-2"
-                        >
-                          <MaterialIcons name="delete" size={20} color="white" />
-                          <Text className="text-white font-semibold ml-2">Odstrániť</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                </Modal>
+              <PDF_Viewer
+                uri={selectedPDF.storage_path}
+                visible={showPDFReports}
+                onClose={() => handleClosePdfViewer()}
+                selectedPDF={selectedPDF}
+                onDelete={() => deletePdf(selectedPDF)}
+              />
             )}
 
             {/* PDF Generation Cleaning Modal */}
@@ -1401,7 +1369,7 @@ export default function ProjectDetails({
                               }}
                             >
                               <Text className="text-white font-semibold">
-                                {ch.type} – {ch.labelling}
+                                {ch.chimney_type?.type} – {ch.chimney_type?.labelling}
                               </Text>
                               <Text className="text-gray-400 text-sm">
                                 {o.object.address}
@@ -1464,7 +1432,7 @@ export default function ProjectDetails({
                               className="bg-dark-details-o_p_bg rounded-xl p-4 mb-4"
                             >
                               <Text className="text-white font-semibold">
-                                {ch.type} – {ch.labelling}
+                                {ch.chimney_type?.type} – {ch.chimney_type?.labelling}
                               </Text>
                               <Text className="text-gray-400 text-sm mb-2">
                                 {o.object.address}

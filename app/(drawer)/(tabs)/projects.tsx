@@ -3,6 +3,7 @@ import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
+import { NotificationToast } from '@/components/notificationToast';
 import { useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons, Feather } from '@expo/vector-icons';
@@ -225,6 +226,7 @@ export default function Projects() {
             </View>
           </View>
         )}
+        <NotificationToast/>
       </View>
         
       <FlatList
@@ -254,35 +256,19 @@ export default function Projects() {
       
       {/* Add new project buton*/}
       <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => {router.push({
-        pathname: "/addProjectScreen",
-        params: { mode: "create" }
-      })}}
-      style={{
-        position: 'absolute',
-        bottom: 110,
-        right: 28,
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: '#1174EE',
-        borderColor: '#FFFFFF',
-        borderWidth: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-      }}
-    >
-      <Text 
-        className='text-white text-3xl'>
-        +
-      </Text>
+        activeOpacity={0.8}
+        onPress={() => {router.push({
+          pathname: "/addProjectScreen",
+          params: { mode: "create" }
+        })}}
+        className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
+      >
+        <Text 
+          className='text-white text-3xl'>
+          +
+        </Text>
       </TouchableOpacity>
+
       </AnimatedScreen>
       {/* Project details modal */}
       {selectedProject && (

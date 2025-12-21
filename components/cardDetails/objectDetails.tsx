@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { useNotificationStore } from "@/store/notificationStore";
 import { useObjectStore } from "@/store/objectStore";
 import { Client, PDF } from "@/types/generics";
 import { Chimney, Object } from "@/types/objectSpecific";
@@ -273,10 +274,18 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
               // Update local state
               setPDFs(PDFs.filter(p => p.id !== pdf.id));
               setSelectedPDF(null);
-              Alert.alert('Úspech', 'PDF záznam bol odstránený');
+              useNotificationStore.getInitialState().addNotification(
+                "PDF záznam bol odstránený",
+                "success",
+                3000
+              )
             } catch (error: any) {
               console.error('Error deleting pdf:', error);
-              Alert.alert('Chyba', 'Nepodarilo sa odstrániť PDF dokument');
+              useNotificationStore.getInitialState().addNotification(
+                "Nepodarilo sa odstrániť PDF záznam",
+                "error",
+                4000
+              )
             }
           }
         }

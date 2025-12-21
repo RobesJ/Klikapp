@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { useClientStore } from "@/store/clientStore";
 import { Client, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
@@ -7,7 +8,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
-import { useClientStore } from "@/store/clientStore";
 interface ClientCardDetailsProps{
     client: Client;
     visible: boolean;

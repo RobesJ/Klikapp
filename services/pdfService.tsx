@@ -1,5 +1,5 @@
 import { Client, Project, User } from '@/types/generics';
-import { Chimney, ObjectWithRelations } from '@/types/projectSpecific';
+import { Chimney, ObjectWithRelations } from '@/types/objectSpecific';
 import { parseISO } from 'date-fns';
 import * as Print from 'expo-print';
 
@@ -189,7 +189,7 @@ export const generateCleaningRecord = async (
           <div class="info-list">
             <p class="info-row"><span class="label">Adresa objektu:</span> ${object.object.address}</p>
             ${clientInfoRows}
-            <p class="info-row"><span class="label">Označenie komína - dymovodu*:</span> ${chimney.type} - ${chimney.labelling}</p>
+            <p class="info-row"><span class="label">Označenie komína - dymovodu*:</span> ${chimney.chimney_type?.type} - ${chimney.chimney_type?.labelling}</p>
             <p class="info-row"><span class="label">Druh a typ spotrebiča:</span> ${chimney.appliance}</p>
             <p class="info-row"><span class="label">Dátum kontroly a čistenia:</span> ${project.start_date || new Date().toLocaleDateString('sk-SK')}</p>
             <div class="info-issues">
@@ -510,7 +510,7 @@ export const generateCleaningWithPaymentRecord = async (
           <div class="info-list">
             <p class="info-row"><span class="label">Adresa objektu:</span> ${object.object.address}</p>
             ${clientInfoRows}
-            <p class="info-row"><span class="label">Označenie komína - dymovodu*:</span> ${chimney.type} - ${chimney.labelling}</p>
+            <p class="info-row"><span class="label">Označenie komína - dymovodu*:</span> ${chimney.chimney_type?.type} - ${chimney.chimney_type?.labelling}</p>
             <p class="info-row"><span class="label">Druh a typ spotrebiča:</span> ${chimney.appliance}</p>
             <p class="info-row"><span class="label">Dátum kontroly a čistenia:</span> ${project.start_date || new Date().toLocaleDateString('sk-SK')}</p>
             <div class="info-issues">
@@ -817,8 +817,8 @@ export const generateInspectionRecord = async (
             ${clientInfoRows}
             <p class="info-row"><span class="label">Umiestnenie pripojeného spotrebiča: </span> ${chimney.placement}</p>
             <p class="info-row"><span class="label">Druh a typ spotrebiča: </span> ${chimney.appliance}</p>
-            <p class="info-row"><span class="label">Označenie komína - dymovodu*: </span>${chimney.labelling}</p>
-            <p class="info-row"><span class="label">Typ komína - dymovodu*: </span>${chimney.type}</p>
+            <p class="info-row"><span class="label">Označenie komína - dymovodu*: </span>${chimney.chimney_type?.labelling}</p>
+            <p class="info-row"><span class="label">Typ komína - dymovodu*: </span>${chimney.chimney_type?.type}</p>
             <p class="info-row"><span class="label">Dátum preskúšania komína: </span> ${project.start_date || new Date().toLocaleDateString('sk-SK')}</p>       
           </div>
 

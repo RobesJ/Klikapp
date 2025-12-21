@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
     FlatList,
     KeyboardAvoidingView,
     Modal,
@@ -13,6 +12,7 @@ import {
     View
 } from "react-native";
 
+import { useNotificationStore } from "@/store/notificationStore";
 import { Client } from "@/types/generics";
 import { ChimneyInput, ChimneyType, Object as ObjectType, ObjectWithRelations } from "@/types/objectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
@@ -399,8 +399,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     
                     if (chimneysError) throw chimneysError;
                 }
-    
-                Alert.alert('Success', 'Objekt bol vytvorený!');
                 
                 // Fetch complete object with relations for store update
                 const { data: completeObject, error: fetchError } = await supabase
@@ -477,8 +475,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     
                     if (chimneysError) throw chimneysError;
                 }
-    
-                Alert.alert('Úspech', 'Objekt bol upravený!');
                 
                 // Fetch complete object with relations for store update
                 const { data: completeObject, error: fetchError } = await supabase
@@ -521,7 +517,20 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         }
         catch (error: any){
             console.error("Error saving object: ", error);
-            Alert.alert('Error', error.message || "Failed to save object's data");
+            if (mode === "create"){
+                useNotificationStore.getState().addNotification(
+                    'Nepodarilo sa vytvoriť objekt',
+                    'error',
+                    4000
+                );
+            }
+            else{
+                useNotificationStore.getState().addNotification(
+                    'Nepodarilo sa upraviť objekt',
+                    'error',
+                    4000
+                );
+            }
         }
         finally{
             setLoading(false);
@@ -558,8 +567,11 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 .single();
             
             if (chimneyTypeError) throw chimneyTypeError;
-            Alert.alert('Success', 'Novy typ komina bol vytvorený!');
-
+            useNotificationStore.getState().addNotification(
+                "Nový typ komina bol vytvorený!",
+                "success",
+                3000
+            );
             // append new chimney type to all types and clear form
             setAllChimneyTypes(prev => [...prev, chimneyTypeData]);
             setFilteredChimneyTypes(prev => [...prev, chimneyTypeData]);
@@ -568,7 +580,11 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         }
         catch (error: any){
             console.error("Error saving object: ", error);
-            Alert.alert('Error', error.message || "Failed to save object's data");
+            useNotificationStore.getState().addNotification(
+                "Nastala chyba pri vytváraní nového typu komina!",
+                "error",
+                4000
+            );
         }
         finally{
             setLoading(false);
@@ -977,7 +993,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
 
                         {/* Labelling field*/}
                         <Text className="font-semibold mb-1">
-                            Oznacenie
+                            Označenie
                         </Text>
                         <TextInput
                           placeholder="Napíšte označenie komína"
@@ -1002,14 +1018,13 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                           className="rounded-xl bg-slate-500 p-4 px-12 active:bg-slate-800"
                         >
                             <Text className="text-white font-bold">
-                                {mode === "create" ? (loading ? "Vytvaram..." : "Vytvoriť") : (loading ? "Upraviť objekt" : "Upravujem...")}
+                                {mode === "create" ? (loading ? "Vytváram..." : "Vytvoriť") : (loading ? "Upraviť objekt" : "Upravujem...")}
                             </Text>
                         </TouchableOpacity>
                     </View>   
                 </View>
             </View>
         </Modal>
-
 
         {/* Chimney Details Modal */}
         <Modal
