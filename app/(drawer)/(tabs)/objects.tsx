@@ -9,7 +9,7 @@ import { EvilIcons } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import debounce from 'lodash.debounce';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,7 +34,7 @@ export default function Objects() {
       fetchObjects(50);
     }, [fetchObjects])
   );
- 
+  
   const handleModalVisibility = (objectData: ObjectWithRelations, value: boolean) =>{
     setShowDetails(value);
     setSelectedObject(objectData);
@@ -44,10 +44,16 @@ export default function Objects() {
     fetchObjects(50);
   };
 
-  const debounceSearch = useMemo(() =>
-    debounce((text: string) => setFilters({searchQuery: text}),300),
-    []
-  );
+  const debounceSearch = useMemo(() => {
+    const debouncedFn = debounce((text: string) => setFilters({searchQuery: text}), 300);
+    return debouncedFn;
+  }, [setFilters]);
+
+  useEffect(() => {
+    return () => {
+      debounceSearch.cancel();
+    };
+  }, [debounceSearch]);
 
   const handleSearchText = (text: string) => {
     setSearchText(text);
@@ -81,7 +87,7 @@ export default function Objects() {
     return Object.values(groups);
   }, [filteredObjects]);
   
-  
+
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
       <AnimatedScreen tabIndex={2}>

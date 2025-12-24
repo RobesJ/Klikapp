@@ -7,6 +7,10 @@ export interface Project {
   start_date: string | null;
   completion_date: string | null;
   note: string | null;
+  locked_by?: string | null;
+  locked_by_name?: string | null;
+  locked_at?: string | null;
+  lock_expires_at?: string | null;
 }
 
 export interface User {
@@ -28,6 +32,10 @@ export interface Client {
   note: string | null;
   projectsCount?: number;
   objectsCount?: number;
+  locked_by?: string | null;
+  locked_by_name?: string | null;
+  locked_at?: string | null;
+  lock_expires_at?: string | null;
 }
 
 export interface PDF {

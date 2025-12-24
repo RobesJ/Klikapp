@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/authContext";
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
 import { Client, User } from "@/types/generics";
@@ -7,6 +8,7 @@ import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { NotificationToast } from "../notificationToast";
 
 interface ClientCardDetailsProps{
     client: Client;
@@ -16,15 +18,19 @@ interface ClientCardDetailsProps{
 
 export default function ClientDetails({client, visible, onClose} : ClientCardDetailsProps) {
     const router = useRouter();
+    const { user } = useAuth();
     const [objectsWithRelations, setObjectsWithRelations] = useState<ObjectWithRelations[]>([]);
     const [projectsWithRelations, setProjectsWithRelations] = useState<ProjectWithRelations[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const {deleteClient}= useClientStore();
+    const [canEdit, setCanEdit] = useState(false);
+    const [lockedBy, setLockedBy] = useState<string | null>(null);
+    const {deleteClient, lockClient, unlockClient, refreshClientLock}= useClientStore();
 
     useEffect(() => {
         fetchRelations(client);
     }, [client.id]);
+
 
     async function fetchRelations(client: Client) {
         try{
@@ -135,7 +141,62 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
         } finally {
             setLoading(false);
         }
-    }
+    };
+
+    useEffect(() => {
+        if(!visible || !client || !user) return;
+        let active = true;
+
+        (async () => {
+            const result = await lockClient(client.id, user.id ,user.user_metadata.name);
+            if(!active) return;
+
+            if(result.success){
+                setCanEdit(true);  
+                console.log("lock aquired");
+            }
+            else{
+                setCanEdit(false);
+                setLockedBy(result.lockedByName);
+                console.log("lock not aquired");
+            }
+        })();
+        
+
+        return () => {
+            active = false;
+            unlockClient(client.id, user.id);
+        };
+    }, [visible, client?.id, user?.id]);
+
+    //useEffect(() => {
+    //    if(!canEdit || !visible || !client || !user) return;
+//
+    //    const refreshInterval  = setInterval(() => {
+    //        refreshClientLock(client.id, user.id);
+    //    }, 2 * 60 * 1000); // 2 minutes
+//
+//
+    //    return () => {
+    //        clearInterval(refreshInterval);
+    //    };
+//
+    //}, [canEdit, visible, client?.id, user?.id]);
+
+    useEffect(() => {
+        if(!canEdit || !visible || !user) return;
+        
+        const interval = setInterval(() => {
+            supabase
+              .from('clients')
+              .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
+              .eq('id', client.id)
+              .eq('locked_by', user.id);
+          }, 120_000);
+
+        return () => clearInterval(interval);
+                
+    }, [visible, canEdit, user?.id]);
 
     if (loading) {
         return (
@@ -190,9 +251,10 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                 {/* Client Info */}
                 <ScrollView className="max-h-screen-safe-offset-12 p-4">
 
-
                     <ScrollView className="flex-1">
-
+                        {!canEdit && (
+                            <NotificationToast/>
+                        )}
                         <View className="mb-3">
                             {client.email && (
                                 <View className="flex-row items-center mb-2">
@@ -293,7 +355,9 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                                 <Text className="text-gray-500">Žiadne projekty</Text>
                             ) : (
                                 projectsWithRelations.map((item) => (
-                                    <TouchableOpacity key={item.project.id} className="bg-dark-details-o_p_bg p-3 rounded-lg mb-2"
+                                    <TouchableOpacity 
+                                        key={item.project.id} 
+                                        className="bg-dark-details-o_p_bg p-3 rounded-lg mb-2"
                                         onPress={() => handleNavigateAndRefresh("/addProjectScreen", {
                                             project: JSON.stringify(item),
                                             mode: "edit", 
@@ -324,6 +388,7 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                       }}
                       activeOpacity={0.8}
                       className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
+                      disabled={!canEdit}
                     >
                       <EvilIcons name="trash" size={24} color="white" />
                       <Text className='text-white'>Odstrániť</Text>
@@ -338,12 +403,13 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                           params: { 
                             client: JSON.stringify(client),
                             mode: "edit" 
-                          }
-                        });
-                      }}
+                            }
+                          });
+                        }}
                         activeOpacity={0.8}
                         className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
-                      >
+                        disabled={!canEdit}
+                    >
                         <Feather name="edit-2" size={16} color="white" />
                         <Text className='text-white'>Upraviť</Text>
                       </TouchableOpacity>   

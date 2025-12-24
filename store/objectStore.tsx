@@ -8,6 +8,15 @@ interface ObjectFilters {
   searchQuery: string;
 }
 
+export type LockResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      lockedByName: string | null;
+    };
+
 interface ObjectStore {
   objects: ObjectWithRelations[];
   filteredObjects: ObjectWithRelations[];
@@ -26,9 +35,11 @@ interface ObjectStore {
   addObject: (object: ObjectWithRelations) => void;
   updateObject: (id: string, object: ObjectWithRelations) => void;
   deleteObject: (id: string) => void;
-  applyFilters: () => ObjectWithRelations[];
-  lookForObjectInDBS: () => void;
+  lookForObjectInDBS: (searchTerm: string) => void;
   loadMore: () => void;
+  lockObject: (id: string, userID: string, userName: string) => Promise<LockResult>;
+  unlockObject: (id: string, userID: string) => Promise<void>;
+  //refreshObjectLock: (id: string, userID: string) => Promise<void>;
 }
 
 const CACHE_DURATION = 300000; // 5 min
@@ -102,13 +113,13 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
 
       set({ 
         objects: objectWithRelations,
+        filteredObjects: objectWithRelations,
         lastFetch: now,
         loading: false,
-        hasMore: limit < (objectWithRelations.length),
+        hasMore: limit === objectWithRelations.length,
         offset: objectWithRelations.length
       });
 
-      get().applyFilters();
       console.log(`Fetched ${objectWithRelations.length} objects`);
     } catch (error: any) {
       console.error('Error fetching objects:', error.message);
@@ -121,127 +132,218 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     }
   },
 
+  lockObject: async (id: string, userID: string, userName: string) => {
+    try{
+      const {data, error} = await supabase.rpc("lock_object_and_chimneys", {
+        p_object_id: id,
+        p_user_id: userID,
+        p_user_name: userName
+      });
+
+      if (error) throw error;
+
+      if (!data?.[0].locked){
+        useNotificationStore.getState().addNotification(
+          `Objekt upravuje používateľ ${data?.[0]?.locked_by_name}`,
+          "warning",
+          4000
+        );
+
+        return {
+          success: false,
+          lockedByName: data?.[0]?.locked_by_name ?? null
+        };
+      }
+    
+      set(state => ({
+        objects: state.objects.map(o =>
+          o.object.id === id
+          ? {
+            ...o, 
+            object: {
+              ...o.object,
+              locked_by: userID,
+              locked_by_name: userName ?? 'Unknown',
+              lock_expires_at: data[0].lock_expires_at
+            }
+          }
+        : o
+        ),
+        filteredObjects: state.filteredObjects.map(o =>
+          o.object.id === id
+          ? {
+            ...o, 
+            object: {
+              ...o.object,
+              locked_by: userID,
+              locked_by_name: userName ?? 'Unknown',
+              lock_expires_at: data[0].lock_expires_at
+            }
+          }
+        : o
+        )
+      }));
+  
+      return { success: true };
+    }
+    catch (error: any){
+      console.error('Error locking object:', error);
+      return { 
+        success: false,
+        lockedByName: null
+       };
+    }
+  },
+
+  unlockObject: async (id: string, userID: string) => {
+    const { error } = await supabase.rpc("unlock_object", {
+      p_object_id: id,
+      p_user_id: userID
+    });
+
+    if (error) throw error;
+    console.log("the object is unlocked");
+    set(state => ({
+      objects: state.objects.map(o =>
+        o.object.id === id
+        ? {
+          ...o, 
+          object: {
+            ...o.object,
+            locked_by: null,
+            locked_by_name: null,
+            lock_expires_at: null
+          }
+        }
+      : o
+      ),
+      filteredObjects: state.filteredObjects.map(o =>
+        o.object.id === id
+        ? {
+          ...o, 
+          object: {
+            ...o.object,
+            locked_by: null,
+            locked_by_name: null,
+            lock_expires_at: null
+          }
+        }
+      : o
+      )
+    }));
+  },
+
   setFilters: (newFilters) => {
-    const { filters } = get();
+    const { filters, objects } = get();
 
     set({filters: { ...filters, ...newFilters }});
-    const filtered = get().applyFilters();
-    set({filteredObjects: filtered});
+    const query = newFilters.searchQuery?.toLowerCase() ?? '';
 
-    if (newFilters.searchQuery?.trim() && newFilters.searchQuery?.trim().length > 3 && filtered.length === 0) {
-      get().lookForObjectInDBS();
+    if(!query) {
+      set ({filteredObjects: objects });
+      return;
+    }
+
+    const filteredLocal = objects.filter(o => {
+      return o.client.name.toLowerCase().includes(query) ||
+      (o.object.city?.toLowerCase() ?? '').includes(query) ||
+      o.object.address?.toLowerCase().includes(query)
+    });
+  
+    set({ filteredObjects: filteredLocal });
+
+    if (query.length > 3) {
+      get().lookForObjectInDBS(query);
     }
   },
 
   clearFilters: () => {
     set({ filters: initialFilters });
-    //get().applyFilters();
   },
 
-  applyFilters: () => {
-    const { objects, filters } = get();
-    
-    let filtered = [...objects];
-
-    if (filters.searchQuery.trim()) {
-      const query = filters.searchQuery.toLowerCase();
-      filtered = filtered.filter(o => 
-        o.client.name.toLowerCase().includes(query) ||
-        o.object.city?.toLowerCase().includes(query) ||
-        o.object.address?.toLowerCase().includes(query)
-      );
-    }
-
-    //set({ filteredObjects: filtered });
-    console.log(`Filtered: ${filtered.length}/${objects.length} objects`);
-    return filtered;
-  },
-
-  lookForObjectInDBS: async() => {
-    const { objects, filters, loading } = get();
+  lookForObjectInDBS: async(searchTerm: string) => {
+    const { objects, loading } = get();
 
     if (loading) {
       return;
     }
 
     set({ loading: true, error: null });
-    if (filters.searchQuery.trim()) {
-      try {
-        console.log("Looking for objects from database...");
-        const searchTerm = filters.searchQuery.trim();
+    try {
+      console.log("Looking for objects from database...");
+      
+      const { data: clientsData, error: clientsError} = await supabase
+        .from("clients")
+        .select("*")
+        .or(`name.ilike.%${searchTerm}%`);
 
-        const { data: clientsData, error: clientsError} = await supabase
-          .from("clients")
-          .select("*")
-          .or(`name.ilike.%${searchTerm}%`);
+      if (clientsError) throw clientsError;
+      const clientIDs = clientsData.map(c => c.id);
 
-        if (clientsError) throw clientsError;
-
-        const clientIDs = clientsData.map(c => c.id);
-
-        let query =  supabase
-          .from("objects")
-          .select(`
-            *,
-            clients (*),
-            chimneys (
+      let query =  supabase
+        .from("objects")
+        .select(`
+          *,
+          clients (*),
+          chimneys (
+            id,
+            object_id,
+            chimney_type_id,
+            placement,
+            appliance,
+            note,
+            chimney_type:chimney_types (
               id,
-              object_id,
-              chimney_type_id,
-              placement,
-              appliance,
-              note,
-              chimney_type:chimney_types (
-                id,
-                type,
-                labelling
-              )
+              type,
+              labelling
             )
-          `);
-        
-        if(clientIDs.length > 0){
-          query.or(`address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,client_id.in.(${clientIDs.join(',')})`);
-        }
-        else{
-          query.or(`address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
-        }
-
-        const { data: objectsData, error: objectError } = await query;
-        if (objectError) throw objectError;
-
-        const filtered: ObjectWithRelations[] = objectsData.map((objectItem: any) => {
-          const chimneys: Chimney[] = objectItem.chimneys || [];
-
-          return {
-            object: objectItem,
-            client: objectItem.clients,
-            chimneys: chimneys,
-          };
-        });
-
-        set({ 
-          objects: [...filtered, ...objects],
-          filteredObjects: filtered,
-          loading: false
-        });
-
-        console.log(`Found ${filtered.length} matching objects`);
-      } catch (error: any) {
-        console.error('Error searching for objects in dbs:', error.message);
-        set({ error: error.message, loading: false });
-        useNotificationStore.getState().addNotification(
-          'Nepodarilo sa vyhľadať viac objektov',
-          'error',
-          4000
-        );
+          )
+        `);
+      
+      if(clientIDs.length > 0){
+        query.or(`address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,client_id.in.(${clientIDs.join(',')})`);
       }
+      else{
+        query.or(`address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
+      }
+
+      const { data: objectsData, error: objectError } = await query;
+      if (objectError) throw objectError;
+
+      const filtered: ObjectWithRelations[] = objectsData.map((objectItem: any) => {
+        const chimneys: Chimney[] = objectItem.chimneys || [];
+        return {
+          object: objectItem,
+          client: objectItem.clients,
+          chimneys: chimneys,
+        };
+      });
+
+      const existingIds = new Set(objects.map(o => o.object.id));
+      const newObjects = filtered.filter(o => !existingIds.has(o.object.id));
+
+      set({ 
+        objects: [...objects, ...newObjects],
+        filteredObjects: filtered,
+        loading: false
+      });
+      
+      console.log(`Found ${filtered.length} matching objects`);
+    } catch (error: any) {
+      console.error('Error searching for objects in dbs:', error.message);
+      set({ error: error.message, loading: false });
+      useNotificationStore.getState().addNotification(
+        'Nepodarilo sa vyhľadať viac objektov',
+        'error',
+        4000
+      );
     }
   },
   
   loadMore: async () => {
-    const {objects, offset, hasMore, pageSize, loading } = get();
+    const {objects, offset, hasMore, pageSize, loading, filters } = get();
 
-    if (loading && !hasMore) {
+    if (loading || !hasMore) {
       return;
     }
 
@@ -271,7 +373,10 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
       if (objectError) throw objectError;
 
       if (!objectsData || objectsData.length === 0) {
-        set({ loading: false });
+        set({ 
+          loading: false, 
+          hasMore: false 
+        });
         console.log('No more objects to load');
         return;
       }
@@ -285,9 +390,22 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         };
       });
 
+      const query = filters.searchQuery?.toLowerCase().trim() ?? '';
+      let filteredNewObjects = objectWithRelations;
+      
+      if (query) {
+        filteredNewObjects = objectWithRelations.filter(o => {
+          return o.client.name.toLowerCase().includes(query) ||
+            (o.object.city?.toLowerCase() ?? '').includes(query) ||
+            o.object.address?.toLowerCase().includes(query);
+        });
+      }
+
       set({ 
         objects: [...objects, ...objectWithRelations],
+        filteredObjects: [...get().filteredObjects, ...filteredNewObjects],
         offset: offset + objectWithRelations.length,
+        hasMore: objectWithRelations.length === pageSize,
         loading: false 
       });
       console.log(`Loaded ${objectWithRelations.length} more objects, total: ${objects.length + objectWithRelations.length}`);
@@ -314,7 +432,9 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
 
     set((state) => ({
       objects: [object, ...state.objects],
-      offset: state.offset +1
+      filteredObjects: [object, ...state.filteredObjects],
+      offset: state.offset +1,
+      lastFetch: Date.now()
     }));
 
     useNotificationStore.getState().addNotification(
@@ -328,7 +448,11 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     set((state) => ({
       objects: state.objects.map(o => 
         o.object.id === id ? updatedObject : o
-      )
+      ),
+      filteredObjects: state.filteredObjects.map(o => 
+        o.object.id === id ? updatedObject : o
+      ),
+      lastFetch: Date.now()
     }));
     useNotificationStore.getState().addNotification(
       'Objekt bol úspešne aktualizovaný',
@@ -348,10 +472,13 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
           style: 'destructive',
           onPress: async() =>{
             const previousObjects = get().objects;
+            const previousFiltered = get().filteredObjects;
+
             set((state) => ({
-              objects: state.objects.filter(o => o.object.id !== id)
+              objects: state.objects.filter(o => o.object.id !== id),
+              filteredObjects: state.filteredObjects.filter(o => o.object.id !== id),
+              lastFetch: Date.now()
             }));
-            //get().applyFilters();
           
             try{
               const { data, error } = await supabase
@@ -372,8 +499,10 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
             }
             catch(error){
               console.error("Chyba pri mazani objektu:", error);
-              set({objects:previousObjects});
-              //get().applyFilters();
+              set({
+                objects: previousObjects,
+                filteredObjects: previousFiltered
+              });
               useNotificationStore.getState().addNotification(
                 'Nepodarilo sa odstrániť objekt',
                 'error',
@@ -386,4 +515,3 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     );
   }
 }));
-        

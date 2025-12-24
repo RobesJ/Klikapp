@@ -40,15 +40,15 @@ export function AnimatedScreen({ children, tabIndex }: AnimatedScreenProps) {
 
         if (isFocused) {
             
-            //if (isFirstMount.current){
-            //    isFirstMount.current = false;
-            //    opacity.value = 1;
-            //    translateX.value = 0;
-            //    scale.value = 1;
-            //    previousFocusState.current = true;
-            //    previousIndex.current = currentIndex;
-            //    return;
-            //}
+            if (isFirstMount.current){
+                isFirstMount.current = false;
+                opacity.value = 1;
+                translateX.value = 0;
+                scale.value = 1;
+                previousFocusState.current = true;
+                previousIndex.current = currentIndex;
+                return;
+            }
 
             if(!previousFocusState.current && previousIndex.current === currentIndex) {
                 opacity.value = 0;

@@ -87,9 +87,9 @@ export default function Login() {
                 contentContainerClassName='flex-grow'
                 keyboardShouldPersistTaps='handled'
             >
-                <View className="flex-1 px-28 items-center justify-center bg-white">
+                <View className="flex-1 items-center justify-center bg-white">
                     {/* header */}
-                    <View className='items-center mb-8'>
+                    <View className='mb-8'>
                         <PlatformText className='text-4xl font-bold mb-2'>
                             Vitajte späť
                         </PlatformText>
@@ -99,7 +99,7 @@ export default function Login() {
                     </View>
 
                     {/* form */}
-                    <View className='mb-6 rounded-3xl p-6 items-start'>
+                    <View className='mb-6 rounded-3xl py-6'>
                         <View className='mb-3'>
                             <TextInput
                                 className='border-2 rounded-2xl w-64 pl-3 py-3'
@@ -136,7 +136,7 @@ export default function Login() {
                                 </Text>
                             )}
                         </View>
-                        <View className='flex-row justify-center items-center mt-2'>
+                        <View className='flex-row justify-center mt-2'>
                         
                         <TouchableOpacity
                             onPress={() => router.push("/(auth)/forgot-pwd")} // TODO create password renewing page

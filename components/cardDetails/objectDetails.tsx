@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/authContext";
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useObjectStore } from "@/store/objectStore";
@@ -19,14 +20,16 @@ interface ObjectCardDetailsProps {
 }
 
 export default function ObjectDetails({ object, chimneys, client, visible, onClose } : ObjectCardDetailsProps) { 
-
+  const router = useRouter();
+  const { user } = useAuth();
   const [loadingPDFs, setLoadingPDFs] = useState(false);
   const [PDFs, setPDFs] = useState<PDF[]>([]);
   const [selectedPDF, setSelectedPDF] = useState<PDF | null>(null);
   const [showPDFReports, setShowPDFReports] = useState(false);
-  const [uploadingPDF, setUploadingPDF] = useState(false);
-  const router = useRouter();
-  const {deleteObject} = useObjectStore();
+  // const [uploadingPDF, setUploadingPDF] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
+  const [lockedBy, setLockedBy] = useState<string | null>(null);
+  const {deleteObject, lockObject, unlockObject } = useObjectStore();
 
   useEffect(() => {
     fetchPDFs();
@@ -51,196 +54,49 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
         setLoadingPDFs(false);
     }
   };
-  
-  /*
-  const handleGeneratePDF = async (pdf: PDF, type: "cleaning" | "inspection" | "cleaningWithPaymentReceipt") => {
-    try {
-      //setIsGenerating(true);
-      const {data: projectData, error: projectError} = await supabase
-        .from("projects")
-        .select()
-        .eq("id", pdf.project_id)
-        .single();
 
-      if (projectError) throw projectError;
-      
-      const watermarkBase64 = await getWatermarkBase64();
-      const footerBase64 = await getFooterImageBase64();
-  
-     
-      if (type === "cleaningWithPaymentReceipt") {
-        console.log("inside of this condition");
-  
-        try {
-          const uri = await generateRecord(
-            projectData,
-            users[0],
-            client,
-            object,
-            chimney,
-            watermarkBase64,
-            footerBase64,
-            type,
-            sums
-          
-          if (uri) {
-            await uploadPDF(
-              uri,
-              type,
-              object.object.id,
-              chimney,
-              sums
-            );
-          }
-        } catch (err) {
-          console.error("Failed uploading or generation of cleaning record with receipt", err);
-        }
+  useEffect(() => {
+    if (!visible || !object.id || !user) return;
+    let active = true;
+
+    (async () => {
+      const result = await lockObject(object.id, user.id, user.user_metadata.name);
+      if(!active) return;
+
+      if(result.success){
+        setCanEdit(true);
+        console.log("Object lock aquired");
       }
-  
-      else {
-        try {
-          const uri = await generateRecord(
-            projectWithRelations.project,
-            users[0],
-            projectWithRelations.client,
-            object,
-            chimney,
-            watermarkBase64,
-            footerBase64,
-            type,
-            null
-          );
-  
-          if (uri) {
-            await uploadPDF(
-              uri,
-              type,
-              object.object.id,
-              chimney,
-              null
-            );
-          }
-        } catch (err) {
-          console.error("Generation of basic report failed", err);
-        }
-          }
-        }
+      else{
+        setCanEdit(false);
+        setLockedBy(result.lockedByName);
       }
-      Alert.alert("Úspech", "PDF dokumenty boli vygenerované");
-  
-    } catch (error) {
-      console.error("handleGeneratePDF failed:", error);
-      Alert.alert("Chyba", "Nepodarilo sa vygenerovať PDF");
-    } finally {
-      setIsGenerating(false);
+    })();
+
+    return () => {
+      active = false;
+      unlockObject(object.id, user.id);
     }
-  };
+  }, [visible, user?.id, object?.id]);
 
 
-  const regeneratePDF = async (pdf: PDF, report_type: string, object_id: string, chimney: Chimney, sums: string[] | null) => {
-    const parts = pdf.storage_path.split("pdf-reports/");
-    const filename = parts[1];
-    setUploadingPDF(true);
-    try{
-      // Delete old version from storage
-      const { error: storageError } = await supabase.storage
-          .from("pdf-reports")
-          .remove([filename]);
-
-      if (storageError) throw storageError;
-    }
-    catch(err: any){
-      console.error("Error deleting object from storage: ", err);
-    }
-         
+  useEffect(() => {
+    if(!canEdit || !visible || !user) return;
     
-    try {
-      let filename;
-      if(report_type === "cleaning" ||  report_type === "cleaningWithPaymentReceipt"){
-        filename =`cleaning_${chimney.id}_${pdf.project_id}.pdf`;
-      }
-      else{
-        filename =`inspection_${chimney.id}_${pdf.project_id}.pdf`;
-      }
-      
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const arrayBuffer = await new Response(blob).arrayBuffer();
-  
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase
-        .storage
-        .from("pdf-reports")
-        .upload(filename, arrayBuffer, {
-          contentType: 'application/pdf',
-          upsert: false,
-        });
+    const interval = setInterval(() => {
+        supabase
+          .from('objects')
+          .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
+          .eq('id', object.id)
+          .eq('locked_by', user.id);
+      }, 120_000);
 
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("pdf-reports")
-        .getPublicUrl(filename);
-      
-      console.log(`PDF for chimney ${chimney.id} uploaded`);
-      
-      // Save to database
-      if( sums !== null){
-        const { data: pdfData, error: dbError } = await supabase
-          .from("pdfs")
-          .update({
-            project_id: pdf.project_id,
-            object_id: pdf.object_id,
-            chimney_id: pdf.chimney_id,
-            report_type: pdf.report_type,
-            file_name: filename,
-            file_size: blob.size,
-            file_type: blob.type.toString(),
-            storage_path: urlData.publicUrl,
-            amount: sums[0],
-            amountByWords: sums[1]
-          })
-          .select();
+    return () => clearInterval(interval);
+            
+  }, [visible, canEdit, user?.id]);
 
-          if (dbError) throw dbError;
-          // Update local state
-          setPDFs([pdfData, ...PDFs]);
-      }
-      else{
-        const { data: pdfData, error: dbError } = await supabase
-          .from("pdfs")
-          .insert({
-            project_id: projectWithRelations.project.id,
-            object_id: object_id,
-            chimney_id: chimney.id,
-            report_type: report_type,
-            file_name: filename,
-            file_size: blob.size,
-            file_type: blob.type.toString(),
-            storage_path: urlData.publicUrl
-          })
-          .select()
-          .single();
-
-          if (dbError) throw dbError;
-          // Update local state
-          setPDFs([pdfData, ...PDFs]);
-      }
-
-      await fetchPDFs();
-      Alert.alert('Úspech', 'PDF záznam bol pridaný');
-    } 
-    catch (error: any) {
-      console.error('Error uploading pdf', error);
-      Alert.alert('Chyba', 'Nepodarilo sa nahrať PDF');
-    } 
-    finally {
-      setUploadingPDF(false);
-    }
-  };
-  */
  
+
   const deletePdf = async (pdf: PDF) => {
     const parts = pdf.storage_path.split("pdf-reports/");
     const filename = parts[1];
@@ -293,9 +149,7 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
     );
   };
 
-
   return (
-
     <Modal
     visible={visible}
     transparent={true}

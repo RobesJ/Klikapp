@@ -8,6 +8,15 @@ import { create } from 'zustand';
 import { useClientStore } from './clientStore';
 import { useNotificationStore } from './notificationStore';
 
+export type LockResult = 
+  | {
+      success: true;
+    }
+  | {
+      success:false;
+      lockedByName: string | null;
+  }
+
 export interface ProjectFilters {
   type: string[];
   state: string[];
@@ -72,6 +81,10 @@ interface ProjectStore {
   addProject: (project: ProjectWithRelations) => void;
   updateProject: (id: string, project: ProjectWithRelations) => void;
   deleteProject: (id: string) => Promise<void>;
+
+  // Lock management
+  lockProject: (id: string, userID: string, userName: string) => Promise<LockResult>;
+  unlockProject: (id: string, userID: string) => void;
 
   // Planning functions
   assignProjectToDate: (projectId: string, date: Date) => void; 
@@ -741,6 +754,76 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         }
       ]
     );
+  },
+  
+  // ======== LOCK MANAGEMENT ========
+
+  lockProject: async (id: string, userID: string, userName: string) => {
+    try{
+      const {data, error} = await supabase.rpc("lock_project_and_relations", {
+        p_project_id: id,
+        p_user_id: userID,
+        p_user_name: userName
+      });
+
+      if (error) throw error;
+
+      if (!data?.[0].locked){
+        useNotificationStore.getState().addNotification(
+          `Projekt upravuje používateľ ${data?.[0]?.locked_by_name}`,
+          "warning",
+          4000
+        );
+
+        return {
+          success: false,
+          lockedByName: data?.[0]?.locked_by_name ?? null
+        };
+      }
+      const project = get().projects.get(id);
+      if(project){
+        const updated = {
+          ...project,
+          project: {
+            ...project.project,
+            locked_by: userID,
+            locked_by_name: userName ?? 'Unknown',
+            lock_expires_at: data[0].lock_expires_at
+          }
+        };
+        get().updateProject(id, updated);
+      }
+      return { success: true };
+    }
+    catch (error: any){
+      console.error("Error locking project:", error);
+      return {
+        success: false,
+        lockedByName: null
+      };
+    }
+  },
+
+  unlockProject: async (id: string, userID: string) => {
+    const { error } = await supabase.rpc("unlock_project", {
+      p_project_id: id,
+      p_user_id: userID
+    });
+
+    if (error) throw error;
+    const project = get().projects.get(id);
+      if(project){
+        const updated = {
+          ...project,
+          project: {
+            ...project.project,
+            locked_by: null,
+            locked_by_name: null,
+            lock_expires_at: null
+          }
+        };
+        get().updateProject(id, updated);
+      }
   },
 
   // ======== PLANNING FUNCTIONS ========

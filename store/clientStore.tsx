@@ -8,6 +8,15 @@ interface ClientFilters {
   searchQuery: string;
 }
 
+export type LockClientResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      lockedByName: string | null;
+    };
+
 interface ClientStore {
   clients: Client[];
   filteredClients: Client[];
@@ -29,7 +38,9 @@ interface ClientStore {
   applyFilters: () => Client[];
   lookForClientInDBS: () => void;
   loadMore: () => Promise<void>;
-  
+  lockClient: (id: string, userID: string, userName: string) => Promise<LockClientResult>;
+  unlockClient: (id: string, userID: string) => Promise<void>;
+  refreshClientLock: (id: string, userID: string) => Promise<void>;
 }
 
 const CACHE_DURATION = 300000; // 5 min
@@ -108,6 +119,78 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     }
   },
   
+  lockClient: async (id: string, userID: string, userName: string) => {
+    const {data, error} = await supabase.rpc("lock_client", {
+      p_client_id: id,
+      p_user_id: userID,
+      p_user_name: userName
+    });
+
+    if (error || !data?.[0].locked){
+      useNotificationStore.getState().addNotification(
+        `Klienta upravuje používateľ ${data?.[0]?.locked_by_name}`,
+        "warning",
+        4000
+      );
+      return {
+        success: false,
+        lockedByName: data?.[0]?.locked_by_name ?? null
+      };
+    }
+    
+    set(state => ({
+      clients: state.clients.map(c =>
+        c.id === id
+          ? {
+              ...c,
+              locked_by: userID,
+              locked_by_name: userName ?? 'Unknown',
+              lock_expires_at: data[0].lock_expires_at
+            }
+          : c
+      )
+    }));
+  
+    return { success: true };
+  },
+
+  unlockClient: async (id: string, userID: string) => {
+    await supabase.rpc("unlock_client", {
+      p_client_id: id,
+      p_user_id: userID
+    });
+
+    set(state => ({
+      clients: state.clients.map(c =>
+        c.id === id
+          ? {
+            ...c,
+            locked_by: null,
+            locked_by_name: null,
+            lock_expires_at: null
+          }
+          : c
+        )
+    }));
+  },
+
+  refreshClientLock: async (id: string, userId: string) => {
+    try {
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      
+      const { error } = await supabase
+        .from('clients')
+        .update({ lock_expires_at: expiresAt })
+        .eq('id', id)
+        .eq('locked_by', userId); 
+  
+      if (error) throw error;
+      
+    } catch (error) {
+      console.error('Error refreshing lock:', error);
+    }
+  },
+
   setFilters: (newFilters) => {
     const { filters } = get(); 
     

@@ -1,4 +1,5 @@
 import { getFooterImageBase64, getWatermarkBase64 } from '@/constants/icons';
+import { useAuth } from '@/context/authContext';
 import { supabase } from "@/lib/supabase";
 import { generateRecord } from "@/services/pdfService";
 import { useNotificationStore } from '@/store/notificationStore';
@@ -14,6 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { ModalSelector, STATE_OPTIONS } from "../badge";
 import { FormInput } from "../formInput";
+import { NotificationToast } from '../notificationToast';
 import { PDF_Viewer } from '../pdfViewer';
 import UserPickerModal from '../userPickerModal';
 
@@ -28,11 +30,14 @@ export default function ProjectDetails({
   visible,
   onClose
 }: ProjectCardDetailsProps) {
-  const { updateProject, addProject, deleteProject, availableUsers } = useProjectStore();
+  const router = useRouter();
+  const { user } = useAuth();
   const [currentState, setCurrentState] = useState(projectWithRelations.project.state);
   const [users, setUsers] = useState<User[]>(projectWithRelations.users);
   const [showUserModal, setShowUserModal] = useState(false);
   const [updatingState, setUpdatingState] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
+  const [lockedByName, setLockedByName] = useState<string | null>(null);
 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
@@ -50,8 +55,8 @@ export default function ProjectDetails({
   
   const [chimneySums, setChimneySums] = useState<Record<string, string[]>>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const router = useRouter();
+  const { updateProject, addProject, deleteProject, availableUsers, lockProject, unlockProject } = useProjectStore();
+  
   type PdfFlowStep =
   | "choice"         
   | "selectOne"       
@@ -65,7 +70,45 @@ export default function ProjectDetails({
     fetchPhotos();
     fetchPDFs();
   }, [projectWithRelations.project.id]);
+
+  useEffect(() => {
+    if(!visible || !projectWithRelations.project.id || !user) return;
+    let active = true;
+
+    (async () => {
+      const result = await lockProject(projectWithRelations.project.id, user.id, user.user_metadata.name);
+      if(!active) return;
+
+      if(result.success){
+        setCanEdit(true);
+        console.log("Project lock aquired");
+      }
+      else{
+        setCanEdit(false);
+        setLockedByName(result.lockedByName);
+      }
+    })();
+
+    return () => {
+      active = false;
+      unlockProject(projectWithRelations.project.id, user.id);
+    }
+  }, [visible, user?.id, projectWithRelations?.project?.id]);
   
+  useEffect(() => {
+    if(!canEdit || !visible ||  !user) return;
+    
+    const interval = setInterval(() => {
+      supabase
+      .from("projects")
+      .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
+      .eq('id', projectWithRelations.project.id)
+      .eq('locked_by', user.id);
+    },120_000);
+    
+    return () => clearInterval(interval);
+  }, [visible, user?.id, canEdit]);
+
   const chimneyCount = useMemo(() =>{
     return projectWithRelations.objects.reduce((sum, o) => sum + o.chimneys.length, 0);
   },[projectWithRelations.objects]);
@@ -718,7 +761,11 @@ export default function ProjectDetails({
             addProject(transformedProject);
           }
         }
-        setSuccess(`Bol vytvorený nový projekt typu: ${newType}`);
+        useNotificationStore.getState().addNotification(
+          `Bol vytvorený nový projekt typu: ${newType}`,
+          "success",
+          3000
+        );
       }
       // Update store
       updateProject(projectWithRelations.project.id, {
@@ -733,7 +780,11 @@ export default function ProjectDetails({
         users,
         objects: projectWithRelations.objects
       });
-      setSuccess(`Stav projektu bol zmenený na: ${newState}`);
+      useNotificationStore.getState().addNotification(
+        `Stav projektu bol zmenený na: ${newState}`,
+        "success",
+        3000
+      );
   
     } catch (error: any) {
       console.error('Error updating project state:', error);
@@ -905,7 +956,7 @@ export default function ProjectDetails({
             {/* Project data*/}
             <ScrollView className="max-h-screen-safe-offset-12 p-4">
               <ScrollView className="flex-1">
-      
+                <NotificationToast/>
                 <View className='flex-row justify-between'>
                   {/* Client Info */}
                   <View className="flex-2 mb-3">

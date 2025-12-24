@@ -7,6 +7,10 @@ export interface Object {
   city: string | null;
   streetNumber: string | null;
   country: string | null;
+  locked_by?: string | null;
+  locked_by_name?: string | null;
+  locked_at?: string | null;
+  lock_expires_at?: string | null;
 }
 
 export interface ChimneyType {
