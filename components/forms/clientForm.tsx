@@ -38,7 +38,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
     const [searchingAddress, setSearchingAddress] = useState(false);
     const API_KEY = process.env.EXPO_PUBLIC_MAPS_API_KEY;
     const router = useRouter();
-    
+
     useEffect(() => {
         if (initialData){
             setFormData({
@@ -117,15 +117,17 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                 onSuccess?.(data);
             }
             else { 
-                const {data, error} = await supabase
-                .from('clients')
-                .update(formData)
-                .eq('id', initialData?.id)
-                .select()
-                .single();
+                if (initialData){
+                    const {data, error} = await supabase
+                    .from('clients')
+                    .update(formData)
+                    .eq('id', initialData?.id)
+                    .select()
+                    .single();
 
-                if (error) throw error;
-                onSuccess?.(data);
+                    if (error) throw error;
+                    onSuccess?.(data);
+                }
             }
         }
         catch (error: any){

@@ -120,46 +120,58 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   },
   
   lockClient: async (id: string, userID: string, userName: string) => {
-    const {data, error} = await supabase.rpc("lock_client", {
-      p_client_id: id,
-      p_user_id: userID,
-      p_user_name: userName
-    });
+    try{
+      const {data, error} = await supabase.rpc("lock_client", {
+        p_client_id: id,
+        p_user_id: userID,
+        p_user_name: userName
+      });
 
-    if (error || !data?.[0].locked){
-      useNotificationStore.getState().addNotification(
-        `Klienta upravuje používateľ ${data?.[0]?.locked_by_name}`,
-        "warning",
-        4000
-      );
-      return {
-        success: false,
-        lockedByName: data?.[0]?.locked_by_name ?? null
-      };
-    }
+      if (error) throw error;
+
+      if (!data?.[0].locked){
+        useNotificationStore.getState().addNotification(
+          `Klienta upravuje používateľ ${data?.[0]?.locked_by_name}`,
+          "warning",
+          4000
+        );
+        return {
+          success: false,
+          lockedByName: data?.[0]?.locked_by_name ?? null
+        };
+      }
+
+      set(state => ({
+        clients: state.clients.map(c =>
+          c.id === id
+            ? {
+                ...c,
+                locked_by: userID,
+                locked_by_name: userName ?? 'Unknown',
+                lock_expires_at: data[0].lock_expires_at
+              }
+            : c
+        )
+      }));
     
-    set(state => ({
-      clients: state.clients.map(c =>
-        c.id === id
-          ? {
-              ...c,
-              locked_by: userID,
-              locked_by_name: userName ?? 'Unknown',
-              lock_expires_at: data[0].lock_expires_at
-            }
-          : c
-      )
-    }));
-  
-    return { success: true };
+      return { success: true };
+    }
+    catch (error: any){
+      console.error('Error locking client:', error);
+      return { 
+        success: false,
+        lockedByName: null
+       };
+    }
   },
 
   unlockClient: async (id: string, userID: string) => {
-    await supabase.rpc("unlock_client", {
+    const { error } = await supabase.rpc("unlock_client", {
       p_client_id: id,
       p_user_id: userID
     });
 
+    if (error) throw error;
     set(state => ({
       clients: state.clients.map(c =>
         c.id === id

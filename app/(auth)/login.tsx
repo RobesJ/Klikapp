@@ -1,8 +1,15 @@
-import { PlatformText } from '@/components/typografy';
+import {
+    Body,
+    BodyLarge,
+    Caption,
+    Heading1
+} from "../../components/typografy";
+
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Login() {
     const router = useRouter();
@@ -55,7 +62,7 @@ export default function Login() {
         setLoading(true);
 
         try{
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { error } = await supabase.auth.signInWithPassword({
                 email: formData.email,
                 password: formData.password
             });
@@ -78,6 +85,8 @@ export default function Login() {
     }
     
     return (
+        <SafeAreaView className='flex-1'>
+
         <KeyboardAvoidingView
             behavior={Platform.OS === "android" ? "padding" : "height"}
             className='flex-1'
@@ -90,12 +99,12 @@ export default function Login() {
                 <View className="flex-1 items-center justify-center bg-white">
                     {/* header */}
                     <View className='mb-8'>
-                        <PlatformText className='text-4xl font-bold mb-2'>
+                        <Heading1 className='text-4xl font-bold mb-2'>
                             Vitajte späť
-                        </PlatformText>
-                        <PlatformText className='text-base'>
+                        </Heading1>
+                        <BodyLarge className='text-base'>
                             Prihláste sa do vášho účtu
-                        </PlatformText>
+                        </BodyLarge>
                     </View>
 
                     {/* form */}
@@ -136,7 +145,7 @@ export default function Login() {
                                 </Text>
                             )}
                         </View>
-                        <View className='flex-row justify-center mt-2'>
+                        <View className='flex-row mt-2'>
                         
                         <TouchableOpacity
                             onPress={() => router.push("/(auth)/forgot-pwd")} // TODO create password renewing page
@@ -160,37 +169,38 @@ export default function Login() {
                         {loading ? 
                         (
                             <View className='flex-row items-center'>
-                                <PlatformText className='font-bold text-white'>
+                                <Body className='font-bold text-white'>
                                     Prihlasovanie
-                                </PlatformText>
+                                </Body>
                             </View>
                         ):
                         (   
                             <View className='flex-row items-center'>
-                                <PlatformText 
-                                    className={Platform.OS ==="android" ? 'font-bold text-white' : 'font-bold text-white'}
+                                <Body 
+                                    className="font-bold text-white"
                                 >
                                     Prihlásiť sa
-                                </PlatformText>
+                                </Body>
                             </View>
                         )}
                     </TouchableOpacity>
 
                     <View className='flex-row justify-center items-center'>
-                        <PlatformText className='text-base'>
+                        <Caption className='text-base'>
                             Nemáte účet?{'  '}
-                        </PlatformText>
+                        </Caption>
                         <TouchableOpacity
                             onPress={() => router.push("/(auth)/register")}
                             disabled={loading}
                         >
-                            <PlatformText className='font-semibold'>
+                            <Caption className='font-semibold'>
                                 Zaregistrujte sa
-                            </PlatformText>
+                            </Caption>
                         </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }

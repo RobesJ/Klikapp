@@ -29,6 +29,11 @@ export default function RootLayout() {
             />
 
             <Stack.Screen
+              name="(auth)"
+              options={{ headerShown: false }}
+            />
+
+            <Stack.Screen
               name="addClientScreen"
               options={{   
                 headerShown: false,
@@ -54,36 +59,11 @@ export default function RootLayout() {
             }}
             />
 
-            <Stack.Screen
-              name="(auth)/login"
-              options={{ 
-                headerShown: false,
-                animation: 'slide_from_right'
-               }}
-            />
-            <Stack.Screen
-              name="(auth)/register"
-              options={{ 
-                headerShown: false,
-                animation: 'slide_from_right'
-               }}
-            />
-            <Stack.Screen 
-              name="(auth)/forgot-pwd" 
-              options={{ 
-                headerShown: false,
-                animation: 'slide_from_right'
-              }}
-            />
-            <Stack.Screen 
-              name="(auth)/reset-pwd" 
-              options={{ headerShown: false }}
-            />
             <Stack.Screen 
               name="settings" 
               options={{ 
                 headerShown: false,
-                animation: 'none' //'slide_from_right' 
+                animation: 'none'
               }}
             />
           </Stack>

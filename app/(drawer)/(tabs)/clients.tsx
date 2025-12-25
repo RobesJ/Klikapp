@@ -2,6 +2,8 @@ import { AnimatedScreen } from "@/components/animatedScreen";
 import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/cards/clientCard";
 import { NotificationToast } from "@/components/notificationToast";
+import { Heading1, Label } from "@/components/typografy";
+import { useAuth } from "@/context/authContext";
 import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
 import { EvilIcons } from "@expo/vector-icons";
@@ -16,6 +18,7 @@ export default function Clients() {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [searchText, setSearchText] = useState('');
+  const { user } = useAuth();
 
   const {
     filteredClients,
@@ -23,7 +26,8 @@ export default function Clients() {
     loading,
     loadMore,
     fetchClients,
-    setFilters
+    setFilters, 
+    unlockClient
   } = useClientStore();
 
   const router = useRouter();
@@ -59,6 +63,14 @@ export default function Clients() {
     setSelectedClient(null);
   };
 
+  const handleOnCloseWithUnlocking = () => {
+    setShowDetails(false);
+    if (selectedClient && user){
+      unlockClient(selectedClient.id, user.id);
+    }
+    setSelectedClient(null);
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
       <AnimatedScreen tabIndex={1}>
@@ -72,10 +84,10 @@ export default function Clients() {
             >
               <EvilIcons name="navicon" size={32} color="white" />
             </TouchableOpacity>
-            <Text allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Text>
+            <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Heading1>
 
             {/* online / offline indicator */}
-            <Text className="text-xl text-green-500">ONLINE</Text>
+            <Label className="text-xl text-green-500">ONLINE</Label>
           </View>
 
           {/* search option - search by client name or phone number */}
@@ -137,6 +149,7 @@ export default function Clients() {
             client={selectedClient}
             visible={showDetails}
             onClose={handleOnClose} 
+            onCloseWithUnlocking={handleOnCloseWithUnlocking}
           />
         )}
       </AnimatedScreen>

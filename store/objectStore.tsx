@@ -31,7 +31,7 @@ interface ObjectStore {
   
   fetchObjects: (limit?: number) => Promise<void>;
   setFilters: (filters: Partial<ObjectFilters>) => void;
-  clearFilters: () => void;
+  //clearFilters: () => void;
   addObject: (object: ObjectWithRelations) => void;
   updateObject: (id: string, object: ObjectWithRelations) => void;
   deleteObject: (id: string) => void;
@@ -61,6 +61,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   error: null,
 
   fetchObjects: async (limit = 50) => {
+    console.log("fetch object called");
     const { objects, lastFetch,  loading } = get();
     const now = Date.now();
 
@@ -113,7 +114,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
 
       set({ 
         objects: objectWithRelations,
-        filteredObjects: objectWithRelations,
+        filteredObjects: [],
         lastFetch: now,
         loading: false,
         hasMore: limit === objectWithRelations.length,
@@ -234,20 +235,21 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   },
 
   setFilters: (newFilters) => {
+    console.log("set filters called");
     const { filters, objects } = get();
 
     set({filters: { ...filters, ...newFilters }});
-    const query = newFilters.searchQuery?.toLowerCase() ?? '';
+    const query = newFilters.searchQuery?.toLowerCase().trim() ?? '';
 
     if(!query) {
-      set ({filteredObjects: objects });
+      set ({filteredObjects: [] });
       return;
     }
 
     const filteredLocal = objects.filter(o => {
       return o.client.name.toLowerCase().includes(query) ||
       (o.object.city?.toLowerCase() ?? '').includes(query) ||
-      o.object.address?.toLowerCase().includes(query)
+      (o.object.address?.toLowerCase() ?? '').includes(query)
     });
   
     set({ filteredObjects: filteredLocal });
@@ -257,9 +259,10 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     }
   },
 
-  clearFilters: () => {
-    set({ filters: initialFilters });
-  },
+  //clearFilters: () => {
+  //  console.log("clear filters called");
+  //  set({ filters: initialFilters });
+  //},
 
   lookForObjectInDBS: async(searchTerm: string) => {
     const { objects, loading } = get();
@@ -269,6 +272,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     }
 
     set({ loading: true, error: null });
+
     try {
       console.log("Looking for objects from database...");
       
@@ -341,13 +345,14 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   },
   
   loadMore: async () => {
-    const {objects, offset, hasMore, pageSize, loading, filters } = get();
+    const {objects, offset, hasMore, pageSize, loading } = get();
 
     if (loading || !hasMore) {
       return;
     }
-
+    console.log("loadMore object called");
     set({ loading: true });
+
     try{
       const { data: objectsData, error: objectError } = await supabase
         .from("objects")
@@ -390,20 +395,20 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         };
       });
 
-      const query = filters.searchQuery?.toLowerCase().trim() ?? '';
-      let filteredNewObjects = objectWithRelations;
-      
-      if (query) {
-        filteredNewObjects = objectWithRelations.filter(o => {
-          return o.client.name.toLowerCase().includes(query) ||
-            (o.object.city?.toLowerCase() ?? '').includes(query) ||
-            o.object.address?.toLowerCase().includes(query);
-        });
-      }
+      //const query = filters.searchQuery?.toLowerCase().trim() ?? '';
+      //let filteredNewObjects = objectWithRelations;
+      //
+      //if (query) {
+      //  filteredNewObjects = objectWithRelations.filter(o => {
+      //    return o.client.name.toLowerCase().includes(query) ||
+      //      (o.object.city?.toLowerCase() ?? '').includes(query) ||
+      //      o.object.address?.toLowerCase().includes(query);
+      //  });
+      //}
 
       set({ 
         objects: [...objects, ...objectWithRelations],
-        filteredObjects: [...get().filteredObjects, ...filteredNewObjects],
+        //filteredObjects: [...get().filteredObjects, ...filteredNewObjects],
         offset: offset + objectWithRelations.length,
         hasMore: objectWithRelations.length === pageSize,
         loading: false 
@@ -432,7 +437,6 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
 
     set((state) => ({
       objects: [object, ...state.objects],
-      filteredObjects: [object, ...state.filteredObjects],
       offset: state.offset +1,
       lastFetch: Date.now()
     }));

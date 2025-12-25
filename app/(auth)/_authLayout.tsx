@@ -11,7 +11,6 @@ export default function AuthLayout() {
       // Handle deep links
       const handleDeepLink = (event: { url: string }) => {
         const url = event.url;
-        //console.log("Deep link received:", url);
 
         if (url.includes('reset-pwd') || url.includes("type=recovery")) {
           router.push('/(auth)/reset-pwd');
@@ -45,7 +44,9 @@ export default function AuthLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#FFFFFF'},
+          contentStyle: { 
+            backgroundColor: '#FFFFFF'
+          },
           animation: 'slide_from_right',
         }}
       >

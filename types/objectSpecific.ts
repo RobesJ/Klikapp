@@ -2,7 +2,7 @@ import { Client } from "./generics";
 
 export interface Object {
   id: string;
-  client_id?: string;
+  client_id: string;
   address: string | null;
   city: string | null;
   streetNumber: string | null;

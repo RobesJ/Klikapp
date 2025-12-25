@@ -3,8 +3,9 @@ import { STATE_OPTIONS_HOME, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
-import { PlatformText } from '@/components/typografy';
+import { BodyLarge, BodySmall, Heading1, Label } from '@/components/typografy';
 import WeekCalendar from '@/components/weekCalendar';
+import { useAuth } from '@/context/authContext';
 import { useClientStore } from '@/store/clientStore';
 import { useObjectStore } from '@/store/objectStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -15,7 +16,7 @@ import { format, isBefore, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, PixelRatio, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
@@ -25,6 +26,7 @@ export default function Home() {
 
   const [showFilterModal, setShowFilterModal] = useState(false);
   const router = useRouter();
+  const { user } = useAuth();
   const navigation = useNavigation();
   
   const {
@@ -41,9 +43,15 @@ export default function Home() {
     toggleTypeFilter,
     toggleStateFilter,
     toggleUserFilter,
+    unlockProject
   } = useProjectStore();
 
   useEffect(() => {
+
+    const pixelRatio = PixelRatio.get();
+    console.log(pixelRatio);
+    const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+    console.log(`screen_ width: ${SCREEN_WIDTH}, screen_height: ${SCREEN_HEIGHT}`);
     if(projects.size === 0){
       fetchActiveProjects();
       setTimeout(() => {
@@ -154,6 +162,14 @@ export default function Home() {
     clearFilters();
   };
 
+  const handleCloseWithUnlock = () => {
+    setShowDetails(false);
+    if (selectedProject?.project && user){
+      unlockProject(selectedProject.project.id, user.id);
+    }
+    setSelectedProject(null);
+  };
+
   const hasActiveFilters = (filters.users.length > 0 ) || (filters.state.length > 0 ) || (filters.type.length > 0);
 
   return (
@@ -171,13 +187,13 @@ export default function Home() {
             </TouchableOpacity>
   
               <View className='ml-6 items-center justify-center'>
-                <PlatformText allowFontScaling={false} className="font-bold text-4xl text-dark-text_color">Aktuálne projekty</PlatformText>
-                <PlatformText className=' text-dark-text_color'>
+                <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color">Aktuálne projekty</Heading1>
+                <Label className=' text-dark-text_color'>
                   {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
-                </PlatformText>
+                </Label>
              </View>
               <View className="flex-2 justify-between items-center">
-                <PlatformText className="text-xl text-green-500">ONLINE</PlatformText>
+                <Label className="text-xl text-green-500">ONLINE</Label>
                 <TouchableOpacity
                     onPress={() => {setShowFilterModal(true)}}
                     activeOpacity={0.8}
@@ -203,9 +219,9 @@ export default function Home() {
                 <TouchableOpacity
                   onPress={()=> handleClearFilters()}
                   >
-                  <PlatformText className='color-red-600'>
+                  <BodyLarge className='color-red-600'>
                    Zrušiť filtre
-                  </PlatformText>
+                  </BodyLarge>
                 </TouchableOpacity>
               )}
               </View>
@@ -239,8 +255,8 @@ export default function Home() {
                         onPress={() => removeFilter(filter.type, filter.value)}
                         className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
                       >
-                        <PlatformText className={`${textColor} font-medium mr-1`}>{filter.value}</PlatformText>
-                        <PlatformText className={`${textColor} font-bold`}>✕</PlatformText>
+                        <BodySmall className={`${textColor} font-medium mr-1`}>{filter.value}</BodySmall>
+                        <BodySmall className={`${textColor} font-bold`}>✕</BodySmall>
                       </TouchableOpacity>
                     );
                   })}
@@ -296,6 +312,7 @@ export default function Home() {
             setShowDetails(false);
             setSelectedProject(null);
           }}
+          onCloseWithUnlock={handleCloseWithUnlock}
         />
       )}
             

@@ -23,12 +23,14 @@ interface ProjectCardDetailsProps {
   projectWithRelations: ProjectWithRelations;
   visible: boolean;
   onClose: () => void;
+  onCloseWithUnlock: () => void;
 }
 
 export default function ProjectDetails({ 
   projectWithRelations, 
   visible,
-  onClose
+  onClose,
+  onCloseWithUnlock
 }: ProjectCardDetailsProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -55,7 +57,7 @@ export default function ProjectDetails({
   
   const [chimneySums, setChimneySums] = useState<Record<string, string[]>>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const { updateProject, addProject, deleteProject, availableUsers, lockProject, unlockProject } = useProjectStore();
+  const { updateProject, addProject, deleteProject, availableUsers, lockProject } = useProjectStore();
   
   type PdfFlowStep =
   | "choice"         
@@ -73,6 +75,7 @@ export default function ProjectDetails({
 
   useEffect(() => {
     if(!visible || !projectWithRelations.project.id || !user) return;
+    console.log("Use effect called");
     let active = true;
 
     (async () => {
@@ -89,10 +92,6 @@ export default function ProjectDetails({
       }
     })();
 
-    return () => {
-      active = false;
-      unlockProject(projectWithRelations.project.id, user.id);
-    }
   }, [visible, user?.id, projectWithRelations?.project?.id]);
   
   useEffect(() => {
@@ -944,7 +943,7 @@ export default function ProjectDetails({
                 </Text>
               
                 <TouchableOpacity
-                  onPress={onClose}
+                  onPress={onCloseWithUnlock}
                   className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                 >
                   <EvilIcons name="close" size={24} color="white" />
@@ -1046,12 +1045,14 @@ export default function ProjectDetails({
                               <Text className="text-gray-400 text-sm">{user.email}</Text>
                             )}
                           </View>
-                          <TouchableOpacity
+                          {canEdit && (
+                            <TouchableOpacity
                             onPress={() => handleRemoveUser(user.id)}
                             className="w-8 h-8 bg-red-600 rounded-full items-center justify-center"
                           >
                             <Text className="text-white font-bold">✕</Text>
                           </TouchableOpacity>
+                          )}          
                         </View>
                       ))}
                     </View>
@@ -1220,6 +1221,7 @@ export default function ProjectDetails({
                   }}
                   activeOpacity={0.8}
                   className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
+                  disabled={!canEdit}
                 >
                   <EvilIcons name="trash" size={24} color="white" />
                   <Text className='text-white'>Odstrániť</Text>
@@ -1239,6 +1241,7 @@ export default function ProjectDetails({
                   }}
                   activeOpacity={0.8}
                   className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
+                  disabled={!canEdit}
                 >
                   <Feather name="edit-2" size={16} color="white" />
                   <Text className='text-white'>Upraviť</Text>
@@ -1311,18 +1314,19 @@ export default function ProjectDetails({
                       </TouchableOpacity>
                     </>
                   )}
-
-                  <View className="absolute bottom-0 left-0 right-0 p-6 bg-dark-bg">
-                    <View className="flex-row justify-around">
-                      <TouchableOpacity
-                        onPress={() => deletePhoto(selectedPhoto)}
-                        className="bg-red-600 rounded-xl px-6 py-3 flex-row items-center"
-                      >
-                        <MaterialIcons name="delete" size={20} color="white" />
-                        <Text className="text-white font-semibold ml-2">Odstrániť</Text>
-                      </TouchableOpacity>
+                  {canEdit && (
+                    <View className="absolute bottom-0 left-0 right-0 p-6 bg-dark-bg">
+                      <View className="flex-row justify-around">
+                        <TouchableOpacity
+                          onPress={() => deletePhoto(selectedPhoto)}
+                          className="bg-red-600 rounded-xl px-6 py-3 flex-row items-center"
+                        >
+                          <MaterialIcons name="delete" size={20} color="white" />
+                          <Text className="text-white font-semibold ml-2">Odstrániť</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
+                  )}
                 </View>
               </Modal>
             )}

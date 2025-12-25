@@ -780,6 +780,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           lockedByName: data?.[0]?.locked_by_name ?? null
         };
       }
+
       const project = get().projects.get(id);
       if(project){
         const updated = {

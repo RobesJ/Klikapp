@@ -14,9 +14,10 @@ interface ClientCardDetailsProps{
     client: Client;
     visible: boolean;
     onClose: () => void;
+    onCloseWithUnlocking: () => void;
 }
 
-export default function ClientDetails({client, visible, onClose} : ClientCardDetailsProps) {
+export default function ClientDetails({client, visible, onClose, onCloseWithUnlocking} : ClientCardDetailsProps) {
     const router = useRouter();
     const { user } = useAuth();
     const [objectsWithRelations, setObjectsWithRelations] = useState<ObjectWithRelations[]>([]);
@@ -25,7 +26,7 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
     const [error, setError] = useState<string | null>(null);
     const [canEdit, setCanEdit] = useState(false);
     const [lockedBy, setLockedBy] = useState<string | null>(null);
-    const {deleteClient, lockClient, unlockClient, refreshClientLock}= useClientStore();
+    const { deleteClient, lockClient }= useClientStore();
 
     useEffect(() => {
         fetchRelations(client);
@@ -149,40 +150,22 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
 
         (async () => {
             const result = await lockClient(client.id, user.id ,user.user_metadata.name);
-            if(!active) return;
+            if (!active) return;
 
             if(result.success){
                 setCanEdit(true);  
-                console.log("lock aquired");
+                console.log("Client lock aquired");
             }
             else{
                 setCanEdit(false);
                 setLockedBy(result.lockedByName);
-                console.log("lock not aquired");
+                console.log("Client lock not aquired");
             }
         })();
-        
 
-        return () => {
-            active = false;
-            unlockClient(client.id, user.id);
-        };
     }, [visible, client?.id, user?.id]);
 
-    //useEffect(() => {
-    //    if(!canEdit || !visible || !client || !user) return;
-//
-    //    const refreshInterval  = setInterval(() => {
-    //        refreshClientLock(client.id, user.id);
-    //    }, 2 * 60 * 1000); // 2 minutes
-//
-//
-    //    return () => {
-    //        clearInterval(refreshInterval);
-    //    };
-//
-    //}, [canEdit, visible, client?.id, user?.id]);
-
+    // locks heartbeat (adding 5 mins every 2 minutes to expires_at value) 
     useEffect(() => {
         if(!canEdit || !visible || !user) return;
         
@@ -240,7 +223,7 @@ export default function ClientDetails({client, visible, onClose} : ClientCardDet
                     </View>
                     {/* Close details modal */}
                     <TouchableOpacity
-                        onPress={onClose}
+                        onPress={onCloseWithUnlocking}
                         className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
                     >
                         <EvilIcons name="close" size={24} color="white" />

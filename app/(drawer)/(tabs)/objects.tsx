@@ -2,6 +2,8 @@ import { AnimatedScreen } from '@/components/animatedScreen';
 import ObjectDetails from '@/components/cardDetails/objectDetails';
 import ObjectCard from '@/components/cards/objectCard';
 import { NotificationToast } from '@/components/notificationToast';
+import { Heading1 } from '@/components/typografy';
+import { useAuth } from '@/context/authContext';
 import { useObjectStore } from '@/store/objectStore';
 import { Client } from '@/types/generics';
 import { ObjectWithRelations } from '@/types/objectSpecific';
@@ -14,20 +16,22 @@ import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Objects() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const navigation = useNavigation();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedObject, setSelectedObject] = useState<ObjectWithRelations | null>(null);
   const [searchText, setSearchText] = useState('');
 
   const {
     loading,
+    objects,
     loadMore,
     fetchObjects,
     setFilters,
-    filteredObjects
+    filteredObjects,
+    unlockObject
   } = useObjectStore();
-
-  const router = useRouter();
-  const navigation = useNavigation();
 
   useFocusEffect(
     useCallback(() => {
@@ -65,10 +69,19 @@ export default function Objects() {
     setSelectedObject(null);
   };
 
+  const handleCloseWithUnlock = () => {
+    setShowDetails(false);
+    if (selectedObject && user){
+      unlockObject(selectedObject.object.id, user.id);
+    }
+    setSelectedObject(null);
+  };
+
   const objectsGroupedByClient = useMemo(() => {
     const groups: Record< string, {client: Client; objects: ObjectWithRelations[]}> ={};
 
-    filteredObjects.forEach(o => {
+    const objectsToGroup = filteredObjects.length > 0 ? filteredObjects : objects;
+    objectsToGroup.forEach(o => {
 
       if (!o.client || !o.client.id){
         console.warn("Object missing client data:", o);
@@ -85,9 +98,8 @@ export default function Objects() {
       groups[clientId].objects.push(o);
     });
     return Object.values(groups);
-  }, [filteredObjects]);
+  }, [filteredObjects, objects]);
   
-
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
       <AnimatedScreen tabIndex={2}>
@@ -101,7 +113,7 @@ export default function Objects() {
           >
             <EvilIcons name="navicon" size={32} color="white" />
           </TouchableOpacity>
-          <Text allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Objekty</Text>
+          <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Objekty</Heading1>
           <Text className="text-xl text-green-500">ONLINE</Text>
         </View>
 
@@ -120,7 +132,8 @@ export default function Objects() {
 
       <FlatList
         data={objectsGroupedByClient}
-        keyExtractor={(group) => group.client.id}
+        keyExtractor={(group) => `${group.client.id}-${group.objects.length}`}
+        extraData={objects.length}
         renderItem={({ item: group }) => (
           <View className="mb-3 pb-4 bg-dark-card-bg border-2 rounded-2xl border-dark-card-border_color">
             {/* Section Header */}
@@ -172,11 +185,10 @@ export default function Objects() {
       {selectedObject && (
         <ObjectDetails 
           key={selectedObject.object.id}
-          object={selectedObject.object}
-          client={selectedObject.client}
-          chimneys={selectedObject.chimneys} 
+          objectWithRelations={selectedObject}          
           visible={showDetails}
           onClose={handleClose}
+          onCloseWithUnlock={handleCloseWithUnlock}
         />
       )}
       </AnimatedScreen>

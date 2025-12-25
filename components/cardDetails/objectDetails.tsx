@@ -2,8 +2,8 @@ import { useAuth } from "@/context/authContext";
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useObjectStore } from "@/store/objectStore";
-import { Client, PDF } from "@/types/generics";
-import { Chimney, Object } from "@/types/objectSpecific";
+import { PDF } from "@/types/generics";
+import { ObjectWithRelations } from "@/types/objectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { parseISO } from "date-fns";
 import { useRouter } from "expo-router";
@@ -12,14 +12,13 @@ import { ActivityIndicator, Alert, Linking, Modal, ScrollView, Text, TouchableOp
 import WebView from "react-native-webview";
 
 interface ObjectCardDetailsProps {
-  object: Object;
-  client: Client;
-  chimneys: Chimney[];
+  objectWithRelations: ObjectWithRelations;
   visible: boolean;
   onClose: () => void;
+  onCloseWithUnlock: () => void;
 }
 
-export default function ObjectDetails({ object, chimneys, client, visible, onClose } : ObjectCardDetailsProps) { 
+export default function ObjectDetails({ objectWithRelations, visible, onClose, onCloseWithUnlock} : ObjectCardDetailsProps) { 
   const router = useRouter();
   const { user } = useAuth();
   const [loadingPDFs, setLoadingPDFs] = useState(false);
@@ -29,11 +28,13 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
   // const [uploadingPDF, setUploadingPDF] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [lockedBy, setLockedBy] = useState<string | null>(null);
-  const {deleteObject, lockObject, unlockObject } = useObjectStore();
+  const {deleteObject, lockObject } = useObjectStore();
 
   useEffect(() => {
-    fetchPDFs();
-  }, [object.id]);
+    if( objectWithRelations.object){
+      fetchPDFs();
+    }
+  }, [objectWithRelations.object.id]);
 
   const fetchPDFs = async () => {
     setLoadingPDFs(true);
@@ -41,7 +42,7 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
         const {data, error} = await supabase
             .from("pdfs")
             .select('*')
-            .eq("object_id", object.id)
+            .eq("object_id", objectWithRelations.object.id)
             .order("generated_at", {ascending: false});
         
         if (error) throw error;
@@ -56,12 +57,12 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
   };
 
   useEffect(() => {
-    if (!visible || !object.id || !user) return;
+    if (!visible || !objectWithRelations.object || !user) return;
     let active = true;
 
     (async () => {
-      const result = await lockObject(object.id, user.id, user.user_metadata.name);
-      if(!active) return;
+      const result = await lockObject(objectWithRelations.object.id, user.id, user.user_metadata.name);
+      if (!active) return;
 
       if(result.success){
         setCanEdit(true);
@@ -70,14 +71,10 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
       else{
         setCanEdit(false);
         setLockedBy(result.lockedByName);
+        console.log("Object lock not aquired");
       }
     })();
-
-    return () => {
-      active = false;
-      unlockObject(object.id, user.id);
-    }
-  }, [visible, user?.id, object?.id]);
+  }, [visible, user?.id, objectWithRelations.object?.id]);
 
 
   useEffect(() => {
@@ -87,14 +84,13 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
         supabase
           .from('objects')
           .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
-          .eq('id', object.id)
+          .eq('id', objectWithRelations.object.id)
           .eq('locked_by', user.id);
       }, 120_000);
 
     return () => clearInterval(interval);
             
   }, [visible, canEdit, user?.id]);
-
  
 
   const deletePdf = async (pdf: PDF) => {
@@ -161,22 +157,22 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
         {/* Header */}
         <View className="px-4 py-6 border-b border-gray-400">
           <View className="flex-row items-center justify-between">
-            {object.city ? (
+            {objectWithRelations.object.city ? (
               <View className='flex-1'>
                 <Text className="text-xl font-bold text-dark-text_color">
-                  {object.streetNumber}
+                  {objectWithRelations.object.streetNumber}
                 </Text>
                 <Text className="text-xl font-bold text-dark-text_color">
-                  {object.city}
+                  {objectWithRelations.object.city}
                 </Text>
               </View>
             ): (
               <Text className="text-xl font-bold text-dark-text_color">
-                {object.address}
+                {objectWithRelations.object.address}
               </Text>
             )}
             <TouchableOpacity
-              onPress={onClose}
+              onPress={onCloseWithUnlock}
               className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
             >
               <EvilIcons name="close" size={24} color="white" />
@@ -189,20 +185,20 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
           
           <View className="flex-2 mb-3">
             <Text className="text-gray-400 mb-1">KLIENT</Text>
-            <Text className="font-semibold text-lg text-white">{client.name}</Text>
+            <Text className="font-semibold text-lg text-white">{objectWithRelations.client.name}</Text>
             <View className="flex-row items-center">
               <MaterialIcons name="phone" size={16} color="#9ca3af"/>
-              <Text className="font-medium text-gray-300 ml-2">{client.phone}</Text>
+              <Text className="font-medium text-gray-300 ml-2">{objectWithRelations.client.phone}</Text>
             </View>
           </View>
               
-          {chimneys.length > 0 && (
+          {objectWithRelations.chimneys.length > 0 && (
               <Text className="text-gray-400 mb-1">
-                  KOMÍNY ({chimneys.length})
+                  KOMÍNY ({objectWithRelations.chimneys.length})
               </Text>
           )}
-          {chimneys.length > 0 && (
-              chimneys.map(ch => (
+          {objectWithRelations.chimneys.length > 0 && (
+              objectWithRelations.chimneys.map(ch => (
                   <View
                       className="flex-row border rounded-lg bg-dark-details-o_p_bg px-4 py-2 mb-2"
                       key={ch.id}
@@ -413,8 +409,8 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
           <TouchableOpacity
               onPress={() => {
                   try{
-                    deleteObject(object.id);
-                    onClose;
+                    onClose();
+                    deleteObject(objectWithRelations.object.id);
                   }
                   catch (error){
                     console.error("Delete failed:", error);
@@ -422,25 +418,27 @@ export default function ObjectDetails({ object, chimneys, client, visible, onClo
               }}
               activeOpacity={0.8}
               className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
+              disabled={!canEdit}
           >
             <EvilIcons name="trash" size={24} color="white" />
             <Text className='text-white'>Odstrániť</Text>
           </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => {
-                onClose;
-                router.push({
-                  pathname: "/addObjectScreen",
-                  params: { 
-                    object: JSON.stringify(object), 
-                    mode: "edit",
-                    preselectedClient: JSON.stringify(client)
-                  }
-                });
-              }}
-              activeOpacity={0.8}
-              className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
+          <TouchableOpacity
+            onPress={() => {
+              onClose();
+              router.push({
+                pathname: "/addObjectScreen",
+                params: { 
+                  object: JSON.stringify(objectWithRelations), 
+                  mode: "edit",
+                  preselectedClient: JSON.stringify(objectWithRelations.client)
+                }
+              });
+            }}
+            activeOpacity={0.8}
+            className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
+            disabled={!canEdit}
           >
             <Feather name="edit-2" size={16} color="white" />
             <Text className='text-white'>Upraviť</Text>

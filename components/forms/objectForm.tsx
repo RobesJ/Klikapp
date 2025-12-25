@@ -30,7 +30,7 @@ interface ObjectFormProps{
 export default function ObjectForm({ mode, initialData, onSuccess, preselectedClient} : ObjectFormProps) {
 
     const [formData, setFormData] = useState<Omit<ObjectType, "id"> & {id?: string}>({
-        client_id: initialData?.object.client_id || '',
+        client_id: initialData?.client.id || '',
         address: initialData?.object.address || '',
         streetNumber: initialData?.object.streetNumber || '',
         city: initialData?.object.city || '',

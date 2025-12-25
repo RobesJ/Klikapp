@@ -4,6 +4,8 @@ import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
 import { NotificationToast } from '@/components/notificationToast';
+import { Heading1 } from '@/components/typografy';
+import { useAuth } from '@/context/authContext';
 import { useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons, Feather } from '@expo/vector-icons';
@@ -15,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Projects() {
   const router = useRouter();
+  const { user } = useAuth();
   const navigation = useNavigation();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithRelations | null>(null);
@@ -37,7 +40,8 @@ export default function Projects() {
     toggleStateFilter,
     toggleTypeFilter,
     toggleUserFilter,
-    removeFilter
+    removeFilter,
+    unlockProject
   } = useProjectStore();
   
   const MINIMUM_RESULTS = 20;
@@ -138,6 +142,14 @@ export default function Projects() {
     loadMore(filters, 30);
   }
 
+  const handleCloseWithUnlock = () => {
+      setShowDetails(false);
+      if(selectedProject?.project && user){
+        unlockProject(selectedProject.project.id, user.id);
+      }
+      setSelectedProject(null);
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
       <AnimatedScreen tabIndex={3}>
@@ -151,7 +163,7 @@ export default function Projects() {
           >
             <EvilIcons name="navicon" size={32} color="white" />
           </TouchableOpacity>
-          <Text allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Text>
+          <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Heading1>
           
             <View className='flex-2 justify-between items-center '>
               <Text className="text-xl text-green-500">ONLINE</Text>
@@ -280,6 +292,7 @@ export default function Projects() {
             setShowDetails(false);
             setSelectedProject(null);
           }}
+          onCloseWithUnlock={handleCloseWithUnlock}
         />
       )}
  

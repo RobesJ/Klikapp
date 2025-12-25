@@ -8,6 +8,13 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
+      fontFamily: {
+        // Add your custom fonts here
+        regular: ['System'],
+        medium: ['System'],
+        semibold: ['System'],
+        bold: ['System'],
+      },
       colors: {
         primary: "#DBEAFE",
         secondary: "#2563EB",

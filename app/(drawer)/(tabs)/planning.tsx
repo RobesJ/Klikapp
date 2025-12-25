@@ -3,7 +3,9 @@ import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
+import { BodySmall, Heading1 } from '@/components/typografy';
 import WeekCalendar from '@/components/weekCalendar';
+import { useAuth } from '@/context/authContext';
 import { ProjectFilters, useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from '@/types/projectSpecific';
 import { EvilIcons, Feather } from '@expo/vector-icons';
@@ -301,7 +303,7 @@ export default function Planning() {
     try{
       const dateToAssign = selectedDateRef.current;
       assignProjectToDate(projectId, dateToAssign);
-      console.log("setting current assignment with projectID", projectId);
+      //console.log("setting current assignment with projectID", projectId);
       currentAssingmentsRef.current = {
         ...currentAssingmentsRef.current,
         [projectId]: dateToAssign
@@ -385,14 +387,14 @@ export default function Planning() {
                 <EvilIcons name="navicon" size={36} color="white" />
               </TouchableOpacity>
               <View className='items-center justify-center ml-6'>
-            <Text allowFontScaling={false} className="font-bold text-4xl text-dark-text_color">
+            <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color">
               Plánovanie projektov
-            </Text>
+            </Heading1>
             <Text className="text-dark-text_color mb-4">
               {format(selectedDate, "EEE, d. MMMM yyyy", { locale: sk })}
             </Text>
             </View>
-            <Text className="text-xl text-green-500">ONLINE</Text>
+            <BodySmall className="text-xl text-green-500">ONLINE</BodySmall>
           </View>
          
           {/* Calendar */}
@@ -581,9 +583,10 @@ function SwipeableProjectCard({
 }: SwipeableProjectCardProps) {
   const translateX = useRef(new Animated.Value(0)).current;
   const [swiped, setSwiped] = useState(false);
+  const { user } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithRelations | null>(null);
-
+  const { unlockProject } = useProjectStore();
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -640,10 +643,19 @@ function SwipeableProjectCard({
     })
   ).current;
 
+
   const handleModalVisibility = (projectData: ProjectWithRelations, value: boolean) => {
     setSelectedProject(projectData);
     setShowDetails(value);
   };
+
+  const handleCloseWithUnlock = () => {
+    setShowDetails(false);
+    if (selectedProject?.project && user){
+      unlockProject(selectedProject.project.id, user.id);
+    }
+    setSelectedProject(null);
+  }
 
   return (
     <View className='mb-2 overflow-hidden'>
@@ -673,6 +685,7 @@ function SwipeableProjectCard({
             setShowDetails(false);
             setSelectedProject(null);
           }}
+          onCloseWithUnlock={handleCloseWithUnlock}
       />
       )}
             
