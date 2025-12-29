@@ -1,7 +1,8 @@
 import { NotificationType, useNotificationStore } from "@/store/notificationStore";
 import { useEffect } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { Body } from "./typografy";
 
 interface ToastItemProps {
     id: string;
@@ -37,12 +38,12 @@ const ToastItem: React.FC<ToastItemProps> = ({message, type}) => {
           ]}
           className="flex-row justify-center items-center py-2"
         >
-            <Text 
+            <Body 
                 className="font-bold" 
                 style={{color: getColor(type)}}
             >
                 {message}
-            </Text>
+            </Body>
         </Animated.View>
     )
 }

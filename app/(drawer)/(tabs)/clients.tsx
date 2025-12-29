@@ -2,7 +2,7 @@ import { AnimatedScreen } from "@/components/animatedScreen";
 import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/cards/clientCard";
 import { NotificationToast } from "@/components/notificationToast";
-import { Heading1, Label } from "@/components/typografy";
+import { Body, Heading1 } from "@/components/typografy";
 import { useAuth } from "@/context/authContext";
 import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
@@ -11,8 +11,9 @@ import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from "expo-router";
 import debounce from "lodash.debounce";
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FONT_SIZES } from "../../../utils/responsive";
 
 export default function Clients() {
   const [showDetails, setShowDetails] = useState(false);
@@ -71,6 +72,14 @@ export default function Clients() {
     setSelectedClient(null);
   };
 
+  const inputStyle = useMemo((): TextStyle => {
+    const size = FONT_SIZES["lg"];
+    return {
+      fontSize: size,
+      lineHeight: size * 1.4,
+    };
+  },[]);
+
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
       <AnimatedScreen tabIndex={1}>
@@ -87,7 +96,7 @@ export default function Clients() {
             <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Heading1>
 
             {/* online / offline indicator */}
-            <Label className="text-xl text-green-500">ONLINE</Label>
+            <Body className="text-xl text-green-500">ONLINE</Body>
           </View>
 
           {/* search option - search by client name or phone number */}
@@ -95,6 +104,7 @@ export default function Clients() {
             <EvilIcons name="search" size={20} color="gray" />
             <TextInput
               className="flex-1 ml-2 text-dark-text_color"
+              style={inputStyle}
               placeholder='Vyhladajte klienta...'
               placeholderTextColor="#9CA3AF"
               value={searchText}
@@ -121,9 +131,9 @@ export default function Clients() {
           onRefresh={handleRefresh}
           ListEmptyComponent={
             loading ? (
-              <Text className="text-center text-gray-500 mt-10">Načítavam...</Text>
+              <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
             ) : (
-              <Text className="text-center text-gray-500 mt-10">Žiadny klienti</Text>
+              <Body className="text-center text-gray-500 mt-10">Žiadny klienti</Body>
             )
           }
           onEndReached={loadMore}
@@ -138,7 +148,7 @@ export default function Clients() {
           activeOpacity={0.8}
           className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
         >
-          <Text className='text-white text-3xl'>+</Text>
+          <Heading1 className='text-white text-3xl'>+</Heading1>
         </TouchableOpacity>
       
 

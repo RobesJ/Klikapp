@@ -1,6 +1,7 @@
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { useState } from "react";
-import { Modal, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Modal, ScrollView, Switch, TouchableOpacity, View } from "react-native";
+import { Body, BodySmall, Caption, Heading3 } from './typografy';
 
 interface FilterOption {
   value: string;
@@ -62,13 +63,13 @@ export default function FilterModal({
           <View className="px-4 py-6 border-b border-gray-700">
             <View className="flex-row items-center justify-between">
               <View>
-                <Text className="text-xl font-bold text-dark-text_color">
+                <Heading3 className="text-xl font-bold text-dark-text_color">
                   Filtrovať
-                </Text>
+                </Heading3>
                 {totalFiltersCount > 0 && (
-                  <Text className="text-sm text-gray-400 mt-1">
+                  <BodySmall className="text-sm text-gray-400 mt-1">
                     {totalFiltersCount} aktívnych filtrov
-                  </Text>
+                  </BodySmall>
                 )}
               </View>
 
@@ -97,14 +98,14 @@ export default function FilterModal({
                     className="rounded-2xl border-2 border-gray-600 py-2 px-4 flex-row items-center justify-between"
                   >
                     <View className="flex-row gap-4 items-center">
-                      <Text className="text-dark-text_color">
+                      <Body className="text-dark-text_color">
                         {section.title}
-                      </Text>
+                      </Body>
                       {activeCount > 0 && (
                         <View className="bg-blue-500 rounded-full w-5 h-5 items-center justify-center">
-                          <Text className="text-white text-xs font-bold">
+                          <Caption className="text-white text-xs font-bold">
                             {activeCount}
-                          </Text>
+                          </Caption>
                         </View>
                       )}
                     </View>
@@ -129,16 +130,16 @@ export default function FilterModal({
                           >
                             {section.type === 'styled' && option.colors ? (
                               // Styled badge option (for Type/State filters)
-                              <Text
+                              <Body
                                 className={`${option.colors[1]} rounded-2xl px-4 py-1 ml-2 ${option.colors[0]}`}
                               >
                                 {displayLabel}
-                              </Text>
+                              </Body>
                             ) : (
                               // Simple text option (for Users/City filters)
-                              <Text className="text-dark-text_color font-semibold ml-2">
+                              <Body className="text-dark-text_color font-semibold ml-2">
                                 {displayLabel}
-                              </Text>
+                              </Body>
                             )}
                             
                             <Switch
@@ -167,9 +168,9 @@ export default function FilterModal({
                 }}
                 className="bg-red-600 rounded-xl py-3"
               >
-                <Text className="text-white font-semibold text-center">
+                <Body className="text-white font-semibold text-center">
                   Zrušiť všetky filtre
-                </Text>
+                </Body>
               </TouchableOpacity>
             </View>
           )}

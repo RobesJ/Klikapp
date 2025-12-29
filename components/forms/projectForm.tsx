@@ -13,13 +13,14 @@ import {
     Modal,
     Platform,
     ScrollView,
-    Text,
-    TextInput,
     TouchableOpacity,
-    View
+    View,
+    useWindowDimensions
 } from "react-native";
 import { BadgeSelector, ModalSelector, STATE_OPTIONS, TYPE_OPTIONS } from "../badge";
+import { FormInput } from "../formInput";
 import ModernDatePicker from "../modernDatePicker";
+import { Body, BodySmall, Caption, Heading1, Heading3 } from "../typografy";
 import UserPickerModal from "../userPickerModal";
 
 
@@ -67,6 +68,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [selectedObjects, setSelectedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
     const [showObjectModal, setShowObjectModal] = useState(false);
     const router = useRouter();
+    const { width } = useWindowDimensions();
     const { availableUsers, fetchAvailableUsers } = useProjectStore();
     let oldState: string | null = initialData ? initialData.project.state : null;
 
@@ -197,18 +199,18 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         const newErrors: Record<string, string> = {};
 
         if (!formData.client_id?.trim()){
-            newErrors.client = "Klient je povinny udaj!";
+            newErrors.client = "Klient je povinný údaj!";
         }
         if (!formData.scheduled_date && !formData.start_date ){
-            newErrors.dates = "Pre ulozenie je potrebne zadat planovany datum alebo datum zacatia projektu!";
+            newErrors.dates = "Pre uloženie je potrebné zadať plánovaný dátum alebo dátum začatia projektu!";
         }
         
         if (!formData.type){
-            newErrors.type = "Vyberte typ projektu";
+            newErrors.type = "Vyberte typ projektu!";
         }
 
         if (!formData.state){
-            newErrors.state = "Vyberte stav projektu";
+            newErrors.state = "Vyberte stav projektu!";
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -596,9 +598,9 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 >
                   <MaterialIcons name="arrow-back" size={24} color="#d6d3d1" />
                 </TouchableOpacity>
-                <Text className="font-bold text-3xl text-dark-text_color top-3 text-center">
+                <Heading1 className="font-bold text-3xl text-dark-text_color top-3 text-center">
                     {mode === "create" ? "Vytvoriť projekt" : "Upraviť projekt"}
-                </Text>
+                </Heading1>
                 
             </View>
             
@@ -612,33 +614,32 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
 
                 {/* Client field*/}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Text>
+                    <Body className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Body>
                     <View>
                         
                         {clientIsPreselected() &&
-                            <Text
+                            <Body
                                 className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-600 text-white">
                                 {selectedClient?.name}
-                            </Text>
+                            </Body>
                         }
                         {!clientIsPreselected() && (
-                            <TextInput
-                            placeholder="Začnite písať meno klienta..."
-                            placeholderTextColor="#ABABAB"
-                            value={searchQuery}
-                            onChangeText={handleSearchClient}
-                            cursorColor="#FFFFFF"
-                            className={`flex-row items-center border-2 bg-gray-800 rounded-xl px-4 py-4 text-white 
-                                ${focusedField === 'client' ? 'border-blue-500' : 'border-gray-700'}
-                            `}
-                            onFocus={() => setFocusedField('client')}
-                            onBlur={() => setFocusedField(null)}
+                            <FormInput
+                              label={selectedClient?.name}
+                              placeholder="Začnite písať meno klienta..."
+                              fieldName="client"
+                              value={searchQuery}
+                              onChange={handleSearchClient}
+                              focusedField={focusedField}
+                              setFocusedField={setFocusedField}
+                              error={errors.client}
+                              autoCapitalize="words"
                             />
                         )}
                         
                         {loadingClients && (!clientIsPreselected()) && (
                             <View className="absolute right-4 top-4">
-                                <Text className="text-gray-400">🔍</Text>
+                                <Body className="text-gray-400">🔍</Body>
                             </View>
                         )}
 
@@ -651,29 +652,37 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                                             onPress={() => handleSelectedClient(item)}
                                             className="p-4 border-b border-gray-100"
                                         >
-                                            <Text className="text-base">{item.name}</Text>
+                                            <Body className="text-base">{item.name}</Body>
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
                             </View>
                         )}
-                        {errors.client && (
-                            <Text className='text-red-500 font-semibold ml-2 mt-1'>
-                                {errors.client}
-                            </Text>
-                        )}
                     </View>
                 </View> 
                 
                 {/* Type field*/}
-                <BadgeSelector
-                  options={TYPE_OPTIONS}
-                  selectedValue={selectedType}
-                  onSelect={handleSelectedType}
-                  label="Typ"
-                  error={errors.type}
-                />
-
+                
+                {width > 400 ? (
+                    <BadgeSelector
+                        options={TYPE_OPTIONS}
+                        selectedValue={selectedType}
+                        onSelect={handleSelectedType}
+                        label="Typ"
+                        error={errors.type}
+                    />
+                ): (
+                    <ModalSelector
+                        options={TYPE_OPTIONS}
+                        selectedValue={selectedType}
+                        onSelect={handleSelectedType}
+                        inDetailsModal={false}
+                        label="Typ"
+                        error={errors.type}
+                        placeholder="Vyberte typ"
+                    />
+                )}
+                
                 {/* State field*/}
                 <ModalSelector
                   options={STATE_OPTIONS}
@@ -687,90 +696,83 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
              
                 {/* Scheduled project start field */}
                 <View className="mb-3 ">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Plánovaný deň začatia</Text>
+                    <Body className="mb-1 ml-1 font-medium text-dark-text_color">Plánovaný deň začatia</Body>
                     <ModernDatePicker
                         value={scheduledDate}
                         onChange={handleScheduledDate}
                         error={errors.scheduledDate}
                     />
                     {errors.dates && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                        <Body className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.dates}
-                        </Text>
+                        </Body>
                     )}
                 </View>
 
                 {/* Project start field */}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Deň začatia</Text>
+                    <Body className="mb-1 ml-1 font-medium text-dark-text_color">Deň začatia</Body>
                     <ModernDatePicker
                         value={startDate}
                         onChange={handleStartdDate}
                         error={errors.startDate}
                     />
                     {errors.dates && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                        <Body className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.dates}
-                        </Text>
+                        </Body>
                     )}
                 </View>
 
                 {/* Project completion field*/}
                 <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Deň ukončenia</Text>
+                    <Body className="mb-1 ml-1 font-medium text-dark-text_color">Deň ukončenia</Body>
                     <ModernDatePicker
                         value={completionDate}
                         onChange={handleCompletionDate}
                         error={errors.completionDate}
                     />
                     {errors.completionDate && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                        <Body className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.completionDate}
-                        </Text>
+                        </Body>
                     )}
                 </View>
 
                 {/* note input*/}
-                <View className="mb-3">
-                    <Text className="mb-1 ml-1 font-medium text-dark-text_color">Poznámka</Text>
-                    <TextInput
-                      placeholder="Ďalšie informácie..."
-                      placeholderTextColor="#ABABAB"
-                      value={formData.note || ''}
-                      cursorColor="#FFFFFF"
-                      className={`flex-row items-center border-2 bg-gray-800 rounded-xl px-4 py-4 text-white 
-                          ${focusedField === "note" ? 'border-blue-500' : 'border-gray-700'}
-                      `}
-                      onFocus={() => setFocusedField("note")}
-                      onBlur={() => setFocusedField(null)}
-                      onChangeText={(value) => handleChange("note", value)}
-                      multiline
-                      numberOfLines={3}
-                    />
-                </View>
+                <FormInput
+                  label="Poznámka"
+                  placeholder="Ďalšie informácie..."
+                  value={formData.note || ''}
+                  onChange={(value) => handleChange("note", value)}
+                  fieldName="note"
+                  focusedField={focusedField}
+                  setFocusedField={setFocusedField}
+                  multiline
+                  numberOfLines={3}
+                />
 
                 {/* Users Field */}
                 <View className="mb-3">
                     <View className="flex-row justify-between mb-2">
-                        <Text className="ml-1 mt-3 font-semibold text-dark-text_color">
+                        <Body className="ml-1 mt-3 font-semibold text-dark-text_color">
                             Priradený používatelia
-                        </Text>
+                        </Body>
                         {/* Assign User Button */}
                         <TouchableOpacity
                           onPress={() => setShowUserModal(true)}
-                          className={'border-2 bg-gray-500 rounded-xl px-4 py-2'}
+                          className={'flex-row border-2 bg-gray-500 rounded-xl px-4 py-2'}
                         >
-                            <Text className="text-white font-semibold text-center">
-                                + Priradiť
-                            </Text>
+                            <Body className="text-white font-semibold text-center mr-1"> + </Body>
+                            <Body className="text-white font-semibold text-center"> Priradiť </Body>
                         </TouchableOpacity>
                     </View>
                     
                     {selectedUsers.length === 0 && (
                          <View className="mb-3">
-                            <Text className="text-red-400 ml-1">
+                            <Body className="text-red-400 ml-1">
                                 Nie je priradený žiadny používateľ
-                            </Text>
+                            </Body>
                         </View>
                     )}
                     {/* Selected Users Display */}
@@ -782,34 +784,33 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                                     className="flex-row items-center justify-between bg-slate-500 rounded-xl p-3 mb-2"
                                 >
                                     <View className="flex-1">
-                                        <Text className="font-semibold text-white">
+                                        <Body className="font-semibold text-white">
                                             {user.name}
-                                        </Text>
+                                        </Body>
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => handleRemoveUser(user.id)}
                                         className="w-8 h-8 bg-red-100 rounded-full items-center justify-center ml-2"
                                     >
-                                        <Text className="text-red-600 font-bold">✕</Text>
+                                        <Body className="text-red-600 font-bold">✕</Body>
                                     </TouchableOpacity>
                                 </View>
                             ))}
                         </View>
                     )}
                     {errors.users && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                        <Body className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.users}
-                        </Text>
+                        </Body>
                     )}
                 </View>
-
 
                 {/* Objects Field */}
                 <View className="mb-3">
                     <View className="flex-row justify-between mb-2">
-                    <Text className="mt-3 ml-1 font-semibold text-dark-text_color">
+                    <Body className="mt-3 ml-1 font-semibold text-dark-text_color">
                         Priradené objekty
-                    </Text>
+                    </Body>
                     {/* Assign Object Button */}
                     <TouchableOpacity
                         onPress={async () => {
@@ -818,19 +819,18 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                               setShowObjectModal(true);
                           }
                         }}
-                          className={'border-2 bg-gray-500 rounded-xl px-4 py-2'}
+                          className="flex-row border-2 bg-gray-500 rounded-xl px-4 py-2"
                         >
-                            <Text className="text-white font-semibold text-center">
-                                + Priradiť
-                            </Text>
+                            <Body className="text-white font-semibold text-center mr-1"> + </Body>
+                            <Body className="text-white font-semibold text-center"> Priradiť </Body>
                         </TouchableOpacity>
                     </View>
                     
                     {selectedObjects.length === 0 && (
                          <View className="mb-3">
-                            <Text className="text-red-400 ml-1">
+                            <Body className="text-red-400 ml-1">
                                 Nie je priradený žiadny objekt
-                            </Text>
+                            </Body>
                         </View>
                     )}
 
@@ -843,15 +843,15 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                                     className="flex-row items-center justify-between bg-slate-500 rounded-xl p-3 mb-2"
                                 >
                                     <View className="flex-1">
-                                        <Text className="font-semibold text-white">
+                                        <Body className="font-semibold text-white">
                                             {object.object.address}
-                                        </Text>
+                                        </Body>
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => handleRemoveObject(object.object.id)}
                                         className="w-8 h-8 bg-red-100 rounded-full items-center justify-center ml-2"
                                     >
-                                        <Text className="text-red-600 font-bold">✕</Text>
+                                        <Body className="text-red-600 font-bold">✕</Body>
                                     </TouchableOpacity>
                                 </View>
                             ))}
@@ -859,9 +859,9 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                     )}
 
                     {errors.objects && (
-                        <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                        <Body className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.objects}
-                        </Text>
+                        </Body>
                     )}
                 </View>
 
@@ -875,14 +875,14 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 onPress={handleSubmit}
                 disabled={loading}
                 className="bg-blue-600 rounded-xl py-4 items-center px-12">
-                <Text className="color-primary font-bold">
+                <Body className="color-primary font-bold">
                     {mode === "create" 
                     ? (loading 
                         ? "Vytvaram..." 
                         : "Vytvoriť projekt") 
                     : (loading 
                         ? "Upravujem..." : "Upraviť projekt")}
-                </Text>
+                </Body>
             </TouchableOpacity>
         </View>
         </KeyboardAvoidingView>
@@ -907,27 +907,27 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                     <View className="p-6 border-b border-gray-600">
                         <View className="flex-row items-center justify-between mb-4">
                             <View className="flex-1">
-                                <Text className="text-xl font-bold text-dark-text_color">Vyhľadajte objekty</Text>
-                                <Text className="text-sm text-gray-500">
+                                <Heading3 className="text-xl font-bold text-dark-text_color">Vyhľadajte objekty</Heading3>
+                                <BodySmall className="text-sm text-gray-500">
                                     {selectedObjects.length} vybraných
-                                </Text>
+                                </BodySmall>
                             </View>
                             <TouchableOpacity
                                 onPress={() => setShowObjectModal(false)}
                                 className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
                             >
-                                <Text className="text-white">✓</Text>
+                                <Body className="text-white">✓</Body>
                             </TouchableOpacity>
                         </View>
                     </View>
                     {loadingObjects ? 
                     (
                         <View className="flex-1 items-center justify-center">
-                            <Text className="text-gray-500">Vyhľadávám...</Text>
+                            <Body className="text-gray-500">Vyhľadávám...</Body>
                         </View>
                     ) : assignedObjects.length === 0 ? (
                         <View className="flex-1 items-center justify-center">
-                            <Text className="text-gray-500">Žiadne objekty neboli nájdene</Text>
+                            <Body className="text-gray-500">Žiadne objekty neboli nájdene</Body>
                         </View>
                     ) : (
                         <FlatList
@@ -944,14 +944,14 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                                             <View className="flex-1">
                                                 
                                                 {item.object.address && (
-                                                    <Text className="text-sm text-gray-500 mt-1">
+                                                    <BodySmall className="text-sm text-gray-500 mt-1">
                                                         {item.object.address}
-                                                    </Text>
+                                                    </BodySmall>
                                                 )}
                                             </View>
                                             {selected && (
                                                 <View className="w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
-                                                    <Text className="text-white text-xs">✓</Text>
+                                                    <Caption className="text-white text-xs">✓</Caption>
                                                 </View>
                                             )}
                                         </View>

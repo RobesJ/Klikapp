@@ -4,15 +4,16 @@ import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
 import { NotificationToast } from '@/components/notificationToast';
-import { Heading1 } from '@/components/typografy';
+import { Body, Heading1 } from '@/components/typografy';
 import { useAuth } from '@/context/authContext';
 import { useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from "@/types/projectSpecific";
+import { FONT_SIZES } from '@/utils/responsive';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Projects() {
@@ -140,7 +141,7 @@ export default function Projects() {
 
   async function loadMoreProjects() {
     loadMore(filters, 30);
-  }
+  };
 
   const handleCloseWithUnlock = () => {
       setShowDetails(false);
@@ -148,7 +149,15 @@ export default function Projects() {
         unlockProject(selectedProject.project.id, user.id);
       }
       setSelectedProject(null);
-  }
+  };
+
+  const inputStyle = useMemo((): TextStyle => {
+    const size = FONT_SIZES["lg"];
+    return {
+      fontSize: size,
+      lineHeight: size * 1.4,
+    };
+  },[]);
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
@@ -166,7 +175,7 @@ export default function Projects() {
           <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Heading1>
           
             <View className='flex-2 justify-between items-center '>
-              <Text className="text-xl text-green-500">ONLINE</Text>
+              <Body className="text-xl text-green-500 mb-1">ONLINE</Body>
               <TouchableOpacity
                 onPress={() => {setShowFilterModal(true)}}
                 activeOpacity={0.8}
@@ -184,6 +193,7 @@ export default function Projects() {
           <EvilIcons name="search" size={20} color="gray" />
           <TextInput
             className="flex-1 ml-2 text-dark-text_color"
+            style={inputStyle}
             placeholder='Vyhladajte klienta alebo mesto...'
             placeholderTextColor="#9CA3AF"
             value={searchText}
@@ -199,9 +209,9 @@ export default function Projects() {
             <TouchableOpacity
               onPress={()=> handleClearFilters()}
               >
-              <Text className='color-red-600'>
-               Zrusit filtre
-              </Text>
+              <Body className='color-red-600'>
+               Zrušiť filtre
+              </Body>
             </TouchableOpacity>
           )}
           </View>
@@ -230,8 +240,8 @@ export default function Projects() {
                     onPress={() => removeFilter(filter.type, filter.value)}
                     className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
                   >
-                    <Text className={`${textColor} font-medium mr-1`}>{filter.value}</Text>
-                    <Text className={`${textColor} font-bold`}>✕</Text>
+                    <Body className={`${textColor} font-medium mr-1`}>{filter.value}</Body>
+                    <Body className={`${textColor} font-bold`}>✕</Body>
                   </TouchableOpacity>
                 );
               })}
@@ -259,9 +269,9 @@ export default function Projects() {
         onEndReached={loadMoreProjects}
         ListEmptyComponent={
           backgroundLoading ? (
-            <Text className="text-center text-gray-500 mt-10">Načítavam...</Text>
+            <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
           ) : (
-            <Text className="text-center text-gray-500 mt-10">Žiadne projekty</Text>
+            <Body className="text-center text-gray-500 mt-10">Žiadne projekty</Body>
           )
         }
       />
@@ -275,10 +285,10 @@ export default function Projects() {
         })}}
         className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
       >
-        <Text 
+        <Heading1 
           className='text-white text-3xl'>
           +
-        </Text>
+        </Heading1>
       </TouchableOpacity>
 
       </AnimatedScreen>

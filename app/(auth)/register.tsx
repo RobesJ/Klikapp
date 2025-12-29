@@ -1,3 +1,5 @@
+import { FormInput } from '@/components/formInput';
+import { Body, Heading1 } from '@/components/typografy';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -6,8 +8,6 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -24,6 +24,7 @@ export default function Register() {
 
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string,string>>({});
+    const [focusedField, setFocusedField] = useState<string | null>(null);
 
     const handleChange = (field: string, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
@@ -40,7 +41,7 @@ export default function Register() {
         const newErrors: Record<string, string> = {};
 
         if(!formData.name.trim()){
-            newErrors.name = "Meno je povinne!"
+            newErrors.name = "Meno je povinné!"
         }
         
         if (!formData.email.trim()) {
@@ -50,14 +51,14 @@ export default function Register() {
         }
 
         if(!formData.password){
-            newErrors.password = "Heslo je povinn0 pole!";
+            newErrors.password = "Heslo je povinné pole!";
         }
         else if(formData.password.length < 8){
-            newErrors.password = "Heslo musi obsahovat aspon 8 znakov!";
+            newErrors.password = "Heslo musí obsahovať aspoň 8 znakov!";
         }
 
         if(formData.password != formData.confirmPassword){
-            newErrors.confirmPassword = "Hesla sa nezhoduju!";
+            newErrors.confirmPassword = "Heslá sa nezhodujú!";
         }
 
         setErrors(newErrors);
@@ -117,88 +118,71 @@ export default function Register() {
         <View className='flex-1 px-10 justify-center'>
             {/*header*/}
             <View className='items-center mb-8'>
-                <Text className='text-4xl font-bold mb-2'>
+                <Heading1 className='mb-2 text-dark-text_color'>
                     Vytvoriť účet
-                </Text>
-                <Text className='text-base'>
+                </Heading1>
+                <Body className='text-base text-dark-text_color'>
                     Zadajte vaše údaje pre registráciu
-                </Text>
+                </Body>
             </View>
 
             {/*form*/}
-            <View className='items-center mb-6 p-6'>
-                <View className='mb-4'>
-                    <Text className='ml-2 mb-1'>Meno</Text>
-                    <TextInput
-                        className='border-2 rounded-2xl w-96 pl-3'
-                        placeholder='Zadajte vase meno a priezvisko'
-                        value={formData.name}
-                        onChangeText={(value) => handleChange("name", value)}
-                        editable={!loading}
-                        autoCapitalize="words"
-                    >
-                    </TextInput>
-                    {errors.name && (
-                        <Text className='text-red-500'>
-                            {errors.name}
-                        </Text>
-                    )}
-                </View>
-                <View className='mb-4'>
-                    <Text className='ml-2 mb-1'>Email</Text>
-                    <TextInput
-                        className='border-2 rounded-2xl w-96 pl-3'
-                        placeholder='Zadajte vas email'
-                        value={formData.email}
-                        onChangeText={(value) => handleChange("email", value)}
-                        editable={!loading}
-                        autoCapitalize="none"
-                        keyboardType='email-address'
-                    >
-                    </TextInput>
-                    {errors.email && (
-                        <Text className='text-red-500'>
-                            {errors.email}
-                        </Text>
-                    )}
-                </View>
-                <View className='mb-4'>
-                    <Text className='ml-2 mb-1'>Heslo</Text>
-                    <TextInput
-                        className='border-2 rounded-2xl w-96 pl-3'
-                        placeholder='Zadajte heslo'
-                        value={formData.password}
-                        onChangeText={(value) => handleChange("password", value)}
-                        editable={!loading}
-                        secureTextEntry
-                        >
-                    </TextInput>
-                    {errors.password && (
-                        <Text className='text-red-500'>
-                            {errors.password}
-                        </Text>
-                    )}
-                </View>
-                <View className='mb-4'>
-                <Text className='ml-2 mb-1'>Potvrdiť heslo</Text>
-                    <TextInput
-                        className='border-2 rounded-2xl w-96 pl-3'
-                        placeholder='Zadajte heslo'
-                        value={formData.confirmPassword}
-                        onChangeText={(value) => handleChange("confirmPassword", value)}
-                        editable={!loading}
-                        secureTextEntry
-                        >
-                    </TextInput>
-                    {errors.confirmPassword && (
-                        <Text className='text-red-500'>
-                            {errors.confirmPassword}
-                        </Text>
-                    )}
-                </View>
+            <View className='w-88 mb-6 p-6'>
+                <FormInput
+                  label="Meno"
+                  placeholder="Zadajte vaše meno a priezvisko"
+                  value={formData.name}
+                  onChange={(value) => handleChange("name", value)}
+                  fieldName="name"
+                  setFocusedField={setFocusedField}
+                  focusedField={focusedField}
+                  editable={!loading}
+                  autoCapitalize="words"
+                  error={errors.name}
+                />
+
+                <FormInput
+                  label="Email"
+                  placeholder="Zadajte váš email"
+                  value={formData.email}
+                  onChange={(value) => handleChange("email", value)}
+                  fieldName="email"
+                  setFocusedField={setFocusedField}
+                  focusedField={focusedField}
+                  editable={!loading}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  error={errors.email}
+                /> 
+
+                <FormInput
+                  label="Heslo"
+                  placeholder="Zadajte heslo"
+                  value={formData.password}
+                  onChange={(value) => handleChange("password", value)}
+                  fieldName="password"
+                  setFocusedField={setFocusedField}
+                  focusedField={focusedField}
+                  editable={!loading}
+                  secureTextEntry={true}
+                  error={errors.password}
+                /> 
+                
+                <FormInput
+                  label="Potvrdiť heslo"
+                  placeholder="Zadajte heslo"
+                  value={formData.confirmPassword}
+                  onChange={(value) => handleChange("confirmPassword", value)}
+                  fieldName="confirmPassword"
+                  setFocusedField={setFocusedField}
+                  focusedField={focusedField}
+                  editable={!loading}
+                  secureTextEntry={true}
+                  error={errors.confirmPassword}
+                /> 
             </View>
             <View className='items-center'>
-            <TouchableOpacity
+                <TouchableOpacity
                     onPress={signUpNewUser}
                     disabled={loading}
                     activeOpacity={0.8}
@@ -206,29 +190,28 @@ export default function Register() {
                 >
                     {loading ? 
                         (
-                            <View>
-                                <Text>
-                                    Vytváram účet...
-                                </Text>
-                            </View>
+                            <Body className='font-bold text-white'>
+                                Vytváram účet...
+                            </Body>
                         ) : (
-                            <Text>
+                            <Body className='text-white font-bold'>
                                 Vytvoriť účet
-                            </Text>
+                            </Body>
                         )
                     }
                 </TouchableOpacity>
                 <View className='flex-row justify-center items-center'>
-                    <Text>
+                    <Body className='text-dark-text_color'>
                         Už máte účet?{'  '}
-                    </Text>
+                    </Body>
                     <TouchableOpacity
                         onPress = {() => router.push("/(auth)/login")}
                         disabled = {loading}
+                        activeOpacity={1}
                     >
-                        <Text className='font-bold'>
+                        <Body className='font-bold text-dark-text_color'>
                             Prihláste sa
-                        </Text>
+                        </Body>
                     </TouchableOpacity>
                 </View>
                 </View>

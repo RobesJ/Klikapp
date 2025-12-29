@@ -1,6 +1,7 @@
+import { Body } from "@/components/typografy"
 import { useAuth } from "@/context/authContext"
 import { Redirect, Tabs } from "expo-router"
-import { ActivityIndicator, Image, Text, View } from "react-native"
+import { ActivityIndicator, Image, View } from "react-native"
 import { icons } from "../../../constants/icons"
 
 const TabIcon = ({focused, icon, title} : any) => {
@@ -12,12 +13,12 @@ const TabIcon = ({focused, icon, title} : any) => {
                   tintColor="#ABABAB"
                   className="size-6"
                 />
-                <Text 
+                <Body 
                   className="text-base"
                   style={{color: "#ABABAB"}}
                 >
                     {title}
-                </Text>
+                </Body>
             </View>
         )
     }
@@ -45,7 +46,6 @@ const _Layout = () => {
         return <Redirect href ="/(auth)/login" />
     }
 
-    
     return (
         <Tabs
             screenOptions={{

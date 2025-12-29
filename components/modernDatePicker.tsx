@@ -1,7 +1,8 @@
 import { EvilIcons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, TouchableOpacity, View } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
+import { Body, Heading2, Heading3 } from './typografy';
 
 // Configure Slovak locale
 LocaleConfig.locales['sk'] = {
@@ -78,17 +79,17 @@ export default function ModernDatePicker({
         
       >
         <View className="flex-row items-center justify-between">
-          <Text style={{ color: value ? "#FFFFFF" : "#ABABAB"}}>
+          <Body style={{ color: value ? "#FFFFFF" : "#ABABAB"}}>
             {formatDate(value)}
-          </Text>
-          <Text className="text-2xl">📅</Text>
+          </Body>
+          <Heading2 className="text-2xl">📅</Heading2>
         </View>
       </TouchableOpacity>
 
       {error && (
-        <Text className="text-red-500 text-xs mt-1 ml-1">
+        <Body className="text-red-500 text-xs mt-1 ml-1">
           {error}
-        </Text>
+        </Body>
       )}
 
       <Modal
@@ -107,9 +108,9 @@ export default function ModernDatePicker({
               {/* Header */}
               <View className="p-6 border-b border-gray-200">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-xl font-bold text-gray-900">
+                  <Heading3 className="text-xl font-bold text-gray-900">
                     Vyberte dátum
-                  </Text>
+                  </Heading3>
                   <TouchableOpacity
                     onPress={() => setShow(false)}
                     className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"

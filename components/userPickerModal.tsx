@@ -1,5 +1,6 @@
 import { useProjectStore } from "@/store/projectStore";
-import { FlatList, Modal, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Modal, TouchableOpacity, View } from "react-native";
+import { Body, BodySmall, Caption, Heading3 } from "./typografy";
 
 interface UserPickerModalProps {
   visible: boolean;
@@ -29,23 +30,23 @@ export default function UserPickerModal({
                 <View className="p-6 border-b border-gray-200">
                     <View className="flex-row items-center justify-between mb-4">
                         <View className="flex-1">
-                            <Text className="text-xl font-bold text-dark-text_color">Vyberte používateľa</Text>
-                            <Text className="text-sm text-gray-500">
+                            <Heading3 className="text-xl font-bold text-dark-text_color">Vyberte používateľa</Heading3>
+                            <BodySmall className="text-sm text-gray-500">
                                 {selectedUsers.length} vybraných
-                            </Text>
+                            </BodySmall>
                         </View>
                         <TouchableOpacity
                             onPress={onClose}
                             className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
                         >
-                            <Text className="text-white">✓</Text>
+                            <Body className="text-white">✓</Body>
                         </TouchableOpacity>
                     </View>
                 </View>
         
                 {!availableUsers ? (
                     <View className="flex-1 items-center justify-center">
-                        <Text className="text-gray-500">Načítavam používateľov..</Text>
+                        <Body className="text-gray-500">Načítavam používateľov..</Body>
                     </View>
                 ) : 
                 (
@@ -61,21 +62,21 @@ export default function UserPickerModal({
                                 >
                                     <View className="flex-row items-center justify-between">
                                         <View className="flex-1">
-                                            <Text className="text-base font-semibold text-dark-text_color">
+                                            <Body className="text-base font-semibold text-dark-text_color">
                                                 {item.name}
-                                            </Text>
+                                            </Body>
                                             {item.email && (
-                                                <Text className="text-sm text-gray-500 mt-1">
+                                                <BodySmall className="text-sm text-gray-500 mt-1">
                                                     {item.email}
-                                                </Text>
+                                                </BodySmall>
                                             )}
                                         </View>
                                         {selected && (
                                             <View className="rounded-full items-center justify-center">
-                                              <Text className="text-green-600 text-xs font-semibold">
+                                              <Caption className="text-green-600 text-xs font-semibold">
                                                 Priradený
-                                              </Text>
-                                              <Text className="text-green-600 text-xs font-semibold">✓</Text>
+                                              </Caption>
+                                              <Caption className="text-green-600 text-xs font-semibold">✓</Caption>
                                             </View>
                                         )}
                                     </View>

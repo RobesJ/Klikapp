@@ -3,7 +3,7 @@ import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
-import { BodySmall, Heading1 } from '@/components/typografy';
+import { Body, BodyLarge, Heading1 } from '@/components/typografy';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
 import { ProjectFilters, useProjectStore } from '@/store/projectStore';
@@ -14,7 +14,7 @@ import { format, parseISO } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Dimensions, PanResponder, ScrollView, Text, TouchableOpacity, Vibration, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, PanResponder, ScrollView, TouchableOpacity, Vibration, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -387,14 +387,14 @@ export default function Planning() {
                 <EvilIcons name="navicon" size={36} color="white" />
               </TouchableOpacity>
               <View className='items-center justify-center ml-6'>
-            <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color">
+            <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color mb-1">
               Plánovanie projektov
             </Heading1>
-            <Text className="text-dark-text_color mb-4">
+            <BodyLarge className="text-dark-text_color mb-4">
               {format(selectedDate, "EEE, d. MMMM yyyy", { locale: sk })}
-            </Text>
+            </BodyLarge>
             </View>
-            <BodySmall className="text-xl text-green-500">ONLINE</BodySmall>
+            <Body className="text-xl text-green-500">ONLINE</Body>
           </View>
          
           {/* Calendar */}
@@ -413,9 +413,9 @@ export default function Planning() {
           {/* Assigned Projects List */}
           <View className="mb-6">
             <View className='flex-row justify-between items-center'>
-              <Text className="text-dark-text_color text-xl font-bold mb-3">
+              <BodyLarge className="text-dark-text_color text-xl font-bold mb-3">
                 Naplánované projekty ({assignedProjects.length})
-              </Text>
+              </BodyLarge>
               <TouchableOpacity
                 onPress={() => {setShowFilterModalAssigned(true)}}
                 activeOpacity={0.8}
@@ -449,8 +449,8 @@ export default function Planning() {
                         onPress={() => removeFilterAssigned(filter.type, filter.value)}
                         className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
                       >
-                        <Text className={`${textColor} font-medium mr-1`}>{filter.value}</Text>
-                        <Text className={`${textColor} font-bold`}>✕</Text>
+                        <Body className={`${textColor} font-medium mr-1`}>{filter.value}</Body>
+                        <Body className={`${textColor} font-bold`}>✕</Body>
                       </TouchableOpacity>
                     );
                   })}
@@ -471,9 +471,9 @@ export default function Planning() {
               </View>
             ) : (
               <View className="bg-dark-secondary rounded-lg p-6">
-                <Text className="text-dark-text_color text-center opacity-50">
+                <Body className="text-dark-text_color text-center opacity-50">
                   Žiadne priradené projekty
-                </Text>
+                </Body>
               </View>
             )}
           </View>
@@ -481,9 +481,9 @@ export default function Planning() {
           {/* Unassigned Projects List */}
           <View className="mb-20">
             <View className='flex-row justify-between items-center'>
-              <Text className="text-dark-text_color text-xl font-bold mb-3">
+              <BodyLarge className="text-dark-text_color text-xl font-bold mb-3">
                 Nepriradené projekty ({unassignedProjects.length})
-              </Text>
+              </BodyLarge>
               <TouchableOpacity
                 onPress={() => {setShowFilterModalUnassigned(true)}}
                 activeOpacity={0.8}
@@ -517,8 +517,8 @@ export default function Planning() {
                         onPress={() => removeFilterUnassigned(filter.type, filter.value)}
                         className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
                       >
-                        <Text className={`${textColor} font-medium mr-1`}>{filter.value}</Text>
-                        <Text className={`${textColor} font-bold`}>✕</Text>
+                        <Body className={`${textColor} font-medium mr-1`}>{filter.value}</Body>
+                        <Body className={`${textColor} font-bold`}>✕</Body>
                       </TouchableOpacity>
                     );
                   })}
@@ -539,9 +539,9 @@ export default function Planning() {
               </View>
             ) : (
               <View className="bg-dark-secondary rounded-lg p-6">
-                <Text className="text-dark-text_color text-center opacity-50">
+                <Body className="text-dark-text_color text-center opacity-50">
                   Žiadne nepriradené projekty
-                </Text>
+                </Body>
               </View>
             )}
           </View>

@@ -3,7 +3,7 @@ import { STATE_OPTIONS_HOME, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
-import { BodyLarge, BodySmall, Heading1, Label } from '@/components/typografy';
+import { Body, BodyLarge, BodySmall, Heading1 } from '@/components/typografy';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
 import { useClientStore } from '@/store/clientStore';
@@ -16,7 +16,7 @@ import { format, isBefore, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dimensions, FlatList, PixelRatio, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, PixelRatio, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
@@ -187,17 +187,17 @@ export default function Home() {
             </TouchableOpacity>
   
               <View className='ml-6 items-center justify-center'>
-                <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color">Aktuálne projekty</Heading1>
-                <Label className=' text-dark-text_color'>
+                <Heading1 allowFontScaling={false} className="font-bold text-dark-text_color mb-1">Aktuálne projekty</Heading1>
+                <BodyLarge className=' text-dark-text_color'>
                   {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
-                </Label>
+                </BodyLarge>
              </View>
-              <View className="flex-2 justify-between items-center">
-                <Label className="text-xl text-green-500">ONLINE</Label>
+              <View className="justify-between items-center">
+                <Body className="text-green-500 mb-1">ONLINE</Body>
                 <TouchableOpacity
                     onPress={() => {setShowFilterModal(true)}}
                     activeOpacity={0.8}
-                    className="ml-4 items-center justify-center"
+                    className="ml-2 items-center justify-center pb-3"
                   >
                     <Feather name="filter" size={20} color="white" />
                 </TouchableOpacity>
@@ -280,18 +280,18 @@ export default function Home() {
             )}
             ListEmptyComponent={
               backgroundLoading ? (
-                <Text className="text-center text-gray-500 mt-10">Načítavam...</Text>
+                <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
               ) : (
                 <View className='flex-1 items-center'>
-                <Text className="text-red-500 mb-4 text-lg">
+                <Body className="text-red-500 mb-4">
                   Žiadne bežiace projekty
-                </Text>
+                </Body>
                 <TouchableOpacity
                   activeOpacity={0.8}
                   className="rounded-xl bg-blue-600 py-3 px-8"
                   onPress={()=> router.push("/planning")}
                 >
-                  <Text className='text-white font-semibold'>Plánovať projekty</Text>
+                  <Body className='text-white font-semibold'>Plánovať projekty</Body>
                 </TouchableOpacity>
                 </View>
               )

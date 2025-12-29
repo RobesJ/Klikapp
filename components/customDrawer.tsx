@@ -2,7 +2,8 @@ import { supabase } from '@/lib/supabase';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+import { Body, BodyLarge, BodySmall, Caption } from './typografy';
 
 export default function CustomDrawerContent(props: any) {
   const router = useRouter();
@@ -34,12 +35,12 @@ export default function CustomDrawerContent(props: any) {
       {/* User Profile Section */}
 
       <View className="px-6 py-8 border-b border-gray-700">
-        <Text className="text-lg font-semibold text-dark-text_color">
+        <BodyLarge className="text-lg font-semibold text-dark-text_color">
           User Name
-        </Text>
-        <Text className="text-sm text-gray-400 mt-1">
+        </BodyLarge>
+        <BodySmall className="text-sm text-gray-400 mt-1">
           user@example.com
-        </Text>
+        </BodySmall>
       </View>
 
       {/* Drawer Items */}
@@ -53,9 +54,9 @@ export default function CustomDrawerContent(props: any) {
           activeOpacity={0.7}
         >
           <Feather name="settings" size={20} color="white" />
-          <Text className="text-dark-text_color text-base ml-4">
+          <Body className="text-dark-text_color text-base ml-4">
             Nastavenia
-          </Text>
+          </Body>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -64,17 +65,17 @@ export default function CustomDrawerContent(props: any) {
           activeOpacity={0.7}
         >
           <Feather name="log-out" size={20} color="#EF4444" />
-          <Text className="text-red-500 text-base ml-4">
+          <Body className="text-red-500 text-base ml-4">
             Odhlásiť sa
-          </Text>
+          </Body>
         </TouchableOpacity>
       </View>
 
       {/* Footer */}
       <View className="px-6 py-4">
-        <Text className="text-gray-500 text-xs text-center">
+        <Caption className="text-gray-500 text-xs text-center">
           Verzia 1.0.0
-        </Text>
+        </Caption>
       </View>
     </DrawerContentScrollView>
   );

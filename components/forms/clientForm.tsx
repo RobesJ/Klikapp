@@ -4,8 +4,9 @@ import { Client } from "@/types/generics";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
+import { Body, Heading1 } from "../typografy";
 
 interface ClientFormProps{
     mode: "create" | "edit";
@@ -269,9 +270,9 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                         <MaterialIcons name="arrow-back" size={24} color="#d6d3d1"/>
                     </TouchableOpacity>
 
-                    <Text className="font-bold text-3xl text-dark-text_color top-3 text-center">
+                    <Heading1 className="font-bold text-3xl text-dark-text_color top-3 text-center">
                         {mode === "create" ? "Vytvoriť klienta" : "Upraviť klienta"}
-                    </Text>
+                    </Heading1>
                 </View>
                 
                 {/* Form */}
@@ -323,9 +324,20 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
 
 
                         {/* Address field */}               
-                        <View className="mb-4">
-                            <Text className="mb-1 ml-1 font-medium text-dark-text_color">Adresa trvalého pobytu / Sídlo firmy</Text>
+                        
                             <View>
+                                <FormInput
+                                    label="Adresa trvalého pobytu / Sídlo firmy"
+                                    value={addressSearch || formData.address || ''}
+                                    onChange={searchGoogleAddress}
+                                    placeholder="Začnite písať adresu..."
+                                    error={errors.phone}
+                                    fieldName="address"
+                                    focusedField={focusedField}
+                                    setFocusedField={setFocusedField}            
+
+                                />
+                                {/*
                                 <TextInput
                                     placeholder="Začnite písať adresu..."
                                     placeholderTextColor="#ABABAB"
@@ -338,10 +350,10 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                                         ${focusedField === 'address' ? 'border-blue-500' : 'border-gray-700'}
                                     `}
                                 />
-
+                                */}
                                 {searchingAddress && (
                                     <View className="absolute right-4 top-4">
-                                        <Text className="text-gray-400">🔍</Text>
+                                        <Body className="text-gray-400">🔍</Body>
                                     </View>
                                 )}
 
@@ -354,46 +366,46 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                                                     onPress={() => selectAddress(item)}
                                                     className="p-4 border-b border-gray-100"
                                                 >
-                                                    <Text className="text-base">{item.description}</Text>
+                                                    <Body className="text-base">{item.description}</Body>
                                                 </TouchableOpacity>
                                             ))}
                                         </ScrollView>
                                     </View>
                                 )}
                             </View>
-                        </View>
+                        
                             
                         {/* Type field */}
                         <View className="mb-4">
-                            <Text className="mb-1 ml-1 font-medium text-dark-text_color">Typ</Text>
+                            <Body className="mb-1 ml-1 font-medium text-dark-text_color">Typ</Body>
                             <View className="flex-row">
                                 <TouchableOpacity
                                     onPress={() => handleSelectedType("Fyzická osoba")}
                                     className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-300" : "border-gray-700 bg-gray-800"} rounded-xl p-4 mr-3 w-36 items-center`}
                                 >
-                                    <Text
+                                    <Body
                                       style={{ color: selectedType === "Fyzická osoba" ? '#FFFFFF' : '#ABABAB' }}
                                       className={`${selectedType === "Fyzická osoba" ? "font-semibold" : "font-normal"}`}
                                     >
                                         Fyzická osoba
-                                    </Text>
+                                    </Body>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-300 " : "border-gray-700 bg-gray-800"} rounded-xl p-4 w-36 items-center`}
                                     onPress={() => handleSelectedType("Právnická osoba")}
                                 >
-                                    <Text
+                                    <Body
                                       style={{ color: selectedType === "Právnická osoba" ? '#FFFFFF' : '#ABABAB' }}
                                       className={`${selectedType === "Právnická osoba" ? "font-semibold" : "font-normal"}`}
                                     >
                                         Právnická osoba
-                                    </Text>
+                                    </Body>
                                 </TouchableOpacity>  
                             </View>
                             {errors.type && (
-                                <Text className='text-red-500 font-semibold ml-2 mt-1'>
+                                <Body className='text-red-500 font-semibold ml-2 mt-1'>
                                     {errors.type}
-                                </Text>
+                                </Body>
                             )}
                         </View>
                         
@@ -421,9 +433,9 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                     onPress={handleSubmit}
                     disabled={loading}
                     className="border bg-blue-600 rounded-2xl items-center py-5 px-12 ">
-                    <Text className="color-primary font-bold">
+                    <Body className="color-primary font-bold">
                         {mode === "create" ? (loading ? "Vytvaram..." : "Vytvoriť klienta") : (loading ? "Upravujem..." : "Upraviť klienta")}
-                    </Text>
+                    </Body>
                 </TouchableOpacity>
             </View>
         </View>

@@ -12,11 +12,12 @@ import { format, parseISO } from 'date-fns';
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { ModalSelector, STATE_OPTIONS } from "../badge";
 import { FormInput } from "../formInput";
 import { NotificationToast } from '../notificationToast';
 import { PDF_Viewer } from '../pdfViewer';
+import { Body, BodyLarge, BodySmall, Caption, Heading3 } from '../typografy';
 import UserPickerModal from '../userPickerModal';
 
 interface ProjectCardDetailsProps {
@@ -938,15 +939,15 @@ export default function ProjectDetails({
             {/* Header */}
             <View className="px-4 py-6 border-b border-gray-400">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold text-dark-text_color">
+                <Heading3 className="text-xl font-bold text-dark-text_color">
                   {projectWithRelations.project.type}
-                </Text>
+                </Heading3>
               
                 <TouchableOpacity
                   onPress={onCloseWithUnlock}
-                  className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+                  className="items-center justify-center"
                 >
-                  <EvilIcons name="close" size={24} color="white" />
+                  <EvilIcons name="close" size={28} color="white" />
                 </TouchableOpacity>
                 
               </View>
@@ -959,11 +960,11 @@ export default function ProjectDetails({
                 <View className='flex-row justify-between'>
                   {/* Client Info */}
                   <View className="flex-2 mb-3">
-                  <Text className="text-gray-400 mb-1">KLIENT</Text>
-                    <Text className="font-semibold text-lg text-white">{projectWithRelations.client.name}</Text>
+                  <Body className="text-gray-400 mb-1">KLIENT</Body>
+                    <BodyLarge className="font-semibold text-lg text-white">{projectWithRelations.client.name}</BodyLarge>
                     <View className="flex-row items-center">
                       <MaterialIcons name="phone" size={16} color="#9ca3af"/>
-                      <Text className="font-medium text-gray-300 ml-2">{projectWithRelations.client.phone}</Text>
+                      <Body className="font-medium text-gray-300 ml-2">{projectWithRelations.client.phone}</Body>
                     </View>
                   </View>
 
@@ -981,31 +982,31 @@ export default function ProjectDetails({
 
                 {/* Dates */}
                 <View className='flex-2 mb-3'>
-                <Text className="text-gray-400 mb-1">TERMÍN</Text>
+                <Body className="text-gray-400 mb-1">TERMÍN</Body>
                 {projectWithRelations.project.scheduled_date && (currentState === "Nový") && (
                   <View className="flex-row">
-                    <Text className="mr-2 text-dark-text_color">Plánované na:</Text>
-                    <Text className="font-semibold text-dark-text_color">
+                    <Body className="mr-2 text-dark-text_color">Plánované na:</Body>
+                    <Body className="font-semibold text-dark-text_color">
                       {format(projectWithRelations.project.scheduled_date, "dd.MM.yyyy")}
-                    </Text>
+                    </Body>
                   </View>
                 )}
 
                 {projectWithRelations.project.start_date && (currentState !== "Nový") && (currentState !== "Ukončený") && (currentState !== "Zrušený") && (
                   <View className="flex-row">
-                    <Text className="mr-2 text-dark-text_color">Začiatok:</Text>
-                    <Text className="font-semibold text-dark-text_color">
+                    <Body className="mr-2 text-dark-text_color">Začiatok:</Body>
+                    <Body className="font-semibold text-dark-text_color">
                       {format(projectWithRelations.project.start_date, "dd.MM.yyyy")}
-                    </Text>
+                    </Body>
                   </View>
                 )}
 
                 {projectWithRelations.project.completion_date && ((currentState === "Ukončený") || (currentState === "Zrušený")) &&(
                   <View className="flex-row">
-                    <Text className="mr-2 text-dark-text_color">Ukončenie:</Text>
-                    <Text className="font-semibold text-dark-text_color">
+                    <Body className="mr-2 text-dark-text_color">Ukončenie:</Body>
+                    <Body className="font-semibold text-dark-text_color">
                       {format(projectWithRelations.project.completion_date, "dd.MM.yyyy")}
-                    </Text>
+                    </Body>
                   </View>
                 )}
                 </View>
@@ -1013,22 +1014,22 @@ export default function ProjectDetails({
                 {/* Note */}
                 {projectWithRelations.project.note && (
                   <View className="mb-3">
-                    <Text className="text-dark-text_color">Poznámka:</Text>
-                    <Text className="font-semibold text-dark-text_color mt-1">
+                    <Body className="text-dark-text_color">Poznámka:</Body>
+                    <Body className="font-semibold text-dark-text_color mt-1">
                       {projectWithRelations.project.note}
-                    </Text>
+                    </Body>
                   </View>
                 )}
 
                 {/* Assigned Users */}
                 <View className="mb-3">
                   <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-gray-400 mt-2">PRIRADENǏ POUŽÍVATELIA</Text>
+                  <Body className="text-gray-400 mt-2">PRIRADENǏ POUŽÍVATELIA</Body>
                     <TouchableOpacity
                       onPress={() => setShowUserModal(true)}
                       className="bg-blue-600  rounded-full w-8 h-8 items-center justify-center"
                     >
-                      <Text className="text-white font-bold text-lg">+</Text>
+                      <BodyLarge className="text-white font-bold text-lg">+</BodyLarge>
                     </TouchableOpacity>
                   </View>
               
@@ -1040,9 +1041,9 @@ export default function ProjectDetails({
                           className="flex-row items-center justify-between bg-dark-details-o_p_bg rounded-xl p-3"
                         >
                           <View>
-                            <Text className="text-white font-semibold">{user.name}</Text>
+                            <Body className="text-white font-semibold">{user.name}</Body>
                             {user.email && (
-                              <Text className="text-gray-400 text-sm">{user.email}</Text>
+                              <BodySmall className="text-gray-400 text-sm">{user.email}</BodySmall>
                             )}
                           </View>
                           {canEdit && (
@@ -1050,27 +1051,27 @@ export default function ProjectDetails({
                             onPress={() => handleRemoveUser(user.id)}
                             className="w-8 h-8 bg-red-600 rounded-full items-center justify-center"
                           >
-                            <Text className="text-white font-bold">✕</Text>
+                            <Body className="text-white font-bold">✕</Body>
                           </TouchableOpacity>
                           )}          
                         </View>
                       ))}
                     </View>
                   ) : (
-                    <Text className="text-gray-400 italic">Žiadni priradení používatelia</Text>
+                    <Body className="text-gray-400">Žiadni priradení používatelia</Body>
                   )}
                 </View>
                 
                 {/* Objects */}
                 {projectWithRelations.objects.length > 0 && (
                   <View className="mb-3">
-                    <Text className="text-gray-400 mb-2">OBJEKTY ({projectWithRelations.objects.length}) </Text>
+                    <Body className="text-gray-400 mb-2">OBJEKTY ({projectWithRelations.objects.length}) </Body>
                     {projectWithRelations.objects.map((o) => (
                       <View key={o.object.id} className="bg-dark-details-o_p_bg rounded-xl p-3 mb-2">
-                        <Text className="text-white font-semibold">{o.object.address}</Text>
-                        <Text className="text-gray-400 text-sm">
+                        <Body className="text-white font-semibold">{o.object.address}</Body>
+                        <BodySmall className="text-gray-400 text-sm">
                           {o.chimneys.length} komínov
-                        </Text>
+                        </BodySmall>
                       </View>
                     ))}
                   </View>
@@ -1079,7 +1080,7 @@ export default function ProjectDetails({
                 {/* Photos Section */}
                 <View className="mb-3">
                     <View className="flex-row items-center justify-between mb-2">
-                      <Text className="text-gray-400 mb-2"> FOTOGRAFIE ({photos.length})</Text>
+                      <Body className="text-gray-400 mb-2"> FOTOGRAFIE ({photos.length})</Body>
 
                       <TouchableOpacity
                           onPress={takePhoto}
@@ -1091,7 +1092,7 @@ export default function ProjectDetails({
                           ) : (
                             <>
                               <Feather name="camera" size={16} color="white" />
-                              <Text className="text-white font-semibold ml-2">Pridať</Text>
+                              <Body className="text-white font-semibold ml-2">Pridať</Body>
                             </>
                           )}
                           </TouchableOpacity>
@@ -1125,7 +1126,7 @@ export default function ProjectDetails({
                             onPress={() => setShowGallery(true)}
                             className="w-20 h-20 rounded-lg bg-gray-700 items-center justify-center"
                           >
-                            <Text className="text-white font-bold">+{photos.length - 6}</Text>
+                            <Body className="text-white font-bold">+{photos.length - 6}</Body>
                           </TouchableOpacity>
                         )}
                       </View>
@@ -1137,7 +1138,7 @@ export default function ProjectDetails({
                 {projectWithRelations.project.type !== "Obhliadka" && projectWithRelations.objects.length > 0 && users.length > 0 && (
                 <View className="mb-3">
                     <View className="flex-row items-center justify-between mb-2">
-                      <Text className="text-gray-400 mb-2"> PDF ZÁZNAMY ({PDFs.length})</Text>
+                      <Body className="text-gray-400 mb-2"> PDF ZÁZNAMY ({PDFs.length})</Body>
                       <TouchableOpacity
                           onPress={() => {
                             if(projectWithRelations.project.type === "Čistenie"){
@@ -1156,7 +1157,7 @@ export default function ProjectDetails({
                           ) : (
                             <View className='flex-row'>
                               <MaterialIcons name="picture-as-pdf" size={16} color={"#FFFFFF"}/>
-                              <Text className="text-white font-semibold ml-2">{isGenerating ? 'Generujem...' : 'Generovať'}</Text>
+                              <Body className="text-white font-semibold ml-2">{isGenerating ? 'Generujem...' : 'Generovať'}</Body>
                             </View>
                           )}
                           </TouchableOpacity>
@@ -1182,8 +1183,8 @@ export default function ProjectDetails({
                           >
 
                             <MaterialIcons name="picture-as-pdf" size={32} color="#ef4444" />
-                            <Text className="text-white font-semibold text-xs">{pdf.report_type === "inspection" ? "Revízia" : "Čistenie"}</Text>
-                            <Text className="text-white font-semibold text-xs">{parseISO(pdf.generated_at).toLocaleDateString('sk-SK')} </Text>
+                            <Caption className="text-white font-semibold text-xs">{pdf.report_type === "inspection" ? "Revízia" : "Čistenie"}</Caption>
+                            <Caption className="text-white font-semibold text-xs">{parseISO(pdf.generated_at).toLocaleDateString('sk-SK')} </Caption>
                           </TouchableOpacity>
                           </View>
                           </View>
@@ -1194,15 +1195,13 @@ export default function ProjectDetails({
                             onPress={() => setShowPDFReports(true)}
                             className="w-20 h-20 rounded-lg bg-gray-700 items-center justify-center"
                           >
-                            <Text className="text-white font-bold">+{PDFs.length - 6}</Text>
+                            <Body className="text-white font-bold">+{PDFs.length - 6}</Body>
                           </TouchableOpacity>
                         )}
                       </View>
                     )}
-
-                </View>
+                  </View>
                 )}
-
               </ScrollView>
               
 
@@ -1224,7 +1223,7 @@ export default function ProjectDetails({
                   disabled={!canEdit}
                 >
                   <EvilIcons name="trash" size={24} color="white" />
-                  <Text className='text-white'>Odstrániť</Text>
+                  <Body className='text-white'>Odstrániť</Body>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1244,7 +1243,7 @@ export default function ProjectDetails({
                   disabled={!canEdit}
                 >
                   <Feather name="edit-2" size={16} color="white" />
-                  <Text className='text-white'>Upraviť</Text>
+                  <Body className='text-white'>Upraviť</Body>
                 </TouchableOpacity>
                   
               </View>
@@ -1271,9 +1270,9 @@ export default function ProjectDetails({
                   className="pt-12 pb-4 px-6 border-b border-gray-700 bg-dark-bg"
                 >
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-xl font-bold text-white">
+                    <Heading3 className="text-xl font-bold text-white">
                       Fotografie ({photos.length})
-                    </Text>
+                    </Heading3>
                     <TouchableOpacity
                       onPress={() => {
                         setShowGallery(false);
@@ -1322,7 +1321,7 @@ export default function ProjectDetails({
                           className="bg-red-600 rounded-xl px-6 py-3 flex-row items-center"
                         >
                           <MaterialIcons name="delete" size={20} color="white" />
-                          <Text className="text-white font-semibold ml-2">Odstrániť</Text>
+                          <Body className="text-white font-semibold ml-2">Odstrániť</Body>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1365,9 +1364,9 @@ export default function ProjectDetails({
                     {/* ================= STEP 1 – CHOICE ================= */}
                     {pdfStep === "choice" && (
                       <View>
-                        <Text className="text-white text-center text-lg mb-6">
+                        <BodyLarge className="text-white text-center text-lg mb-6">
                           Ako chcete vygenerovať PDF?
-                        </Text>
+                        </BodyLarge>
                       
                         {/* NO RECEIPT */}
                         <TouchableOpacity
@@ -1377,9 +1376,9 @@ export default function ProjectDetails({
                             closePdfModal();
                           }}
                         >
-                          <Text className="text-white text-center">
+                          <Body className="text-white text-center">
                             Len {chimneyCount > 1 ? "správy" : "správa"} (bez PPD)
-                          </Text>
+                          </Body>
                         </TouchableOpacity>
                         
                         {/* ONE CHIMNEY */}
@@ -1388,9 +1387,9 @@ export default function ProjectDetails({
                             className="bg-gray-700 rounded-xl p-4 mb-4"
                             onPress={() => setPdfStep("selectOne")}
                           >
-                            <Text className="text-white text-center">
+                            <Body className="text-white text-center">
                               Správa + PPD pre jeden komín
-                            </Text>
+                            </Body>
                           </TouchableOpacity>
                         )}
 
@@ -1399,9 +1398,9 @@ export default function ProjectDetails({
                           className="bg-blue-600 rounded-xl p-4"
                           onPress={() => setPdfStep("inputAll")}
                         >
-                          <Text className="text-white text-center font-semibold">
+                          <Body className="text-white text-center font-semibold">
                           {chimneyCount > 1 ? "Správy + PPD pre všetky komíny" : "Správa + PPD"}
-                          </Text>
+                          </Body>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1409,9 +1408,9 @@ export default function ProjectDetails({
                     {/* ================= STEP 2 – SELECT ONE ================= */}
                     {pdfStep === "selectOne" && (
                       <ScrollView>
-                        <Text className="text-white text-lg mb-4">
+                        <BodyLarge className="text-white text-lg mb-4">
                           Vyberte komín
-                        </Text>
+                        </BodyLarge>
                     
                         {projectWithRelations.objects.flatMap(o =>
                           o.chimneys.map(ch => (
@@ -1423,12 +1422,12 @@ export default function ProjectDetails({
                                 setPdfStep("inputOne");
                               }}
                             >
-                              <Text className="text-white font-semibold">
+                              <Body className="text-white font-semibold">
                                 {ch.chimney_type?.type} – {ch.chimney_type?.labelling}
-                              </Text>
-                              <Text className="text-gray-400 text-sm">
+                              </Body>
+                              <BodySmall className="text-gray-400 text-sm">
                                 {o.object.address}
-                              </Text>
+                              </BodySmall>
                             </TouchableOpacity>
                           ))
                         )}
@@ -1470,9 +1469,9 @@ export default function ProjectDetails({
                             closePdfModal();
                           }}
                         >
-                          <Text className="text-white text-center font-semibold">
+                          <Body className="text-white text-center font-semibold">
                             {isGenerating ? "Generujem..." : "Generovať"}
-                          </Text>
+                          </Body>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1486,12 +1485,12 @@ export default function ProjectDetails({
                               key={ch.id}
                               className="bg-dark-details-o_p_bg rounded-xl p-4 mb-4"
                             >
-                              <Text className="text-white font-semibold">
+                              <Body className="text-white font-semibold">
                                 {ch.chimney_type?.type} – {ch.chimney_type?.labelling}
-                              </Text>
-                              <Text className="text-gray-400 text-sm mb-2">
+                              </Body>
+                              <BodySmall className="text-gray-400 text-sm mb-2">
                                 {o.object.address}
-                              </Text>
+                              </BodySmall>
                           
                               <FormInput
                                 label="Suma (€)"
@@ -1527,9 +1526,9 @@ export default function ProjectDetails({
                             closePdfModal();
                           }}
                         >
-                          <Text className="text-white text-center font-semibold">
+                          <Body className="text-white text-center font-semibold">
                             {isGenerating ? "Generujem..." : "Generovať všetky"}
-                          </Text>
+                          </Body>
                         </TouchableOpacity>
                       </ScrollView>
                     )}

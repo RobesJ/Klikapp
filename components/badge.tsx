@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Body, BodySmall, Heading3 } from './typografy';
 
 interface BadgeOption {
   value: string;
@@ -42,15 +43,11 @@ export const ProjectBadge: React.FC<ProjectBadgeProps> = ({
         ${isSelected ? `${colors[1]} ${colors[0]} bg-opacity-20` : 'border-2 border-gray-600 bg-gray-800'}
       `}
     >
-      <Text
-        className={`
-          ${textSizeClasses[size]}
-          font-semibold
-          ${isSelected ? colors[0] : 'text-gray-400'}
-        `}
+      <Body
+        className={`${textSizeClasses[size]} font-semibold ${isSelected ? colors[0] : 'text-gray-400'}`}
       >
         {value}
-      </Text>
+      </Body>
     </TouchableOpacity>
   );
 };
@@ -73,7 +70,7 @@ export const BadgeSelector: React.FC<BadgeSelectorProps> = ({
 }) => {
   return (
     <View className="mb-4">
-      <Text className="mb-2 ml-1 text-dark-text_color">{label}</Text>
+      <Body className="mb-2 ml-1 text-dark-text_color">{label}</Body>
       <View className="flex-row justify-between gap-2">
         {options.map((option) => (
           <ProjectBadge
@@ -87,9 +84,9 @@ export const BadgeSelector: React.FC<BadgeSelectorProps> = ({
         ))}
       </View>
       {error && (
-        <Text className="text-red-500 font-semibold ml-2 mt-1">
+        <BodySmall className="text-red-500 font-semibold ml-2 mt-1">
           {error}
-        </Text>
+        </BodySmall>
       )}
     </View>
   );
@@ -123,7 +120,7 @@ export const ModalSelector: React.FC<ModalSelectorProps> = ({
     <>
       {!inDetailsModal && (
         <View className="mb-4">
-          <Text className="mb-2 ml-1 font-medium text-dark-text_color">{label}</Text>
+          <Body className="mb-2 ml-1 font-medium text-dark-text_color">{label}</Body>
           <TouchableOpacity
             onPress={() => setShowModal(true)}
             className={`border-2 
@@ -132,25 +129,25 @@ export const ModalSelector: React.FC<ModalSelectorProps> = ({
                   : showModal 
                       ? 'border-blue-500'
                       : 'border-gray-600'
-              } bg-gray-800 rounded-2xl p-3`}
+              } bg-gray-800 rounded-xl p-4`}
           >
             <View className="flex-row items-center justify-between">
               {selectedOption ? (
                 <View className={`${selectedOption.colors[1]} ${selectedOption.colors[0]} bg-opacity-20 rounded-full px-4 py-1`}>
-                  <Text className={`${selectedOption.colors[0]} font-semibold`}>
+                  <Body className={`${selectedOption.colors[0]} font-semibold`}>
                     {selectedOption.value}
-                  </Text>
+                  </Body>
                 </View>
               ) : (
-                <Text style={{ color: '#ABABAB' }}>{placeholder}</Text>
+                <Body style={{ color: '#ABABAB' }}>{placeholder}</Body>
               )}
-              <Text className="text-gray-400">▼</Text>
+              <Body className="text-gray-400">▼</Body>
             </View>
           </TouchableOpacity>
           {error && (
-            <Text className="text-red-500 text-xs mt-1 ml-1">
+            <BodySmall className="text-red-500 text-xs mt-1 ml-1">
               {error}
-            </Text>
+            </BodySmall>
           )}
         </View>
       )}
@@ -168,9 +165,9 @@ export const ModalSelector: React.FC<ModalSelectorProps> = ({
             />
           )}
           {error && (
-            <Text className="text-red-500 text-xs mt-1 ml-1">
+            <BodySmall className="text-red-500 mt-1 ml-1">
               {error}
-            </Text>
+            </BodySmall>
           )}
         </View>
       )}
@@ -187,12 +184,12 @@ export const ModalSelector: React.FC<ModalSelectorProps> = ({
             {/* Header */}
             <View className="p-6 border-b border-gray-700">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xl text-white font-bold">{label}</Text>
+                <Heading3 className="text-xl text-white font-bold">{label}</Heading3>
                 <TouchableOpacity
                   onPress={() => setShowModal(false)}
                   className="w-9 h-9 bg-gray-700 rounded-full items-center justify-center"
                 >
-                  <Text className="text-white text-xl">×</Text>
+                  <Heading3 className="text-white text-xl">×</Heading3>
                 </TouchableOpacity>
               </View>
             </View>
@@ -214,12 +211,12 @@ export const ModalSelector: React.FC<ModalSelectorProps> = ({
                     `}
                   >
                     <View className="flex-row items-center justify-between">
-                      <Text className={`font-semibold text-base ${isSelected ? option.colors[0] : 'text-white'}`}>
+                      <Body className={`font-semibold text-base ${isSelected ? option.colors[0] : 'text-white'}`}>
                         {option.value}
-                      </Text>
+                      </Body>
                       {isSelected && (
                         <View className={`w-6 h-6 rounded-full items-center justify-center ${option.colors[1]}`}>
-                          <Text className={option.colors[0]}>✓</Text>
+                          <Body className={option.colors[0]}>✓</Body>
                         </View>
                       )}
                     </View>

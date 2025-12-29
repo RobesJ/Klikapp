@@ -7,8 +7,9 @@ import { ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { NotificationToast } from "../notificationToast";
+import { Body, BodyLarge, BodySmall, Heading3 } from "../typografy";
 
 interface ClientCardDetailsProps{
     client: Client;
@@ -192,7 +193,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
     if (error) {
         return (
             <View className="flex-1 items-center justify-center">
-                <Text className="text-red-500">{error}</Text>
+                <Body className="text-red-500">{error}</Body>
             </View>
         );
     }
@@ -218,15 +219,15 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                 <View className="px-4 py-6 border-b border-gray-400">
                   <View className="flex-row items-center justify-between">
                     <View>
-                      <Text className="text-xl font-bold text-dark-text_color">{client.name}</Text>   
-                      <Text className="text-sm text-dark-text_color">{client.type}</Text>
+                      <Heading3 className="text-xl font-bold text-dark-text_color mb-1">{client.name}</Heading3>   
+                      <BodySmall className="text-sm text-dark-text_color">{client.type}</BodySmall>
                     </View>
                     {/* Close details modal */}
                     <TouchableOpacity
                         onPress={onCloseWithUnlocking}
-                        className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+                        className="items-center justify-center"
                     >
-                        <EvilIcons name="close" size={24} color="white" />
+                        <EvilIcons name="close" size={28} color="white" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -242,28 +243,28 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                             {client.email && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="email" size={20} color={"white"}/>
-                                    <Text className="text-dark-text_color ml-2">{client.email}</Text>
+                                    <Body className="text-dark-text_color ml-2">{client.email}</Body>
                                 </View>
                             )}
 
                             {client.phone && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="phone" size={20} color={"white"}/>
-                                    <Text className="text-dark-text_color ml-2 text-lg">{client.phone}</Text>
+                                    <BodyLarge className="text-dark-text_color ml-2 text-lg">{client.phone}</BodyLarge>
                                 </View>
                             )}
 
                             {client.address && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="location-pin" size={20} color={"white"}/>
-                                    <Text className="text-dark-text_color ml-2">{client.address}</Text>
+                                    <Body className="text-dark-text_color ml-2">{client.address}</Body>
                                 </View>
                             )}
 
                             {client.note && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="notes" size={20} color={"white"}/>
-                                    <Text className="text-dark-text_color w-80 ml-2">{client.note}</Text>
+                                    <Body className="text-dark-text_color w-80 ml-2">{client.note}</Body>
                                 </View>
                             )}
                         </View>
@@ -271,7 +272,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                         {/* Objects Section */}
                         <View className="mb-3">
                             <View className="flex-row items-center justify-between mb-2">
-                            <Text className="text-gray-400 mt-2">OBJEKTY ({objectsWithRelations.length})</Text>
+                            <Body className="text-gray-400 mt-2">OBJEKTY ({objectsWithRelations.length})</Body>
                         
                             <TouchableOpacity
                                 activeOpacity={0.8}
@@ -281,13 +282,13 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                     preselectedClient: JSON.stringify(client)
                                 })}
                                 >
-                                <Text className="text-white text-center font-semibold">+</Text>
-                                <Text className="text-white text-center font-semibold">Pridať</Text>
+                                <Body className="text-white text-center font-semibold">+</Body>
+                                <Body className="text-white text-center font-semibold">Pridať</Body>
                             </TouchableOpacity>
                             </View>
                             
                             {objectsWithRelations.length === 0 ? (
-                                <Text className="text-gray-500">Žiadne objekty</Text>
+                                <Body className="text-gray-500">Žiadne objekty</Body>
                             ) : (
                                 objectsWithRelations.map((item) => (
                                     <TouchableOpacity 
@@ -301,17 +302,17 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                     >
                                         {!item.object.streetNumber 
                                         ? (
-                                            <Text className="font-semibold text-dark-text_color">
+                                            <Body className="font-semibold text-dark-text_color mb-1">
                                                 {item.object.address}
-                                            </Text> 
+                                            </Body> 
                                         ):(
-                                            <Text className="font-semibold text-dark-text_color">
+                                            <Body className="font-semibold text-dark-text_color mb-1">
                                                 {item.object.streetNumber}, {item.object.city}
-                                            </Text> 
+                                            </Body> 
                                         )}
-                                        <Text className="text-sm text-dark-text_color">
+                                        <BodySmall className="text-sm text-dark-text_color">
                                             Komíny: {item.chimneys.length}
-                                        </Text>
+                                        </BodySmall>
                                     </TouchableOpacity>
                                 ))
                             )}
@@ -320,7 +321,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                         {/* Projects Section */}
                         <View className="mb-3">
                             <View className="flex-row items-center justify-between mb-2">
-                                <Text className="text-gray-400 mt-2">PROJEKTY ({projectsWithRelations.length})</Text>
+                                <Body className="text-gray-400 mt-2">PROJEKTY ({projectsWithRelations.length})</Body>
 
                                 <TouchableOpacity
                                     activeOpacity={0.8}
@@ -330,12 +331,12 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                         preselectedClient: JSON.stringify(client)
                                     })}
                                 >
-                                    <Text className="text-white text-center font-semibold">+</Text>
-                                    <Text className="text-white text-center font-semibold">Pridať</Text>
+                                    <Body className="text-white text-center font-semibold">+</Body>
+                                    <Body className="text-white text-center font-semibold">Pridať</Body>
                                 </TouchableOpacity>
                             </View>
                             {projectsWithRelations.length === 0 ? (
-                                <Text className="text-gray-500">Žiadne projekty</Text>
+                                <Body className="text-gray-500">Žiadne projekty</Body>
                             ) : (
                                 projectsWithRelations.map((item) => (
                                     <TouchableOpacity 
@@ -347,8 +348,8 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                             preselectedClient: JSON.stringify(client)
                                         })}
                                     >
-                                        <Text className="font-semibold text-dark-text_color">{item.project.type}</Text>
-                                        <Text className="text-sm text-dark-text_color">{item.project.state}</Text>
+                                        <Body className="font-semibold text-dark-text_color mb-1">{item.project.type}</Body>
+                                        <BodySmall className="text-sm text-dark-text_color">{item.project.state}</BodySmall>
                                     </TouchableOpacity>
                                 ))
                             )}
@@ -374,7 +375,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                       disabled={!canEdit}
                     >
                       <EvilIcons name="trash" size={24} color="white" />
-                      <Text className='text-white'>Odstrániť</Text>
+                      <Body className='text-white'>Odstrániť</Body>
                     </TouchableOpacity>
 
                     {/* Edit selected client */}     
@@ -394,7 +395,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                         disabled={!canEdit}
                     >
                         <Feather name="edit-2" size={16} color="white" />
-                        <Text className='text-white'>Upraviť</Text>
+                        <Body className='text-white'>Upraviť</Body>
                       </TouchableOpacity>   
                     </View>
                 </View>

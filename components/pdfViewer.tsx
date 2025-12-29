@@ -1,8 +1,9 @@
 import { PDF } from '@/types/generics';
 import { EvilIcons, MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Modal, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { Body, BodySmall, Heading3 } from './typografy';
 
 interface PDFViewerProps {
   uri: string;
@@ -40,12 +41,12 @@ export const PDF_Viewer = ({ uri, visible, onClose, selectedPDF, onDelete }: PDF
             <View className="pt-12 pb-4 px-6 border-b border-gray-700 bg-dark-bg">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
-                  <Text className="text-xl font-bold text-white">
+                  <Heading3 className="text-xl font-bold text-white">
                     {selectedPDF.report_type === "cleaning" ? "Čistenie" : "Revízna správa"}
-                  </Text>
-                  <Text className="text-gray-400 text-sm">
+                  </Heading3>
+                  <BodySmall className="text-gray-400 text-sm">
                     {new Date(selectedPDF.generated_at).toLocaleDateString('sk-SK')}
-                  </Text>
+                  </BodySmall>
                 </View>
                 <TouchableOpacity
                   onPress={() => onClose()}
@@ -78,7 +79,7 @@ export const PDF_Viewer = ({ uri, visible, onClose, selectedPDF, onDelete }: PDF
                     className="bg-red-600 rounded-xl px-6 py-3 flex-row items-center flex-1 ml-2"
                   >
                     <MaterialIcons name="delete" size={20} color="white" />
-                    <Text className="text-white font-semibold ml-2">Odstrániť</Text>
+                    <Body className="text-white font-semibold ml-2">Odstrániť</Body>
                   </TouchableOpacity>
                 </View>
             </View>

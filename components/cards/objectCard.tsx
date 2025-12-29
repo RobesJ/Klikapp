@@ -1,6 +1,7 @@
 import { Client } from "@/types/generics";
 import { Chimney, Object } from "@/types/objectSpecific";
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
+import { BodySmall } from "../typografy";
 
 interface ObjectCardProps {
     object: Object;
@@ -20,24 +21,24 @@ export default function ObjectCard({ object, chimneys, onPress } : ObjectCardPro
           <View className="flex-row items-center justify-between mb-1">
             {object.streetNumber && object.city &&
               <View>
-                <Text className="text-dark-text_color text-sm">
+                <BodySmall className="text-dark-text_color text-sm">
                  📍 {object.streetNumber}, {object.city}
-                </Text>
+                </BodySmall>
               </View>
             } 
 
             {object.address && (!object.streetNumber || !object.city) &&
               <View className="max-w-64">
-                <Text className="text-dark-text_color text-sm">
+                <BodySmall className="text-dark-text_color text-sm">
                   📍 {object.address}
-                </Text>
+                </BodySmall>
               </View>
             } 
 
             {chimneys.length > 0 && (
-              <Text className="text-dark-text_color text-sm">
+              <BodySmall className="text-dark-text_color text-sm">
                   {chimneys.length} {chimneys.length === 1 ? "komín" : (chimneys.length > 4 ? "komínov" : "komíny")}
-                </Text>
+              </BodySmall>
             )}
           </View>
            

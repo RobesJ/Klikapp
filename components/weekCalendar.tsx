@@ -1,7 +1,8 @@
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { BodyLarge, Caption, Heading1, Heading3 } from "./typografy";
 
 interface WeekCalendarProps {
     selectedDay: Date;
@@ -10,6 +11,8 @@ interface WeekCalendarProps {
 }
 
 export default function WeekCalendar({selectedDay, onDateSelect, initialWeekStart}: WeekCalendarProps) {
+    const { width } = useWindowDimensions();
+    
     const [currentWeekStart, setCurrentWeekStart] = useState(
         initialWeekStart 
         ?  startOfWeek(initialWeekStart, { weekStartsOn: 1})
@@ -35,35 +38,44 @@ export default function WeekCalendar({selectedDay, onDateSelect, initialWeekStar
         onDateSelect(new Date());
     };
 
+    const horizontalPadding = 32; // px-4 = 16 on each side
+    const arrowSpace = 80; // Space for arrows and gaps
+    const availableWidth = width - horizontalPadding - arrowSpace;
+    const dayWidth = Math.floor(availableWidth / 7);
+
+    // Responsive sizing based on available width
+    const isSmallScreen = width < 400;
+    const dayHeight = isSmallScreen ? 58 : 66;
+
     return (
         <View className="p-4 mx-4">
-
             {/* Header */}
             <View className="flex-row items-center justify-between mb-4">
                 <TouchableOpacity
                     onPress={goToPreviousWeek}
+                    className="px-3"
                 >
-                    <Text className="font-bold text-3xl text-dark-text_color">←</Text>
+                    <Heading1 className="font-bold text-dark-text_color">←</Heading1>
                 </TouchableOpacity>
                 
-                <View className="items-center">
-                    <Text className="text-lg font-bold  text-dark-text_color">
+                <View className="items-center flex-1">
+                    <BodyLarge className="font-bold  text-dark-text_color">
                         {format(currentWeekStart, "LLLL yyyy", {locale: sk})}
-                    </Text>
+                    </BodyLarge>
                     <TouchableOpacity onPress={goToToday} className="mt-1">
-                        <Text className="text-xl text-dark-text_color">Dnes</Text>
+                        <Heading3 className="text-dark-text_color">Dnes</Heading3>
                     </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
                     onPress={goToNextWeek}
+                    className="px-3"
                 >
-                    <Text className="font-bold text-3xl text-dark-text_color">→</Text>
+                    <Heading1 className="font-bold text-dark-text_color">→</Heading1>
                 </TouchableOpacity>
             </View>
-            <View className="flex-2 items-center justify-center">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row">
+            
+                <View className="flex-row items-center justify-center">
                     {weekDays.map((day, index) =>{
                         const isSelected = isSameDay(day, selectedDay);
                         const isToday = isSameDay(day, new Date());
@@ -72,7 +84,12 @@ export default function WeekCalendar({selectedDay, onDateSelect, initialWeekStar
                             <TouchableOpacity
                                 key={index}
                                 onPress={() => onDateSelect(day)}
-                                className={`items-center justify-center w-14 h-20 rounded-xl ${
+                                style={{
+                                    width: dayWidth,
+                                    height: dayHeight,
+                                    marginLeft: index > 0 ? 1 : 0,
+                                }}
+                                className={`items-center justify-center rounded-xl ${
                                     isSelected 
                                     ? "bg-blue-600"
                                     : isToday
@@ -80,26 +97,24 @@ export default function WeekCalendar({selectedDay, onDateSelect, initialWeekStar
                                     : "bg-gray-100"
                                 }`}
                             >
-                                <Text
-                                  className={`text-xs font-medium ${
+                                <Caption
+                                  className={`font-medium ${
                                     isSelected ? 'text-white' : isToday ? 'text-blue-600' : 'text-gray-600'
                                   }`}
                                 >
                                     {format(day, "EEE", {locale: sk}).toUpperCase()}
-                                </Text>
-                                <Text
-                                  className={`text-xl font-bold mt-1 ${
+                                </Caption>
+                                <BodyLarge
+                                  className={`font-bold mt-1 ${
                                     isSelected ? 'text-white' : isToday ? 'text-blue-600' : 'text-gray-900'
                                   }`}
                                 >
                                     {format(day, 'd')}
-                                </Text>
+                                </BodyLarge>
                             </TouchableOpacity>
                         );
                     })}
                 </View>
-            </ScrollView>
-            </View>
         </View>
     );
 }

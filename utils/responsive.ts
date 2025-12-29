@@ -18,7 +18,7 @@ export type DeviceSize = typeof DEVICE_SIZE[keyof typeof DEVICE_SIZE];
 
 // Determine device size category
 export const getDeviceSize = (): DeviceSize => {
-  if (SCREEN_WIDTH < 300) return DEVICE_SIZE.SMALL;
+  if (SCREEN_WIDTH < 320) return DEVICE_SIZE.SMALL;
   if (SCREEN_WIDTH > 500) return DEVICE_SIZE.LARGE;
   return DEVICE_SIZE.MEDIUM;
 };
@@ -43,7 +43,7 @@ export const DEVICE_INFO: DeviceInfo = {
   fontScale: PixelRatio.getFontScale(),
   size: getDeviceSize(),
   platform: Platform.OS as DeviceInfo['platform'],
-  isSmallDevice: SCREEN_WIDTH < 300,
+  isSmallDevice: SCREEN_WIDTH < 320,
   isLargeDevice: SCREEN_WIDTH > 500,
 };
 
@@ -57,18 +57,12 @@ export const getWidthScale = (): number => {
 
 /**
  * Calculate pixel density multiplier
- * Higher pixel density = larger fonts (sharper text)
- * Benchmark: 2.0 pixel ratio = 1.0 multiplier
  */
 export const getPixelDensityMultiplier = (): number => {
   const pixelRatio = PixelRatio.get();
   
   // Linear scaling based on pixel density
-  // 1.5 ratio → 0.875x (smaller fonts)
-  // 2.0 ratio → 1.0x (baseline)
-  // 2.3 ratio → 1.075x
-  // 3.0 ratio → 1.25x (larger fonts for sharp displays)
-  return pixelRatio / BENCHMARK_PIXEL_RATIO;
+  return BENCHMARK_PIXEL_RATIO / pixelRatio;
 };
 
 /**
@@ -81,9 +75,9 @@ export const getDeviceSizeMultiplier = (): number => {
   
   switch (deviceSize) {
     case DEVICE_SIZE.SMALL:
-      return 0.92; // 8% smaller for tiny screens
+      return 0.92; 
     case DEVICE_SIZE.LARGE:
-      return 1.15; // 15% larger for tablets/large phones
+      return 1.15; 
     case DEVICE_SIZE.MEDIUM:
     default:
       return 1.0;
@@ -165,11 +159,11 @@ export type FontSizeKey = 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl' | '
 export const FONT_SIZES: Record<FontSizeKey, number> = {
   xs: normalizeFont(10),
   sm: normalizeFont(12),
-  base: normalizeFont(14),
-  lg: normalizeFont(16),
-  xl: normalizeFont(18),
-  '2xl': normalizeFont(20),
-  '3xl': normalizeFont(26),
+  base: normalizeFont(13),
+  lg: normalizeFont(15),
+  xl: normalizeFont(19),
+  '2xl': normalizeFont(24),
+  '3xl': normalizeFont(28),
   '4xl': normalizeFont(32)
 };
 

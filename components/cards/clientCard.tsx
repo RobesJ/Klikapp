@@ -1,6 +1,7 @@
 import { Client } from "@/types/generics";
 import { Feather } from "@expo/vector-icons";
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
+import { Body, BodyLarge } from "../typografy";
 
 interface ClientCardProps {
     client: Client,
@@ -23,26 +24,26 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
         >   
         <View className="flex-row items-center">
             <View className="flex-row">
-                <View className="mt-1">
+                <View>
                     <Feather name="user" size={32} color={"#d6d3d1"}/>
                 </View>
-                <View className="flex-1 ml-4 ">
-                    <View>
-                        <Text className="text-lg font-bold text-dark-text_color">
+                <View className="flex-1 ml-4">
+                    <View className="mb-1">
+                        <BodyLarge className="font-bold text-dark-text_color">
                             {client.name}
-                        </Text> 
+                        </BodyLarge> 
                     </View>
                     <View>
-                        <Text className="text-lg text-dark-text_color">
+                        <BodyLarge className="text-dark-text_color">
                             {client.phone}
-                        </Text> 
+                        </BodyLarge> 
                     </View>
                 </View>  
                 <View className="flex-1 items-end justify-center mr-6">
 
                     {client.projectsCount !== undefined && client.projectsCount > 0 && (
                         <View className="mb-2">
-                            <Text className="text-dark-text_color">
+                            <Body className="text-dark-text_color">
                                 {client.projectsCount} 
                                 {client.projectsCount===1
                                 ? " projekt" 
@@ -50,13 +51,13 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
                                     ? " projekty":
                                     " projektov"
                                 )}
-                            </Text>
+                            </Body>
                         </View>
                     )}
 
                     {client.objectsCount !== undefined && client.objectsCount > 0 && (
                         <View>
-                            <Text className="text-dark-text_color">
+                            <Body className="text-dark-text_color">
                                 {client.objectsCount}
                                 {client.objectsCount===1
                                 ? " objekt" 
@@ -64,7 +65,7 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
                                     ? " objekty":
                                     " objektov"
                                 )}
-                            </Text>
+                            </Body>
                         </View>
                     )}
                 </View>
