@@ -3,7 +3,7 @@ import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
-import { Body, BodyLarge, Heading1 } from '@/components/typografy';
+import { Body, BodyLarge, Heading1 } from '@/components/typography';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
 import { ProjectFilters, useProjectStore } from '@/store/projectStore';

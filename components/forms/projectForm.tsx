@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { useClientStore } from "@/store/clientStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useProjectStore } from "@/store/projectStore";
 import { Client, Project, User } from "@/types/generics";
@@ -8,27 +9,20 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    TouchableOpacity,
-    View,
-    useWindowDimensions
+    FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView,
+    TouchableOpacity, View, useWindowDimensions
 } from "react-native";
 import { BadgeSelector, ModalSelector, STATE_OPTIONS, TYPE_OPTIONS } from "../badge";
 import { FormInput } from "../formInput";
 import ModernDatePicker from "../modernDatePicker";
-import { Body, BodySmall, Caption, Heading1, Heading3 } from "../typografy";
+import { Body, BodySmall, Caption, Heading1, Heading3 } from "../typography";
 import UserPickerModal from "../userPickerModal";
-
 
 interface ProjectFormProps{
     mode: "create" | "edit";
     initialData?: ProjectWithRelations;
     onSuccess?: (project: ProjectWithRelations) => void;
-    preselectedClient?: Client;
+    preselectedClient?: string;
 }
 
 export default function ProjectForm({ mode, initialData, onSuccess, preselectedClient} : ProjectFormProps) {
@@ -103,11 +97,17 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 setAssignedObjects(initialData.objects);
             }
         }
-        else if (preselectedClient){
-            setSelectedClient(preselectedClient);
-            setFormData(prev => ({...prev, client_id: preselectedClient.id}));
-        }
-    }, [initialData, preselectedClient]);
+    }, [initialData]);
+
+    const client = useClientStore(
+        s => s.clients.find(c => c.id === preselectedClient)
+    );
+
+    useEffect(() => {
+        if (!client || initialData) return;
+        setSelectedClient(client);
+        setFormData(prev => ({ ...prev, client_id: client.id }));
+      }, [client, initialData]);
 
     // Fetch available users when component mounts or modal opens
     useEffect(() => {
@@ -189,12 +189,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
     };
 
-    const clientIsPreselected = () : boolean => {
-        if (preselectedClient)
-            return true;
-        return false;
-    };
-
     const validate = () : boolean => {
         const newErrors: Record<string, string> = {};
 
@@ -241,7 +235,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 
                 if (projectError) throw projectError;
                 projectID = projectData.id;
-                console.log(projectID);
                 if(selectedUsers.length > 0){
                     const usersProjectRelations = selectedUsers.map(user => ({
                         project_id: projectID,
@@ -617,13 +610,13 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                     <Body className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Body>
                     <View>
                         
-                        {clientIsPreselected() &&
+                        {client &&
                             <Body
                                 className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-600 text-white">
                                 {selectedClient?.name}
                             </Body>
                         }
-                        {!clientIsPreselected() && (
+                        {!client && (
                             <FormInput
                               label={selectedClient?.name}
                               placeholder="Začnite písať meno klienta..."
@@ -637,13 +630,13 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                             />
                         )}
                         
-                        {loadingClients && (!clientIsPreselected()) && (
-                            <View className="absolute right-4 top-4">
+                        {loadingClients && !client && (
+                            <View className="absolute right-4 top-9">
                                 <Body className="text-gray-400">🔍</Body>
                             </View>
                         )}
 
-                        {clientSuggestions && (!clientIsPreselected()) && clientSuggestions.length > 0 && (
+                        {clientSuggestions && !client && clientSuggestions.length > 0 && (
                             <View className="border-2 border-gray-300 rounded-xl mt-1 bg-gray-300 max-h-60">
                                 <ScrollView className="border-b rounded-xl border-gray-300">
                                     {clientSuggestions.map((item) => (
@@ -662,7 +655,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 </View> 
                 
                 {/* Type field*/}
-                
                 {width > 400 ? (
                     <BadgeSelector
                         options={TYPE_OPTIONS}

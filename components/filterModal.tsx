@@ -1,7 +1,7 @@
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { useState } from "react";
 import { Modal, ScrollView, Switch, TouchableOpacity, View } from "react-native";
-import { Body, BodySmall, Caption, Heading3 } from './typografy';
+import { Body, BodySmall, Caption, Heading3 } from './typography';
 
 interface FilterOption {
   value: string;
@@ -75,9 +75,9 @@ export default function FilterModal({
 
               <TouchableOpacity
                 onPress={onClose}
-                className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+                className="items-center justify-center"
               >
-                <EvilIcons name="close" size={24} color="white"/>
+                <EvilIcons name="close" size={28} color="white"/>
               </TouchableOpacity>
             </View>
           </View>

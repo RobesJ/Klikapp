@@ -3,7 +3,7 @@ import { STATE_OPTIONS_HOME, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
-import { Body, BodyLarge, BodySmall, Heading1 } from '@/components/typografy';
+import { Body, BodyLarge, BodySmall, Heading1 } from '@/components/typography';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
 import { useClientStore } from '@/store/clientStore';
@@ -158,9 +158,9 @@ export default function Home() {
     ];
   };
 
-  const handleClearFilters = () => {
-    clearFilters();
-  };
+  //const handleClearFilters = () => {
+  //  clearFilters();
+  //};
 
   const handleCloseWithUnlock = () => {
     setShowDetails(false);
@@ -170,7 +170,7 @@ export default function Home() {
     setSelectedProject(null);
   };
 
-  const hasActiveFilters = (filters.users.length > 0 ) || (filters.state.length > 0 ) || (filters.type.length > 0);
+  //const hasActiveFilters = (filters.users.length > 0 ) || (filters.state.length > 0 ) || (filters.type.length > 0);
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
@@ -209,22 +209,6 @@ export default function Home() {
                  selectedDay={selectedDate}
                  onDateSelect={setSelectedDate}
                />
-            </View>
-
-            <View className='flex-row'>            
-
-              {/* Clear filters button */}
-              <View className='flex-1 items-end justify-center'>
-              {hasActiveFilters && (
-                <TouchableOpacity
-                  onPress={()=> handleClearFilters()}
-                  >
-                  <BodyLarge className='color-red-600'>
-                   Zrušiť filtre
-                  </BodyLarge>
-                </TouchableOpacity>
-              )}
-              </View>
             </View>
             
             {/* Active filters indicator */}

@@ -31,7 +31,7 @@ interface ObjectStore {
   
   fetchObjects: (limit?: number) => Promise<void>;
   setFilters: (filters: Partial<ObjectFilters>) => void;
-  //clearFilters: () => void;
+  clearFilters: () => void;
   addObject: (object: ObjectWithRelations) => void;
   updateObject: (id: string, object: ObjectWithRelations) => void;
   deleteObject: (id: string) => void;
@@ -39,7 +39,6 @@ interface ObjectStore {
   loadMore: () => void;
   lockObject: (id: string, userID: string, userName: string) => Promise<LockResult>;
   unlockObject: (id: string, userID: string) => Promise<void>;
-  //refreshObjectLock: (id: string, userID: string) => Promise<void>;
 }
 
 const CACHE_DURATION = 300000; // 5 min
@@ -259,10 +258,10 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     }
   },
 
-  //clearFilters: () => {
-  //  console.log("clear filters called");
-  //  set({ filters: initialFilters });
-  //},
+  clearFilters: () => {
+    console.log("clear filters called");
+    set({ filters: initialFilters });
+  },
 
   lookForObjectInDBS: async(searchTerm: string) => {
     const { objects, loading } = get();
@@ -395,24 +394,15 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
         };
       });
 
-      //const query = filters.searchQuery?.toLowerCase().trim() ?? '';
-      //let filteredNewObjects = objectWithRelations;
-      //
-      //if (query) {
-      //  filteredNewObjects = objectWithRelations.filter(o => {
-      //    return o.client.name.toLowerCase().includes(query) ||
-      //      (o.object.city?.toLowerCase() ?? '').includes(query) ||
-      //      o.object.address?.toLowerCase().includes(query);
-      //  });
-      //}
-
-      set({ 
-        objects: [...objects, ...objectWithRelations],
-        //filteredObjects: [...get().filteredObjects, ...filteredNewObjects],
-        offset: offset + objectWithRelations.length,
+      set(state => ({ 
+        objects: [...state.objects, ...objectWithRelations],
+        filteredObjects: state.filteredObjects.length > 0
+                          ? [...state.filteredObjects, ...objectWithRelations]
+                          : state.filteredObjects,
+        offset: state.offset + objectWithRelations.length,
         hasMore: objectWithRelations.length === pageSize,
         loading: false 
-      });
+      }));
       console.log(`Loaded ${objectWithRelations.length} more objects, total: ${objects.length + objectWithRelations.length}`);
     }
     catch (error: any) {

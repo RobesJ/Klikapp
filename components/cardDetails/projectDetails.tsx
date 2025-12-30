@@ -2,39 +2,44 @@ import { getFooterImageBase64, getWatermarkBase64 } from '@/constants/icons';
 import { useAuth } from '@/context/authContext';
 import { supabase } from "@/lib/supabase";
 import { generateRecord } from "@/services/pdfService";
+import { useClientStore } from '@/store/clientStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useProjectStore } from "@/store/projectStore";
 import { PDF, User } from "@/types/generics";
 import { Chimney } from "@/types/objectSpecific";
-import { Photo, ProjectWithRelations } from "@/types/projectSpecific";
+import { Photo } from "@/types/projectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { format, parseISO } from 'date-fns';
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { ModalSelector, STATE_OPTIONS } from "../badge";
-import { FormInput } from "../formInput";
 import { NotificationToast } from '../notificationToast';
+import PdfGenerationModal from '../pdfGenerationModal';
 import { PDF_Viewer } from '../pdfViewer';
-import { Body, BodyLarge, BodySmall, Caption, Heading3 } from '../typografy';
+import { Body, BodyLarge, BodySmall, Caption, Heading3 } from '../typography';
 import UserPickerModal from '../userPickerModal';
 
 interface ProjectCardDetailsProps {
-  projectWithRelations: ProjectWithRelations;
+  projectWithRelationsID: string;
   visible: boolean;
   onClose: () => void;
   onCloseWithUnlock: () => void;
 }
 
 export default function ProjectDetails({ 
-  projectWithRelations, 
+  projectWithRelationsID, 
   visible,
   onClose,
   onCloseWithUnlock
 }: ProjectCardDetailsProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const projectWithRelations = useProjectStore(state => state.projects.get(projectWithRelationsID));
+  if (!projectWithRelations) {
+    return null;
+  }
   const [currentState, setCurrentState] = useState(projectWithRelations.project.state);
   const [users, setUsers] = useState<User[]>(projectWithRelations.users);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -59,6 +64,7 @@ export default function ProjectDetails({
   const [chimneySums, setChimneySums] = useState<Record<string, string[]>>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const { updateProject, addProject, deleteProject, availableUsers, lockProject } = useProjectStore();
+  const { updateClientCounts } = useClientStore();
   
   type PdfFlowStep =
   | "choice"         
@@ -68,15 +74,19 @@ export default function ProjectDetails({
 
   const [pdfStep, setPdfStep] = useState<PdfFlowStep>("choice");
   const [selectedChimneyId, setSelectedChimneyId] = useState<string | null>(null);
-
+  
   useEffect(() => {
     fetchPhotos();
     fetchPDFs();
   }, [projectWithRelations.project.id]);
 
   useEffect(() => {
+    setCurrentState(projectWithRelations.project.state);
+    setUsers(projectWithRelations.users);
+  }, [projectWithRelations.project.state, projectWithRelations.users]);
+  
+  useEffect(() => {
     if(!visible || !projectWithRelations.project.id || !user) return;
-    console.log("Use effect called");
     let active = true;
 
     (async () => {
@@ -109,9 +119,6 @@ export default function ProjectDetails({
     return () => clearInterval(interval);
   }, [visible, user?.id, canEdit]);
 
-  const chimneyCount = useMemo(() =>{
-    return projectWithRelations.objects.reduce((sum, o) => sum + o.chimneys.length, 0);
-  },[projectWithRelations.objects]);
 
   const fetchPhotos = async () => {
     setLoadingPhotos(true);
@@ -468,7 +475,7 @@ export default function ProjectDetails({
       setChimneySums({});
     }
   };
-  
+
   const uploadPDF = async (uri: string | null, report_type: string, object_id: string, chimney: Chimney, sums: string[] | null) => {
     if (uri === null){
       return;
@@ -779,12 +786,12 @@ export default function ProjectDetails({
         client: projectWithRelations.client,
         users,
         objects: projectWithRelations.objects
-      });
-      useNotificationStore.getState().addNotification(
-        `Stav projektu bol zmenený na: ${newState}`,
-        "success",
-        3000
-      );
+      }, true);
+      //useNotificationStore.getState().addNotification(
+      //  `Stav projektu bol zmenený na: ${newState}`,
+      //  "success",
+      //  3000
+      //);
   
     } catch (error: any) {
       console.error('Error updating project state:', error);
@@ -829,11 +836,11 @@ export default function ProjectDetails({
         client: projectWithRelations.client,
         users: updatedUsers,
         objects: projectWithRelations.objects
-      });
+      }, false);
 
       setShowUserModal(false);
       useNotificationStore.getState().addNotification(
-        "Úspech', `${user.name} bol priradený k projektu",
+        `${user.name} bol priradený k projektu`,
         "success",
         3000
       );
@@ -862,12 +869,15 @@ export default function ProjectDetails({
       setUsers(updatedUsers);
 
       // Update store
-      updateProject(projectWithRelations.project.id, {
-        project: projectWithRelations.project,
-        client: projectWithRelations.client,
-        users: updatedUsers,
-        objects: projectWithRelations.objects 
-      });
+      updateProject(
+        projectWithRelations.project.id, 
+        {
+          project: projectWithRelations.project,
+          client: projectWithRelations.client,
+          users: updatedUsers,
+          objects: projectWithRelations.objects 
+        },
+        false);
 
     } catch (error: any) {
       console.error('Error removing user:', error);
@@ -903,18 +913,6 @@ export default function ProjectDetails({
     setSelectedPhoto(photos[previousIndex]);
   };
 
-  const handleChimneySumChange = (chimneyId: string, index: number, value: string) => {
-    setChimneySums((prev) => {
-      const currentArray = prev[chimneyId] || ['', ''];
-      const updatedArray = [...currentArray];
-      updatedArray[index] = value;
-      return {
-        ...prev,
-        [chimneyId]: updatedArray,
-      };
-    });
-  };
-
   const closePdfModal = () => {
     setpdfGenModalVisible(false);
     setPdfStep("choice");
@@ -924,16 +922,27 @@ export default function ProjectDetails({
 
   const handleClosePdfViewer = () => {
     setShowPDFReports(false);
+    setPdfStep("choice");
     setSelectedPDF(null);
+  };
+
+  const handlePdfGenerationWithClose = (type: "cleaningWithPaymentReceipt" | "cleaning", chimneyId?: string) =>{
+    if(chimneyId){
+      handleGeneratePDF(type, chimneyId);
+    }
+    else{
+      handleGeneratePDF(type);
+    }
+    handleClosePdfViewer();
   };
 
   return (
     <Modal
-        visible={visible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={onClose}
-      >
+      visible={visible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
         <View className="flex-1 bg-black/50 justify-center items-center">
           <View className="w-10/12 h-fit bg-dark-bg border-2 border-gray-300 rounded-2xl overflow-hidden">
             {/* Header */}
@@ -1211,8 +1220,9 @@ export default function ProjectDetails({
                 <TouchableOpacity
                   onPress={() => {
                       try{
-                        deleteProject(projectWithRelations.project.id);
                         onClose();
+                        deleteProject(projectWithRelations.project.id);
+                        updateClientCounts(projectWithRelations.client.id, -1, 0);
                       }
                       catch (error){
                         console.error("Delete failed:", error);
@@ -1341,201 +1351,13 @@ export default function ProjectDetails({
               />
             )}
 
-            {/* PDF Generation Cleaning Modal */}
-            <Modal
+            {/* PDF Generation Cleaning Modal */} 
+            <PdfGenerationModal
               visible={pdfGenModalVisible}
-              transparent
-              animationType="slide"
-              onRequestClose={closePdfModal}
-            >
-              <View className="flex-1 bg-black/50 justify-center items-center">
-                <View className="w-11/12 max-h-[90%] bg-dark-bg border border-gray-600 rounded-2xl overflow-hidden">
-
-                  {/* Header */}
-                  <View className="flex-row justify-end p-4 border-b border-gray-700">
-                    <TouchableOpacity onPress={closePdfModal}>
-                      <EvilIcons name="close" size={28} color="white" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* BODY */}
-                  <View className="p-6 flex-2">
-
-                    {/* ================= STEP 1 – CHOICE ================= */}
-                    {pdfStep === "choice" && (
-                      <View>
-                        <BodyLarge className="text-white text-center text-lg mb-6">
-                          Ako chcete vygenerovať PDF?
-                        </BodyLarge>
-                      
-                        {/* NO RECEIPT */}
-                        <TouchableOpacity
-                          className="bg-gray-700 rounded-xl p-4 mb-4"
-                          onPress={() => {
-                            handleGeneratePDF("cleaning");
-                            closePdfModal();
-                          }}
-                        >
-                          <Body className="text-white text-center">
-                            Len {chimneyCount > 1 ? "správy" : "správa"} (bez PPD)
-                          </Body>
-                        </TouchableOpacity>
-                        
-                        {/* ONE CHIMNEY */}
-                        {chimneyCount > 1 && (
-                          <TouchableOpacity
-                            className="bg-gray-700 rounded-xl p-4 mb-4"
-                            onPress={() => setPdfStep("selectOne")}
-                          >
-                            <Body className="text-white text-center">
-                              Správa + PPD pre jeden komín
-                            </Body>
-                          </TouchableOpacity>
-                        )}
-
-                        {/* ALL CHIMNEYS */}
-                        <TouchableOpacity
-                          className="bg-blue-600 rounded-xl p-4"
-                          onPress={() => setPdfStep("inputAll")}
-                        >
-                          <Body className="text-white text-center font-semibold">
-                          {chimneyCount > 1 ? "Správy + PPD pre všetky komíny" : "Správa + PPD"}
-                          </Body>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-
-                    {/* ================= STEP 2 – SELECT ONE ================= */}
-                    {pdfStep === "selectOne" && (
-                      <ScrollView>
-                        <BodyLarge className="text-white text-lg mb-4">
-                          Vyberte komín
-                        </BodyLarge>
-                    
-                        {projectWithRelations.objects.flatMap(o =>
-                          o.chimneys.map(ch => (
-                            <TouchableOpacity
-                              key={ch.id}
-                              className="bg-dark-details-o_p_bg rounded-xl p-4 mb-3"
-                              onPress={() => {
-                                setSelectedChimneyId(ch.id);
-                                setPdfStep("inputOne");
-                              }}
-                            >
-                              <Body className="text-white font-semibold">
-                                {ch.chimney_type?.type} – {ch.chimney_type?.labelling}
-                              </Body>
-                              <BodySmall className="text-gray-400 text-sm">
-                                {o.object.address}
-                              </BodySmall>
-                            </TouchableOpacity>
-                          ))
-                        )}
-                      </ScrollView>
-                    )}
-
-                    {/* ================= STEP 3A – INPUT ONE ================= */}
-                    {pdfStep === "inputOne" && selectedChimneyId && (
-                      <View>
-                        <FormInput
-                          label="Suma (€)"
-                          value={chimneySums[selectedChimneyId]?.[0] || ""}
-                          onChange={(v: string) =>
-                            handleChimneySumChange(selectedChimneyId, 0, v)
-                          }
-                          fieldName="sum-one"
-                          keyboardType="phone-pad"
-                          focusedField={focusedField}
-                          setFocusedField={setFocusedField}
-                        />
-                        <FormInput
-                          label="Suma slovom"
-                          value={chimneySums[selectedChimneyId]?.[1] || ""}
-                          onChange={(v: string) =>
-                            handleChimneySumChange(selectedChimneyId, 1, v)
-                          }
-                          fieldName="sum-one-words"
-                          focusedField={focusedField}
-                          setFocusedField={setFocusedField}
-                        />
-                        <TouchableOpacity
-                          className="bg-blue-600 rounded-xl p-4 mt-6"
-                          disabled={isGenerating}
-                          onPress={() => {
-                            handleGeneratePDF(
-                              "cleaningWithPaymentReceipt",
-                              selectedChimneyId
-                            );
-                            closePdfModal();
-                          }}
-                        >
-                          <Body className="text-white text-center font-semibold">
-                            {isGenerating ? "Generujem..." : "Generovať"}
-                          </Body>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-
-                    {/* ================= STEP 3B – INPUT ALL ================= */}
-                    {pdfStep === "inputAll" && (
-                      <ScrollView>
-                        {projectWithRelations.objects.flatMap(o =>
-                          o.chimneys.map(ch => (
-                            <View
-                              key={ch.id}
-                              className="bg-dark-details-o_p_bg rounded-xl p-4 mb-4"
-                            >
-                              <Body className="text-white font-semibold">
-                                {ch.chimney_type?.type} – {ch.chimney_type?.labelling}
-                              </Body>
-                              <BodySmall className="text-gray-400 text-sm mb-2">
-                                {o.object.address}
-                              </BodySmall>
-                          
-                              <FormInput
-                                label="Suma (€)"
-                                value={chimneySums[ch.id]?.[0] || ""}
-                                onChange={(v: string) =>
-                                  handleChimneySumChange(ch.id, 0, v)
-                                }
-                                fieldName={`sum-${ch.id}`}
-                                keyboardType="phone-pad"
-                                focusedField={focusedField}
-                                setFocusedField={setFocusedField}
-                              />
-
-                              <FormInput
-                                label="Suma slovom"
-                                value={chimneySums[ch.id]?.[1] || ""}
-                                onChange={(v: string) =>
-                                  handleChimneySumChange(ch.id, 1, v)
-                                }
-                                fieldName={`sum-words-${ch.id}`}
-                                focusedField={focusedField}
-                                setFocusedField={setFocusedField}
-                              />
-                            </View>
-                          ))
-                        )}
-
-                        <TouchableOpacity
-                          className="bg-blue-600 rounded-xl p-4 mt-4"
-                          disabled={isGenerating}
-                          onPress={() => {
-                            handleGeneratePDF("cleaningWithPaymentReceipt");
-                            closePdfModal();
-                          }}
-                        >
-                          <Body className="text-white text-center font-semibold">
-                            {isGenerating ? "Generujem..." : "Generovať všetky"}
-                          </Body>
-                        </TouchableOpacity>
-                      </ScrollView>
-                    )}
-                  </View>
-                </View>
-              </View>
-            </Modal>
+              onCloseSimple={closePdfModal}
+              projectWithRelations={projectWithRelations}
+              handlePdfGeneration={handlePdfGenerationWithClose}
+            />
           </View>
         </View>  
       </Modal>

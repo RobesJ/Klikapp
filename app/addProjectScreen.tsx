@@ -1,6 +1,7 @@
 import ProjectForm from '@/components/forms/projectForm';
 import { useAuth } from '@/context/authContext';
 import { supabase } from '@/lib/supabase';
+import { useClientStore } from '@/store/clientStore';
 import { useProjectStore } from "@/store/projectStore";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,10 +12,11 @@ export default function AddProjectScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { addProject, updateProject, unlockProject } = useProjectStore();
-  const { project, mode, preselectedClient } = useLocalSearchParams();
+  const { project, mode, preselectedClientID } = useLocalSearchParams();
 
   const parsedProject = project ? (JSON.parse(project as string) as ProjectWithRelations) : undefined;
-  const parsedClient =  preselectedClient ? JSON.parse(preselectedClient as string) : undefined;
+  const parsedClientID =  preselectedClientID ? preselectedClientID as string : undefined;
+  const { updateClientCounts } = useClientStore();
 
   useEffect(() => {
     return () => {
@@ -31,22 +33,25 @@ export default function AddProjectScreen() {
         supabase
           .from('objects')
           .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
-          .eq('id', parsedClient.id)
+          .eq('id', parsedProject?.project.id,)
           .eq('locked_by', user.id);
       }, 120_000);
 
     return () => clearInterval(interval);
-  }, [ parsedClient?.id, user?.id]);
+  }, [parsedProject?.project.id, user?.id]);
 
   const handleSuccess = (projectData: ProjectWithRelations) => {
     if (mode === "create"){
       console.log("trying to create project");
       if(projectData.project){
         addProject(projectData);
+        if(parsedClientID){
+          updateClientCounts(parsedClientID, 1,0);
+        }
       }
     }
     else{
-        updateProject(projectData.project?.id , projectData);
+        updateProject(projectData.project?.id , projectData, false);
         if (projectData.project && user){
           unlockProject(projectData.project.id, user.id);
         }
@@ -60,7 +65,7 @@ export default function AddProjectScreen() {
         mode={(mode as "create" | "edit") || "create"}
         initialData={parsedProject}
         onSuccess={handleSuccess}
-        preselectedClient={parsedClient}
+        preselectedClient={parsedClientID}
       />
     </SafeAreaView>
   );

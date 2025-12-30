@@ -1,7 +1,7 @@
 import { Client } from "@/types/generics";
 import { Feather } from "@expo/vector-icons";
 import { TouchableOpacity, View } from "react-native";
-import { Body, BodyLarge } from "../typografy";
+import { Body, BodyLarge } from "../typography";
 
 interface ClientCardProps {
     client: Client,

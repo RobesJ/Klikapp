@@ -1,6 +1,7 @@
 import { FormInput } from '@/components/formInput';
-import { Body, Heading1 } from '@/components/typografy';
+import { Body, Heading1 } from '@/components/typography';
 import { supabase } from '@/lib/supabase';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -68,13 +69,13 @@ export default function Register() {
     async function signUpNewUser() { 
 
         if (!validate()) {
-            Alert.alert("Chyba:", "Prosim opravta chyby vo formulari")
+            //Alert.alert("Chyba:", "Prosim opravta chyby vo formulari")
             return;
         }
 
         setLoading(true);
         try{
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            const { error: authError } = await supabase.auth.signUp({
                 email: formData.email, 
                 password: formData.password,
                 options: {
@@ -86,20 +87,16 @@ export default function Register() {
 
             if (authError) throw authError;
 
-            Alert.alert(
-                "Uspech!",
-                "Ucet bol vytvoreny. Skontrolujte svoj email pre overenie.",
-                [
-                    {
-                        text: "OK",
-                        onPress: () => router.replace("/(auth)/login")
-                    }
-                ]
+            useNotificationStore.getState().addNotification(
+                "Účet bol vytvorený. Skontrolujte svoj email pre overenie",
+                "success",
+                10000
             );
+            router.replace("/(auth)/login");
 
         } catch(error: any){
             console.error("Error signing up: ", error);
-            Alert.alert("Chyba ", error.message || "Nepodarilo sa vytvorit ucet")
+            Alert.alert("Chyba ", error.message || "Nepodarilo sa vytvoriť účet")
         } finally{
             setLoading(false);
         }
@@ -214,7 +211,7 @@ export default function Register() {
                         </Body>
                     </TouchableOpacity>
                 </View>
-                </View>
+            </View>
         </View>
     </ScrollView>
     </KeyboardAvoidingView>

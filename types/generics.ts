@@ -53,3 +53,10 @@ export interface PDF {
   amount?: number | null;
   amountByWords?: string | null;
 }
+
+export type AddressFields = {
+  address?: string | null;
+  streetNumber?: string | null;
+  city?: string | null;
+  country?: string | null;
+};

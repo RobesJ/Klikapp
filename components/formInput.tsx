@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { TextInput, TextStyle, View } from "react-native";
 import { FONT_SIZES } from "../utils/responsive";
-import { Body } from "./typografy";
+import { Body } from "./typography";
 
 interface FormInputProps{
     label?: string;

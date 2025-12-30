@@ -79,7 +79,7 @@ interface ProjectStore {
 
   // Project management
   addProject: (project: ProjectWithRelations) => void;
-  updateProject: (id: string, project: ProjectWithRelations) => void;
+  updateProject: (id: string, project: ProjectWithRelations, showNotification: boolean) => void;
   deleteProject: (id: string) => Promise<void>;
 
   // Lock management
@@ -683,17 +683,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     );
   },
   
-  updateProject: (id: string, updatedProject) => {
+  updateProject: (id: string, updatedProject: ProjectWithRelations, showNotification: boolean) => {
     set(state => {
       const newMap = new Map(state.projects);
       newMap.set(id, updatedProject);
       return {projects: newMap};
     });
-    useNotificationStore.getState().addNotification(
-      'Projekt bol úspešne aktualizovaný',
-      'success',
-      3000
-    );
+    if (showNotification) {
+      useNotificationStore.getState().addNotification(
+        'Projekt bol úspešne aktualizovaný',
+        'success',
+        3000
+      );
+    }
     //get().applySmartFilters(get().filters);
   },
 
@@ -757,7 +759,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
   
   // ======== LOCK MANAGEMENT ========
-
   lockProject: async (id: string, userID: string, userName: string) => {
     try{
       const {data, error} = await supabase.rpc("lock_project_and_relations", {
@@ -792,7 +793,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             lock_expires_at: data[0].lock_expires_at
           }
         };
-        get().updateProject(id, updated);
+        get().updateProject(id, updated, false);
       }
       return { success: true };
     }
@@ -823,7 +824,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             lock_expires_at: null
           }
         };
-        get().updateProject(id, updated);
+        get().updateProject(id, updated, false);
       }
   },
 
@@ -843,7 +844,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           }
         };
         console.log('Updated project in store:', updated.project.start_date);
-        get().updateProject(projectId, updated);
+        get().updateProject(projectId, updated, false);
       }
       
     }
@@ -876,7 +877,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             start_date: null
           }
         };
-        get().updateProject(projectId, updated);
+        get().updateProject(projectId, updated, false);
       }
     }
     catch(error: any){
@@ -911,7 +912,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             }
           };
           console.log('Updated project in store:', updated.project.start_date);
-          get().updateProject(projectId, updated);
+          get().updateProject(projectId, updated, true);
         }
       }
       else{

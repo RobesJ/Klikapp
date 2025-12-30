@@ -2,7 +2,7 @@ import { EvilIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Modal, TouchableOpacity, View } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
-import { Body, Heading2, Heading3 } from './typografy';
+import { Body, Heading2, Heading3 } from './typography';
 
 // Configure Slovak locale
 LocaleConfig.locales['sk'] = {

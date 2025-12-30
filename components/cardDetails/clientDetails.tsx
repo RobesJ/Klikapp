@@ -9,7 +9,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { NotificationToast } from "../notificationToast";
-import { Body, BodyLarge, BodySmall, Heading3 } from "../typografy";
+import { Body, BodyLarge, BodySmall, Heading3 } from "../typography";
 
 interface ClientCardDetailsProps{
     client: Client;
@@ -32,7 +32,6 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
     useEffect(() => {
         fetchRelations(client);
     }, [client.id]);
-
 
     async function fetchRelations(client: Client) {
         try{
@@ -199,7 +198,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
     }
 
     const handleNavigateAndRefresh = async (pathname: any, params: any) => {
-        onClose(); // Close modal first
+        onClose(); 
         router.push({ pathname, params });
         // Refetch clients to update counts
         //setTimeout(() => fetchClients(100), 500); // Small delay to ensure DB is updated
@@ -279,7 +278,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                 className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg "
                                 onPress={() => handleNavigateAndRefresh("/addObjectScreen", {
                                     mode: "create", 
-                                    preselectedClient: JSON.stringify(client)
+                                    preselectedClientID: client.id
                                 })}
                                 >
                                 <Body className="text-white text-center font-semibold">+</Body>
@@ -297,7 +296,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                         onPress={() => handleNavigateAndRefresh("/addObjectScreen", {
                                             object: JSON.stringify(item),
                                             mode: "edit", 
-                                            preselectedClient: JSON.stringify(client)
+                                            preselectedClientID: client.id
                                         })}
                                     >
                                         {!item.object.streetNumber 
@@ -328,7 +327,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                     className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg"
                                     onPress={() => handleNavigateAndRefresh("/addProjectScreen", {
                                         mode: "create", 
-                                        preselectedClient: JSON.stringify(client)
+                                        preselectedClientID: client.id
                                     })}
                                 >
                                     <Body className="text-white text-center font-semibold">+</Body>
@@ -345,7 +344,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                         onPress={() => handleNavigateAndRefresh("/addProjectScreen", {
                                             project: JSON.stringify(item),
                                             mode: "edit", 
-                                            preselectedClient: JSON.stringify(client)
+                                            preselectedClientID: client.id
                                         })}
                                     >
                                         <Body className="font-semibold text-dark-text_color mb-1">{item.project.type}</Body>

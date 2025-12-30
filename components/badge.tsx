@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, ScrollView, TouchableOpacity, View } from 'react-native';
-import { Body, BodySmall, Heading3 } from './typografy';
+import { Body, BodySmall, Heading3 } from './typography';
 
 interface BadgeOption {
   value: string;

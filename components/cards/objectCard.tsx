@@ -1,7 +1,7 @@
 import { Client } from "@/types/generics";
 import { Chimney, Object } from "@/types/objectSpecific";
 import { TouchableOpacity, View } from "react-native";
-import { BodySmall } from "../typografy";
+import { BodySmall } from "../typography";
 
 interface ObjectCardProps {
     object: Object;

@@ -3,7 +3,7 @@ import { ObjectWithRelations } from "@/types/objectSpecific";
 import { format } from "date-fns";
 import { TouchableOpacity, View } from "react-native";
 import { STATE_OPTIONS } from "../badge";
-import { Body, BodySmall, Caption, Heading3 } from "../typografy";
+import { Body, BodySmall, Caption, Heading3 } from "../typography";
 
 interface ProjectCardProps {
     project: Project;

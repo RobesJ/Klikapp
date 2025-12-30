@@ -4,10 +4,9 @@ import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/filterModal';
 import { NotificationToast } from '@/components/notificationToast';
-import { Body, Heading1 } from '@/components/typografy';
+import { Body, Heading1 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';
 import { useProjectStore } from '@/store/projectStore';
-import { ProjectWithRelations } from "@/types/projectSpecific";
 import { FONT_SIZES } from '@/utils/responsive';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
@@ -21,13 +20,13 @@ export default function Projects() {
   const { user } = useAuth();
   const navigation = useNavigation();
   const [showDetails, setShowDetails] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ProjectWithRelations | null>(null);
+  const [selectedProjectID, setSelectedProjectID] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const {
     backgroundLoading,
-    projects,
+    //projects,
     metadata,
     availableUsers,
     fetchActiveProjects,
@@ -105,10 +104,11 @@ export default function Projects() {
     },
   ];
 
-  const filteredProjects = useMemo(() => {
-    return getFilteredProjects(filters);
-  }, [filters, getFilteredProjects, projects.size]);
-
+  //const filteredProjects = useMemo(() => {
+    //return getFilteredProjects(filters);
+  //}, [filters, getFilteredProjects, projects.size]);
+  const filteredProjects = getFilteredProjects(filters);
+    
   const handleRefresh = () => {
     fetchActiveProjects();
     fetchPlannedProjects();
@@ -127,15 +127,10 @@ export default function Projects() {
     ];
   };
 
-  const handleClearFilters = () => {
-    setSearchText('');
-    clearFilters();
-  };
-
   const hasActiveFilters = filters.searchQuery || (filters.state.length > 0 ) || (filters.type.length > 0) || (filters.users.length > 0);
 
-  const handleModalVisibility = (projectData: ProjectWithRelations, value: boolean) => {
-    setSelectedProject(projectData);
+  const handleModalVisibility = (projectID: string, value: boolean) => {
+    setSelectedProjectID(projectID);
     setShowDetails(value);
   };
 
@@ -145,10 +140,10 @@ export default function Projects() {
 
   const handleCloseWithUnlock = () => {
       setShowDetails(false);
-      if(selectedProject?.project && user){
-        unlockProject(selectedProject.project.id, user.id);
+      if(selectedProjectID && user){
+        unlockProject(selectedProjectID, user.id);
       }
-      setSelectedProject(null);
+      setSelectedProjectID(null);
   };
 
   const inputStyle = useMemo((): TextStyle => {
@@ -185,36 +180,19 @@ export default function Projects() {
               </TouchableOpacity>
             
           </View>
-  
         </View>
 
         {/* Search klient Input*/}
         <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4 mb-4">
           <EvilIcons name="search" size={20} color="gray" />
           <TextInput
-            className="flex-1 ml-2 text-dark-text_color"
+            className="ml-2 text-dark-text_color py-3"
             style={inputStyle}
             placeholder='Vyhladajte klienta alebo mesto...'
             placeholderTextColor="#9CA3AF"
             value={searchText}
             onChangeText={handleSearch}
           />
-        </View>
-
-        <View className='flex-row'>            
-
-          {/* Clear filters button */}
-          <View className='flex-1 items-end justify-center'>
-          {hasActiveFilters && (
-            <TouchableOpacity
-              onPress={()=> handleClearFilters()}
-              >
-              <Body className='color-red-600'>
-               Zrušiť filtre
-              </Body>
-            </TouchableOpacity>
-          )}
-          </View>
         </View>
 
         {/* Active filters indicator */}
@@ -260,7 +238,7 @@ export default function Projects() {
               client={item.client}
               users={item.users}
               objects={item.objects}
-              onPress={() => handleModalVisibility(item, true)}
+              onPress={() => handleModalVisibility(item.project.id, true)}
           />
         )}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
@@ -285,22 +263,20 @@ export default function Projects() {
         })}}
         className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
       >
-        <Heading1 
-          className='text-white text-3xl'>
-          +
-        </Heading1>
+        <Heading1 className='text-white'> + </Heading1>
       </TouchableOpacity>
 
       </AnimatedScreen>
+      
       {/* Project details modal */}
-      {selectedProject && (
+      {selectedProjectID && (
         <ProjectDetails 
-          key={selectedProject.project.id}
-          projectWithRelations={selectedProject}
+          key={selectedProjectID}
+          projectWithRelationsID={selectedProjectID}
           visible={showDetails}
           onClose={()=> {
             setShowDetails(false);
-            setSelectedProject(null);
+            setSelectedProjectID(null);
           }}
           onCloseWithUnlock={handleCloseWithUnlock}
         />

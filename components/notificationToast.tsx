@@ -2,7 +2,7 @@ import { NotificationType, useNotificationStore } from "@/store/notificationStor
 import { useEffect } from "react";
 import { View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { Body } from "./typografy";
+import { Body } from "./typography";
 
 interface ToastItemProps {
     id: string;

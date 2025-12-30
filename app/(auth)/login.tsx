@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, BodyLarge, BodySmall, Caption, Heading1 } from "../../components/typografy";
+import { Body, BodyLarge, BodySmall, Caption, Heading1 } from "../../components/typography";
 
 export default function Login() {
     const router = useRouter();

@@ -40,7 +40,8 @@ interface ClientStore {
   loadMore: () => Promise<void>;
   lockClient: (id: string, userID: string, userName: string) => Promise<LockClientResult>;
   unlockClient: (id: string, userID: string) => Promise<void>;
-  refreshClientLock: (id: string, userID: string) => Promise<void>;
+  // refreshClientLock: (id: string, userID: string) => Promise<void>;
+  updateClientCounts: (id: string, projectCount: number, objectCount: number) => void;
 }
 
 const CACHE_DURATION = 300000; // 5 min
@@ -186,22 +187,22 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     }));
   },
 
-  refreshClientLock: async (id: string, userId: string) => {
-    try {
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      
-      const { error } = await supabase
-        .from('clients')
-        .update({ lock_expires_at: expiresAt })
-        .eq('id', id)
-        .eq('locked_by', userId); 
-  
-      if (error) throw error;
-      
-    } catch (error) {
-      console.error('Error refreshing lock:', error);
-    }
-  },
+  //refreshClientLock: async (id: string, userId: string) => {
+  //  try {
+  //    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  //    
+  //    const { error } = await supabase
+  //      .from('clients')
+  //      .update({ lock_expires_at: expiresAt })
+  //      .eq('id', id)
+  //      .eq('locked_by', userId); 
+  //
+  //    if (error) throw error;
+  //    
+  //  } catch (error) {
+  //    console.error('Error refreshing lock:', error);
+  //  }
+  //},
 
   setFilters: (newFilters) => {
     const { filters } = get(); 
@@ -210,7 +211,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     const filtered = get().applyFilters();
     set({ filteredClients: filtered });
   
-    // Change this line - use 'filtered' not 'filteredClients'
     if (newFilters.searchQuery?.trim() && newFilters.searchQuery?.trim().length > 3 && filtered.length === 0) {
       get().lookForClientInDBS();
     }
@@ -234,14 +234,12 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       );
     }
 
-    //set({ filteredClients: filtered });
     console.log(`Filtered: ${filtered.length}/${clients.length} clients`);
     return filtered;
   },
 
   lookForClientInDBS: async () =>{
     const { clients, filters } = get();
-    //let filtered = [...clients];
 
     if (filters.searchQuery.trim()) {
       try {
@@ -362,6 +360,29 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     );
   },
 
+  updateClientCounts: (clientId: string, projectCount: number, objectCount: number) => {
+    set(state => ({
+      clients: state.clients.map(client => 
+        client.id === clientId 
+          ? { 
+              ...client, 
+              projectsCount: (client.projectsCount || 0) + projectCount,
+              objectsCount: (client.objectsCount || 0) + objectCount
+            }
+          : client
+      ),
+      filteredClients: state.filteredClients.map(client => 
+        client.id === clientId 
+          ? { 
+              ...client, 
+              projectsCount: (client.projectsCount || 0) + projectCount,
+              objectsCount: (client.objectsCount || 0) + objectCount
+            }
+          : client
+      )
+    }));
+  },
+  
   deleteClient: async (id: string) => {
     Alert.alert(
       'Odstrániť klienta',

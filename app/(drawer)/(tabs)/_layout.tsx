@@ -1,4 +1,4 @@
-import { Body } from "@/components/typografy"
+import { Body } from "@/components/typography"
 import { useAuth } from "@/context/authContext"
 import { Redirect, Tabs } from "expo-router"
 import { ActivityIndicator, Image, View } from "react-native"
@@ -11,12 +11,9 @@ const TabIcon = ({focused, icon, title} : any) => {
                 <Image
                   source={icon}
                   tintColor="#ABABAB"
-                  className="size-6"
+                  className="size-6 mb-2"
                 />
-                <Body 
-                  className="text-base"
-                  style={{color: "#ABABAB"}}
-                >
+                <Body style={{color: "#ABABAB"}}>
                     {title}
                 </Body>
             </View>

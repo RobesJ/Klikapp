@@ -1,27 +1,21 @@
+import { useGoogleSearchAddress } from "@/hooks/useGoogleAddressSearch";
 import { supabase } from "@/lib/supabase";
+import { useClientStore } from "@/store/clientStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { Client } from "@/types/generics";
 import { ChimneyInput, ChimneyType, Object as ObjectType, ObjectWithRelations } from "@/types/objectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import {
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    TouchableOpacity,
-    View
-} from "react-native";
+import { FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
-import { Body, BodySmall, Caption, Heading1, Heading3 } from "../typografy";
+import { Body, BodySmall, Caption, Heading1, Heading3 } from "../typography";
 
 interface ObjectFormProps {
     mode: "create" | "edit";
     initialData?: ObjectWithRelations;
     onSuccess?: (object: any) => void;
-    preselectedClient?: Client;
+    preselectedClient?: string;
 }
 
 export default function ObjectForm({ mode, initialData, onSuccess, preselectedClient} : ObjectFormProps) {
@@ -33,7 +27,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         city: initialData?.object.city || '',
         country: initialData?.object.country || ''
     });
-
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -52,12 +46,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     const [filteredChimneyTypes, setFilteredChimneyTypes] = useState<ChimneyType[]>([]);
     const [editingChimney, setEditingChimney] = useState<ChimneyInput | null>(null);
     const [editingChimneyIndex, setEditingChimneyIndex] = useState<number | null>(null);
-    
-    const [addressSearch, setAddressSearch] = useState('');
-    const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
-    const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
-    const [searchingAddress, setSearchingAddress] = useState(false);
-    const API_KEY = process.env.EXPO_PUBLIC_MAPS_API_KEY;
+    const [showChimneyTypeModal, setshowChimneyTypeModal] = useState(false);
     const [chimneyFormData, setChimneyTypeFormData] = useState<{
         type: string;
         labelling: string;
@@ -65,106 +54,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         type: '',
         labelling: ''
     });
-    const [showChimneyTypeModal, setshowChimneyTypeModal] = useState(false);
-    const router = useRouter();
     
-    const searchGoogleAddress = async (text: string) => {
-        setAddressSearch(text);
-        handleChange("address", text);
-
-        if (text.length < 3) {
-            setAddressSuggestions([]);
-            setShowAddressSuggestions(false);
-            return;
-        }
-
-        setSearchingAddress(true);
-        try {
-            const response = await fetch(
-                `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${API_KEY}&components=country:sk&language=sk`
-            );
-            const data = await response.json();
-
-            if (data.predictions) {
-                setAddressSuggestions(data.predictions);
-                setShowAddressSuggestions(true);
-            }
-        } catch (error) {
-            console.error('Address search error:', error);
-        } finally {
-            setSearchingAddress(false);
-        }
-    };
-
-    const selectClientAddress = async (preselectedClient: Client) => {
-        if(preselectedClient.address){
-            const fullAddress = preselectedClient.address;
-            handleChange("address", fullAddress);
-            setAddressSearch(fullAddress);
-
-            if (preselectedClient.streetNumber) {
-                handleChange("streetNumber",preselectedClient.streetNumber);
-            }
-            if (preselectedClient.city) {
-                handleChange("city",preselectedClient.city);
-            } 
-            if (preselectedClient.country) {
-                handleChange("country",preselectedClient.country);
-            }
-        }
-        
-    }
-
-    const selectAddress = async (suggestion: any) => {
-        const fullAddress = suggestion.description;
-        handleChange("address", fullAddress);
-        setAddressSearch(fullAddress);
-        setShowAddressSuggestions(false);
-        
-        try {
-            const response = await fetch(
-                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${suggestion.place_id}&key=${API_KEY}&language=sk`
-            );
-            const data = await response.json();
-            
-            if (data.result && data.result.address_components) {
-               parseAddressComponents(data.result.address_components);
-            }
-        } catch (error) {
-            console.error('Error fetching place details:', error);
-        }
-    };
-
-    function parseAddressComponents(components: any[]) {
-        let street: string | null = null;
-        let number: string | null = null;
-        
-        components.forEach((component: any) => {
-            const types = component.types;
-            
-            if (types.includes('route')) {
-                street = component.long_name;
-            }
-            if (types.includes('street_number')) {
-                number = component.long_name;
-            }
-            if (types.includes('sublocality') || types.includes('locality')) {
-                handleChange("city",component.long_name)
-            }
-            if (types.includes('country')) {
-                handleChange("country",component.long_name)
-            }
-        });
-        
-        if (street && number) {
-            handleChange("streetNumber",`${street} ${number}`);
-        } else if (street) {
-            handleChange("streetNumber",street);
-        } else if (number) {
-            handleChange("streetNumber",number);
-        }
-    };
-
     useEffect(() => {
         fetchChimneyTypes();
         if (initialData){
@@ -184,12 +74,18 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                 setSelectedChimneys(initialData.chimneys);
             }
         }
-        else if (preselectedClient){
-            setSelectedClient(preselectedClient);
-            setFormData(prev => ({...prev, client_id: preselectedClient.id}));
-        }
-    }, [initialData, preselectedClient]);
-    
+    }, [initialData]);
+
+    const client = useClientStore(
+        s => s.clients.find(c => c.id === preselectedClient)
+    );
+
+    useEffect(() => {
+        if (!client || initialData) return;
+        setSelectedClient(client);
+        setFormData(prev => ({ ...prev, client_id: client.id }));
+      }, [client, initialData]);
+
     const handleChange = (field: keyof Omit<ObjectType, "id">, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
         if(errors[field]){
@@ -200,6 +96,16 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             });
         }
     };
+
+    const {
+        addressSearch,
+        addressSuggestions,
+        showAddressSuggestions,
+        searchingAddress,
+        searchGoogleAddress,
+        selectClientAddress,
+        selectAddress
+    } = useGoogleSearchAddress<Omit<ObjectType, "id">>(handleChange);
 
     async function fetchChimneyTypes() {
         try{
@@ -218,12 +124,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             console.error("Error fetching chimneys: ", error);
         }
     }
-
-    const clientIsPreselected = () : boolean => {
-        if (preselectedClient)
-            return true;
-        return false;
-    };
 
     const handleSearchClient = useCallback((text: string) => {
         setSearchQuery(text);
@@ -534,7 +434,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         }
     };
 
-
     const validateNewChimneyType = () : boolean => {
         const newErrors : Record<string, string> = {};
 
@@ -624,12 +523,12 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     <View className="mb-3">
                         <View>
 
-                            {clientIsPreselected() &&
+                            {preselectedClient &&
                                 <Body className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-700 text-white">
                                     {selectedClient?.name}
                                 </Body>
                             }
-                            {!clientIsPreselected() && (
+                            {!preselectedClient && (
                                 <FormInput
                                     label="Klient"
                                     value={searchQuery}
@@ -640,15 +539,16 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                     focusedField={focusedField}
                                     setFocusedField={setFocusedField}
                                     autoCapitalize="words"
+                                    containerClassName=" "
                                 />
                             )}
-                            {loadingClients && (!clientIsPreselected()) && (
+                            {loadingClients && !preselectedClient && (
                                 <View className="absolute right-4 top-4">
                                     <Body className="text-gray-400">🔍</Body>
                                 </View>
                             )}
 
-                            {clientSuggestions && (!clientIsPreselected()) && clientSuggestions.length > 0 && (
+                            {clientSuggestions && !preselectedClient && clientSuggestions.length > 0 && (
                                 <View className="border-2 border-gray-300 rounded-xl mt-1 bg-gray-300 max-h-60">
                                     <ScrollView className="border-b rounded-xl border-gray-300">
                                         {clientSuggestions.map((item) => (
@@ -679,11 +579,12 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                 focusedField={focusedField}
                                 setFocusedField={setFocusedField}
                                 autoCapitalize="words"
+                                containerClassName=" "
                             />
                             {/* Text button, use clients address */}
-                            {preselectedClient && !searchingAddress && !formData.address && (
+                            {client && !searchingAddress && !formData.address && (
                                 <TouchableOpacity className="ml-2 mt-2"
-                                onPress={() => selectClientAddress(preselectedClient)}
+                                onPress={() => selectClientAddress(client)}
                                 >
                                     <Caption className="text-dark-text_color text-xs">
                                         Použiť adresu klienta ako adresu objektu?

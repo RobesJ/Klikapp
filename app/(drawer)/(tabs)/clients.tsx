@@ -2,10 +2,11 @@ import { AnimatedScreen } from "@/components/animatedScreen";
 import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/cards/clientCard";
 import { NotificationToast } from "@/components/notificationToast";
-import { Body, Heading1 } from "@/components/typografy";
+import { Body, Heading1 } from "@/components/typography";
 import { useAuth } from "@/context/authContext";
 import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
+import { FONT_SIZES } from "@/utils/responsive";
 import { EvilIcons } from "@expo/vector-icons";
 import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from "expo-router";
@@ -13,7 +14,6 @@ import debounce from "lodash.debounce";
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FONT_SIZES } from "../../../utils/responsive";
 
 export default function Clients() {
   const [showDetails, setShowDetails] = useState(false);
@@ -37,7 +37,7 @@ export default function Clients() {
   useFocusEffect(
     useCallback(() => {
       fetchClients(50);
-    }, [fetchClients])
+    }, [fetchClients]),  // clients.length, selectedClient?.objectsCount, selectedClient?.projectsCount])
   );
   
   const handleModalVisibility = (client: Client, value: boolean) => {
@@ -103,7 +103,7 @@ export default function Clients() {
           <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4">
             <EvilIcons name="search" size={20} color="gray" />
             <TextInput
-              className="flex-1 ml-2 text-dark-text_color"
+              className="ml-2 text-dark-text_color py-3"
               style={inputStyle}
               placeholder='Vyhladajte klienta...'
               placeholderTextColor="#9CA3AF"
@@ -118,7 +118,7 @@ export default function Clients() {
         <FlatList
           data={searchText.length > 0 ? filteredClients : clients }
           keyExtractor={(item) => item.id}
-          extraData={clients}
+          //extraData={clients}
           renderItem={({item}) =>(
             <ClientCard
                 key={item.id}

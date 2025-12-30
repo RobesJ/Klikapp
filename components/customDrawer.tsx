@@ -3,7 +3,7 @@ import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
 import { TouchableOpacity, View } from 'react-native';
-import { Body, BodyLarge, BodySmall, Caption } from './typografy';
+import { Body, BodyLarge, BodySmall, Caption } from './typography';
 
 export default function CustomDrawerContent(props: any) {
   const router = useRouter();

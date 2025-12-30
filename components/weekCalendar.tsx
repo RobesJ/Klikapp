@@ -2,7 +2,7 @@ import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useEffect, useState } from "react";
 import { TouchableOpacity, useWindowDimensions, View } from "react-native";
-import { BodyLarge, Caption, Heading1, Heading3 } from "./typografy";
+import { BodyLarge, Caption, Heading1, Heading3 } from "./typography";
 
 interface WeekCalendarProps {
     selectedDay: Date;
