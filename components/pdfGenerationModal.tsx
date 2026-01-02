@@ -61,7 +61,13 @@ export default function PdfGenerationModal({
 
                   {/* Header */}
                   <View className="flex-row justify-end p-4 border-b border-gray-700">
-                    <TouchableOpacity onPress={onCloseSimple}>
+                    <TouchableOpacity onPress={() => {
+                      setPdfStep("choice");
+                      setSelectedChimneyId(null);
+                      setChimneySums({});
+                      setFocusedField(null);
+                      onCloseSimple();
+                    }}>
                       <EvilIcons name="close" size={28} color="white" />
                     </TouchableOpacity>
                   </View>
@@ -79,8 +85,13 @@ export default function PdfGenerationModal({
                         {/* NO RECEIPT */}
                         <TouchableOpacity
                           className="bg-gray-700 rounded-xl p-4 mb-4"
-                          onPress={() => handlePdfGeneration("cleaning")}
-                         
+                          onPress={() => {
+                            handlePdfGeneration("cleaning");
+                            setPdfStep("choice");
+                            setSelectedChimneyId(null);
+                            setChimneySums({});
+                            setFocusedField(null);
+                          }}
                         >
                           <Body className="text-white text-center">
                             Len {chimneyCount > 1 ? "správy" : "správa"} (bez PPD)
@@ -167,7 +178,13 @@ export default function PdfGenerationModal({
                         <TouchableOpacity
                           className="bg-blue-600 rounded-xl p-4 mt-6"
                           disabled={isGenerating}
-                          onPress={() => handlePdfGeneration("cleaningWithPaymentReceipt", selectedChimneyId)}
+                          onPress={() => {
+                            handlePdfGeneration("cleaningWithPaymentReceipt", selectedChimneyId)
+                            setPdfStep("choice");
+                            setSelectedChimneyId(null);
+                            setChimneySums({});
+                            setFocusedField(null);
+                          }}
                         >
                           <Body className="text-white text-center font-semibold">
                             {isGenerating ? "Generujem..." : "Generovať"}
@@ -221,7 +238,13 @@ export default function PdfGenerationModal({
                         <TouchableOpacity
                           className="bg-blue-600 rounded-xl p-4 mt-4"
                           disabled={isGenerating}
-                          onPress={() => handlePdfGeneration("cleaningWithPaymentReceipt")}
+                          onPress={() => {
+                            handlePdfGeneration("cleaningWithPaymentReceipt");
+                            setPdfStep("choice");
+                            setSelectedChimneyId(null);
+                            setChimneySums({});
+                            setFocusedField(null);
+                          }}
                         >
                           <Body className="text-white text-center font-semibold">
                             {isGenerating ? "Generujem..." : "Generovať všetky"}

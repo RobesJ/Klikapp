@@ -62,7 +62,7 @@ export default function Home() {
         await Promise.all([
           fetchAvailableUsers(),
           useClientStore.getState().fetchClients(30),
-          useObjectStore.getState().fetchObjects(10),
+          useObjectStore.getState().fetchObjects(15),
           fetchPlannedProjects()
         ]);
       }
@@ -290,7 +290,7 @@ export default function Home() {
       {selectedProject && (
         <ProjectDetails 
           key={selectedProject.project.id}
-          projectWithRelations={selectedProject}
+          projectWithRelationsID={selectedProject.project.id}
           visible={showDetails}
           onClose={()=> {
             setShowDetails(false);

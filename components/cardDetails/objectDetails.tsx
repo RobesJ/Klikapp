@@ -331,7 +331,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
                   params: { 
                     object: JSON.stringify(objectWithRelations), 
                     mode: "edit",
-                    preselectedClient: JSON.stringify(objectWithRelations.client)
+                    preselectedClientID: objectWithRelations.client.id
                   }
                 });
               }}

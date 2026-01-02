@@ -4,16 +4,16 @@ import ObjectCard from '@/components/cards/objectCard';
 import { NotificationToast } from '@/components/notificationToast';
 import { Body, BodyLarge, Heading1 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';
-import { useObjectStore } from '@/store/objectStore';
-import { Client } from '@/types/generics';
+import { ObjectSection, useObjectStore } from '@/store/objectStore';
 import { ObjectWithRelations } from '@/types/objectSpecific';
 import { FONT_SIZES } from '@/utils/responsive';
 import { EvilIcons } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
-import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
+import { FlashList } from "@shopify/flash-list";
+import { useNavigation, useRouter } from 'expo-router';
 import debounce from 'lodash.debounce';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { SectionList, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
+import { TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Objects() {
@@ -26,54 +26,24 @@ export default function Objects() {
 
   const {
     loading,
-    objects,
+    groupedObjects,
+    filteredGroupedObjects,
     loadMore,
     fetchObjects,
     clearFilters,
     setFilters,
-    filteredObjects,
     unlockObject
   } = useObjectStore();
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchObjects(50);
-    }, [fetchObjects])
-  );
+  useEffect(() => {
+    return () => {
+      clearFilters();
+    };
+  }, [clearFilters]);
 
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        clearFilters();
-        setFilters({searchQuery: ''});
-      }
-    }, [clearFilters, setFilters])
-  );
-  
-  const sections = useMemo(() => {
-    const source = filteredObjects.length > 0 ? filteredObjects : objects;
-    const map = new Map<
-      string,
-      {
-        client: Client;
-        data: ObjectWithRelations[];
-      }
-    >();
-
-    source.forEach(o => {
-      if (!o.client.id) return;
-
-      if(!map.has(o.client.id)) {
-        map.set(o.client.id, {
-          client: o.client,
-          data: [],
-        });
-      }
-      map.get(o.client.id)!.data.push(o);
-    });
-
-    return Array.from(map.values());
-  },[objects, filteredObjects]);
+  const displayedGroups = useMemo(() => {
+    return searchText.trim() ? filteredGroupedObjects : groupedObjects;
+  }, [searchText, filteredGroupedObjects, groupedObjects]);
 
 
   const handleModalVisibility = (objectData: ObjectWithRelations, value: boolean) =>{
@@ -82,11 +52,18 @@ export default function Objects() {
   };
 
   const handleRefresh = () => {
-    fetchObjects(50);
+    fetchObjects(30);
   };
 
+  const handleLoadMore = useCallback(() => {
+    if (!loading) {
+      loadMore();
+    }
+  }, [loading, loadMore]);
+
   const debounceSearch = useMemo(() => {
-    const debouncedFn = debounce((text: string) => setFilters({searchQuery: text}), 300);
+    const debouncedFn = debounce((text: string) => 
+      setFilters({searchQuery: text}), 300);
     return debouncedFn;
   }, [setFilters]);
 
@@ -113,29 +90,6 @@ export default function Objects() {
     }
     setSelectedObject(null);
   };
-
-  const objectsGroupedByClient = useMemo(() => {
-    const groups: Record< string, {client: Client; objects: ObjectWithRelations[]}> ={};
-
-    const objectsToGroup = filteredObjects.length > 0 ? filteredObjects : objects;
-    objectsToGroup.forEach(o => {
-
-      if (!o.client || !o.client.id){
-        console.warn("Object missing client data:", o);
-        return;
-      }
-      const clientId = o.client.id;
-
-      if (!groups[clientId]){
-        groups[clientId] ={
-          client: o.client,
-          objects: []
-        };
-      }
-      groups[clientId].objects.push(o);
-    });
-    return Object.values(groups);
-  }, [filteredObjects, objects]);
   
   const inputStyle = useMemo((): TextStyle => {
     const size = FONT_SIZES["lg"];
@@ -144,6 +98,31 @@ export default function Objects() {
       lineHeight: size * 1.4,
     };
   },[]);
+
+
+  const renderItem = useCallback(({ item }: { 
+    item: ObjectSection;
+  }) => {
+    return (
+      <View className="bg-dark-card-bg rounded-2xl mb-4 overflow-hidden border border-dark-card-border_color">
+          <View className="px-4 py-2 bg-dark-card-bg">
+            <BodyLarge className="font-bold text-lg text-dark-text_color">
+              {item.title}
+            </BodyLarge>
+          </View>
+        {item.data.map(obj => (
+         <View key={obj.object.id} className="px-4 pt-1 border-b border-dark-card-border_color last:border-b-0">
+           <ObjectCard
+              object={obj.object}
+              chimneys={obj.chimneys}
+              client={obj.client}
+              onPress={() => handleModalVisibility(obj, true)}
+            />
+        </View>
+        ))}
+      </View>
+    );
+  }, []);
   
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
@@ -175,99 +154,23 @@ export default function Objects() {
         </View>
         <NotificationToast/>
       </View>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.object.id}
-        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
-        
-        onEndReached={loadMore}
-        onRefresh={handleRefresh}
-        refreshing={loading}
-        
-        renderSectionHeader={({ section }) => (
-          <View className="mb-3 pb-4 bg-dark-card-bg border-2 rounded-2xl border-dark-card-border_color">
-            {/* Client Header */}
-            <View className="rounded-t-xl px-4 py-2">
-              <BodyLarge className="font-bold text-lg text-dark-text_color">
-                {section.client.name} ({section.data.length})
-              </BodyLarge>
-            </View>
-          </View>
-        )}
-      
-        renderItem={({ item, section, index }) => {
-          const isFirst = index === 0;
-          const isLast = index === section.data.length - 1;
-        
-          return (
-            <View
-              className={`px-2 ${
-                isLast ? 'mb-3' : ''
-              }`}
-            >
-              <ObjectCard
-                object={item.object}
-                chimneys={item.chimneys}
-                client={item.client}
-                onPress={() => handleModalVisibility(item, true)}
-              />
-            </View>
-          );
-        }}
-      
-        ListEmptyComponent={
-          loading ? (
-            <Body className="text-center text-gray-500 mt-10">
-              Načítavam...
-            </Body>
-          ) : (
-            <Body className="text-center text-gray-500 mt-10">
-              Žiadne objekty
-            </Body>
-          )
-        }
-      />
-      {/*
-      <FlatList
-        data={objectsGroupedByClient}
-        keyExtractor={(group) => group.client.id}
-        //extraData={objects.length}
-        renderItem={({ item: group }) => (
-          <View className="mb-3 pb-4 bg-dark-card-bg border-2 rounded-2xl border-dark-card-border_color">
-            {/* Section Header *
-            <View className="rounded-t-xl px-4 py-2">
-              <BodyLarge className="font-bold text-lg text-dark-text_color">
-                {group.client.name} ({group.objects.length})
-              </BodyLarge>
-            </View>
 
-            {/* Objects List *
-            <View className="mt-2 px-2">
-              {group.objects.map((item) => (
-                <View key={item.object.id} >
-                  <ObjectCard
-                    key={item.object.id}
-                    object={item.object}
-                    chimneys={item.chimneys}
-                    client={item.client}
-                    onPress={() => handleModalVisibility(item, true)}
-                  />
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
-        onEndReached={loadMore}
-        onRefresh={handleRefresh}
+      <FlashList
+        data={displayedGroups}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
         refreshing={loading}
+        onRefresh={handleRefresh}
+        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
         ListEmptyComponent={
-          loading 
-          ? ( <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>)
-          : ( <Body className="text-center text-gray-500 mt-10">Žiadne objekty</Body>)
+          loading
+            ? <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
+            : <Body className="text-center text-gray-500 mt-10">Žiadne objekty</Body>
         }
       />
-      */}
+      {/* Create new Object button */}
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => router.push({
@@ -289,7 +192,7 @@ export default function Objects() {
           onCloseWithUnlock={handleCloseWithUnlock}
         />
       )}
-      </AnimatedScreen>
+     </AnimatedScreen>
     </SafeAreaView>
   );
 }

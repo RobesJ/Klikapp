@@ -64,7 +64,7 @@ export default function AddObjectScreen() {
           mode={(mode as "create" | "edit") || "create"}
           initialData={parsedObject}
           onSuccess={handleSuccess}
-          preselectedClient={parsedClientID}
+          preselectedClientID={parsedClientID}
         />  
     </SafeAreaView>
   );

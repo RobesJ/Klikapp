@@ -15,10 +15,10 @@ interface ObjectFormProps {
     mode: "create" | "edit";
     initialData?: ObjectWithRelations;
     onSuccess?: (object: any) => void;
-    preselectedClient?: string;
+    preselectedClientID?: string;
 }
 
-export default function ObjectForm({ mode, initialData, onSuccess, preselectedClient} : ObjectFormProps) {
+export default function ObjectForm({ mode, initialData, onSuccess, preselectedClientID} : ObjectFormProps) {
 
     const [formData, setFormData] = useState<Omit<ObjectType, "id"> & {id?: string}>({
         client_id: initialData?.client.id || '',
@@ -68,6 +68,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
 
             if (initialData.client){
                 setSelectedClient(initialData.client);
+                setSearchQuery(initialData.client.name);
             }
 
             if (initialData.chimneys){
@@ -77,7 +78,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
     }, [initialData]);
 
     const client = useClientStore(
-        s => s.clients.find(c => c.id === preselectedClient)
+        s => s.clients.find(c => c.id === preselectedClientID)
     );
 
     useEffect(() => {
@@ -523,12 +524,12 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     <View className="mb-3">
                         <View>
 
-                            {preselectedClient &&
+                            {client &&
                                 <Body className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-700 text-white">
                                     {selectedClient?.name}
                                 </Body>
                             }
-                            {!preselectedClient && (
+                            {!client && (
                                 <FormInput
                                     label="Klient"
                                     value={searchQuery}
@@ -542,13 +543,13 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                     containerClassName=" "
                                 />
                             )}
-                            {loadingClients && !preselectedClient && (
+                            {loadingClients && !client && (
                                 <View className="absolute right-4 top-4">
                                     <Body className="text-gray-400">🔍</Body>
                                 </View>
                             )}
 
-                            {clientSuggestions && !preselectedClient && clientSuggestions.length > 0 && (
+                            {clientSuggestions && !client && clientSuggestions.length > 0 && (
                                 <View className="border-2 border-gray-300 rounded-xl mt-1 bg-gray-300 max-h-60">
                                     <ScrollView className="border-b rounded-xl border-gray-300">
                                         {clientSuggestions.map((item) => (
