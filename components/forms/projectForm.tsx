@@ -1,22 +1,21 @@
+import { useProjectSubmit } from "@/hooks/submitHooks/useProjectSubmit";
+import { useSearchClient } from "@/hooks/useSearchClient";
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
-import { useNotificationStore } from "@/store/notificationStore";
 import { useProjectStore } from "@/store/projectStore";
-import { Client, Project, User } from "@/types/generics";
+import { Project, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-    FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView,
-    TouchableOpacity, View, useWindowDimensions
-} from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { BadgeSelector, ModalSelector, STATE_OPTIONS, TYPE_OPTIONS } from "../badge";
 import { FormInput } from "../formInput";
+import ObjectPickerModal from "../modals/objectPickerModal";
+import UserPickerModal from "../modals/userPickerModal";
 import ModernDatePicker from "../modernDatePicker";
-import { Body, BodySmall, Caption, Heading1, Heading3 } from "../typography";
-import UserPickerModal from "../userPickerModal";
+import { Body, Heading1 } from "../typography";
 
 interface ProjectFormProps{
     mode: "create" | "edit";
@@ -37,15 +36,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         note: initialData?.project.note ?? "",
       });
 
-    const [loading, setLoading] = useState(false);
+    const router = useRouter();
+    const { width } = useWindowDimensions();
+    const { availableUsers, fetchAvailableUsers } = useProjectStore();
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [focusedField, setFocusedField] = useState<string | null>(null);
-
-    const [clientSuggestions, setClientSuggestions] = useState<Client[]>([]);
-    const [loadingClients, setLoadingClients] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedClient, setSelectedClient] = useState<Client | null>(initialData?.client ?? null);
-    const [timerId, setTimerId] = useState<number>();
 
     const [selectedType, setSelectedType] = useState(initialData?.project.type ?? "");
     const [selectedState, setSelectedState] = useState(initialData?.project.state ?? "");
@@ -61,42 +56,34 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [loadingObjects, setLoadingObjects] = useState(false);
     const [selectedObjects, setSelectedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
     const [showObjectModal, setShowObjectModal] = useState(false);
-    const router = useRouter();
-    const { width } = useWindowDimensions();
-    const { availableUsers, fetchAvailableUsers } = useProjectStore();
-    let oldState: string | null = initialData ? initialData.project.state : null;
+    let oldState: string = initialData ? initialData.project.state : '';
+    const {loading, submitProject } = useProjectSubmit({mode, oldState, initialData, onSuccess}); 
 
     useEffect(() => {
-        if (initialData){
-            setFormData({
-                client_id: initialData?.client.id,
-                type: initialData?.project.type,
-                state: initialData?.project.state,
-                scheduled_date: initialData?.project.scheduled_date ?? null,
-                start_date: initialData?.project.start_date ?? null,
-                completion_date: initialData?.project.completion_date ?? null,
-                note: initialData?.project.note ?? "",
-              });
-          
-            if (initialData.project.scheduled_date){
-                const parsedDate = new Date(initialData.project.scheduled_date);
-                setScheduledDate(parsedDate);
-            }
-            if (initialData.project.start_date){
-                const parsedDate = new Date(initialData.project.start_date);
-                setStartDate(parsedDate);
-            }
-            if (initialData.project.completion_date){
-                const parsedDate = new Date(initialData.project.completion_date);
-                setCompletionDate(parsedDate);
-            }
-            if (initialData.users && initialData.users.length > 0){
-                setSelectedUsers(initialData.users);
-            }
-            if (initialData.objects && initialData.objects.length > 0){
-                setAssignedObjects(initialData.objects);
-            }
-        }
+        if (!initialData) return;
+
+        setFormData({
+            client_id: initialData?.client.id,
+            type: initialData?.project.type,
+            state: initialData?.project.state,
+            scheduled_date: initialData?.project.scheduled_date ?? null,
+            start_date: initialData?.project.start_date ?? null,
+            completion_date: initialData?.project.completion_date ?? null,
+            note: initialData?.project.note ?? "",
+        });
+        
+        const dates = {
+            scheduled: initialData.project.scheduled_date,
+            start: initialData.project.start_date,
+            completion: initialData.project.completion_date
+        };
+
+        if (dates.scheduled)  setScheduledDate(new Date(dates.scheduled));
+        if (dates.start)      setStartDate(new Date(dates.start));
+        if (dates.completion) setCompletionDate(new Date(dates.completion));
+       
+        if (initialData.users?.length > 0) setSelectedUsers(initialData.users);
+        if (initialData.objects?.length > 0) setAssignedObjects(initialData.objects);
     }, [initialData]);
 
     const client = useClientStore(
@@ -127,68 +114,16 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
     };
     
-    const handleSearchClient = (text: string) => {
-        setSearchQuery(text);
-        
-        if(timerId) {
-            clearTimeout(timerId);
-        }
-        const timer = window.setTimeout(() => {
-            searchClient(text);
-        }, 300);
-
-        setTimerId(timer);
-    };
-
-    async function searchClient(query: string) {
-        if (query.trim().length < 2){
-            setClientSuggestions([]);
-            return;
-        }
-        setLoadingClients(true);
-        try{
-            const { data, error } = await supabase
-                .from("clients")
-                .select("*")
-                .or(`name.ilike.%${query}%`)
-                .order("name")
-                .limit(20);
-
-            if (error) throw error;
-            setClientSuggestions(data || []);
-        } 
-        catch(error: any){
-            console.error("Chyba: ", error.message);
-            setClientSuggestions([]);
-        }
-        finally{
-            setLoadingClients(false);
-        }
-    }
-
-    const handleSelectedClient = (client: Client) => {
-        setSelectedClient(client);
-        setSearchQuery(client.name);
-        setClientSuggestions([]);
-        setFormData(prev => ({ ...prev, client_id: client.id}));
-
-        if (errors.client_id){
-            setErrors(prev => {
-                const newErrors = {...prev};
-                delete newErrors.client_id;
-                return newErrors;
-            });
-        }
-
-        if (errors.objects){
-            setErrors(prev => {
-                const newErrors = {...prev};
-                delete newErrors.objects;
-                return newErrors;
-            });
-        }
-    };
-
+    const {
+        handleSearchClient,
+        handleSelectedClient,
+        clientSuggestions,
+        loadingClients,
+        searchQuery,
+        selectedClient,
+        setSelectedClient
+    } = useSearchClient<Omit<Project, "id">>(handleChange);
+    
     const validate = () : boolean => {
         const newErrors: Record<string, string> = {};
 
@@ -210,215 +145,16 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         return Object.keys(newErrors).length === 0;
     };
 
-
     const handleSubmit = async () => {
         if(!validate()){
             return;
         }
-
-        setLoading(true);
         try {
-            const cleanedFormData = {
-                ...formData,
-                scheduled_date: formData.scheduled_date || null,
-                start_date: formData.start_date || null,
-                completion_date: formData.completion_date || null
-            }
-            let projectID : string; 
-            if (mode === "create"){
-                console.log("creating project");
-                const {data: projectData, error: projectError} = await supabase
-                .from('projects')
-                .insert([cleanedFormData])
-                .select()
-                .single();
-                
-                if (projectError) throw projectError;
-                projectID = projectData.id;
-                if(selectedUsers.length > 0){
-                    const usersProjectRelations = selectedUsers.map(user => ({
-                        project_id: projectID,
-                        user_id: user.id,
-                    }));
-
-                    const {error: usersError } = await supabase
-                    .from("project_assignments")
-                    .insert(usersProjectRelations);
-
-                    if (usersError) throw usersError;
-                }
-                
-                if(selectedObjects.length > 0){
-                    const objectProjectRelations = selectedObjects.map(object => ({
-                        project_id: projectID,
-                        object_id: object.object.id
-                    }));
-
-                    const {error: objectError } = await supabase
-                        .from("project_objects")
-                        .insert(objectProjectRelations);
-
-                    if (objectError) throw objectError;
-                }
-
-                const { data: completeProject, error: fetchError } = await supabase
-                    .from("projects")
-                    .select(`
-                        *,
-                        clients(*),
-                        project_assignments (
-                            user_profiles (id, name, email)
-                        ),
-                        project_objects(
-                            objects(
-                                id,
-                                client_id,
-                                address,
-                                city,
-                                streetNumber,
-                                country,
-                                chimneys(
-                                    id,
-                                    chimney_types (id, type, labelling),
-                                    placement,
-                                    appliance,
-                                    note
-                                )
-                            )
-                        )
-                    `)
-                    .eq("id", projectID)
-                    .single();
-                
-                if (fetchError) throw fetchError;
-                onSuccess?.(completeProject);
-            }
-            else { 
-                // check the oldState and check/change date values
-                if(oldState && oldState !== cleanedFormData.state){
-                    if (cleanedFormData.state === "Nový"){
-                        cleanedFormData.start_date = null;
-                        cleanedFormData.completion_date = null;
-                    }
-                    else if (["Prebieha", "Pozastavený", "Naplánovaný"].includes(cleanedFormData.state)){
-                        if (oldState === "Nový"){
-                            cleanedFormData.start_date ? cleanedFormData.start_date : new Date().toISOString().split('T')[0]; 
-                        }
-                        else if (["Ukončený","Zrušený"].includes(oldState)){
-                          cleanedFormData.completion_date = null;
-                        }
-                    }
-                    else if (["Ukončený","Zrušený"].includes(cleanedFormData.state)){
-                      if (!["Ukončený","Zrušený"].includes(oldState)){
-                          cleanedFormData.completion_date ? cleanedFormData.completion_date : new Date().toISOString().split('T')[0]; 
-                      }
-                    }
-                }
-
-                const {data: projectData, error: projectError} = await supabase
-                .from('projects')
-                .update(cleanedFormData)
-                .eq('id', initialData?.project.id)
-                .select()
-                .single()
-
-                if (projectError) throw projectError;
-                projectID = projectData.id;
-
-                const { error: deleteError } = await supabase
-                    .from("project_assignments")
-                    .delete()
-                    .eq("project_id", projectID);
-                if (deleteError) throw deleteError;
-
-                const { error: deleteObjectError } = await supabase
-                    .from("project_objects")
-                    .delete()
-                    .eq("project_id", projectID);
-                if (deleteObjectError ) throw deleteObjectError ;
-
-                if(selectedUsers.length > 0){
-                    const usersProjectRelations = selectedUsers.map(user => ({
-                        project_id: projectID,
-                        user_id: user.id,
-                    }));
-    
-                    const {error: usersError } = await supabase
-                        .from("project_assignments")
-                        .insert(usersProjectRelations);
-    
-                    if (usersError) throw usersError;
-                }
-               
-                if(selectedObjects.length > 0){
-                    const objectsProjectRelations = selectedObjects.map(object => ({
-                        project_id: projectID,
-                        object_id: object.object.id,
-                    }));
-    
-                    const {error: objectsError } = await supabase
-                        .from("project_objects")
-                        .insert(objectsProjectRelations);
-    
-                    if (objectsError) throw objectsError;
-                }
-
-                const { data: completeProject, error: fetchError } = await supabase
-                    .from("projects")
-                    .select(`
-                        *,
-                        clients(*),
-                        project_assignments (
-                            user_profiles (id, name, email)
-                        ),
-                        project_objects(
-                            objects(
-                                id,
-                                client_id,
-                                address,
-                                city,
-                                streetNumber,
-                                country,
-                                chimneys(
-                                    id,
-                                    chimney_types (id, type, labelling),
-                                    placement,
-                                    appliance,
-                                    note
-                                )
-                            )
-                        )
-                    `)
-                    .eq("id", projectID)
-                    .single();
-                
-                if (fetchError) throw fetchError;
-
-                onSuccess?.(completeProject);
-            }
+            await submitProject(formData, selectedUsers, selectedObjects);
         }
-        catch (error: any){
-            console.error("Chyba pri ukladaní projektu: ", error);
-            if (mode === "create"){
-                useNotificationStore.getState().addNotification(
-                    'Nepodarilo sa vytvoriť projekt',
-                    'error',
-                    4000
-                );
-            }
-            else{
-                useNotificationStore.getState().addNotification(
-                    'Nepodarilo sa upraviť projekt',
-                    'error',
-                    4000
-                );
-            }
-        }
-        finally{
-            setLoading(false);
-        }
+        catch (error){}
     };
-
+    
     const handleSelectedType = (type: string) => {
         setSelectedType(type);
         setFormData(prev => ({...prev, type: type}));
@@ -448,32 +184,26 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     };
 
 
-    const handleToggleUser = async (user_id: string) => {
-        const user = availableUsers.find(u => u.id === user_id);
-        if (!user) {
-            console.error("User not found in availableUsers");
-            return;
-        }
-
+    const handleToggleUser = async (userId: string) => {
         setSelectedUsers(prev => {
-            const isSelected = prev.some(u => u.id === user_id);
+            const isSelected = prev.some(u => u.id === userId);
             
             if (isSelected) {
-                return prev.filter(u => u.id !== user_id);
+                return prev.filter(u => u.id !== userId);
             } else {
+                const user = availableUsers.find(u => u.id === userId);
+                if(!user){
+                    console.error("User not found in availableUsers");
+                    return prev;
+                }
                 return [...prev, user];
             }
         });
     };
 
-    //const isUserSelected = (userId: string): boolean => {
-    //    return selectedUsers.some(c => c.id === userId);
-    //};
-
     const handleRemoveUser = (userId: string) => {
         setSelectedUsers(prev => prev.filter(c => c.id !== userId));
     };
-
 
     async function getAssignedObjects(): Promise<boolean> {
         if(!formData.client_id) {
@@ -552,25 +282,24 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         finally{
             setLoadingObjects(false);
         }
-    }
-
-    const handleToggleObject = (object: ObjectWithRelations) => {
-        setSelectedObjects(prev => {
-            // Check if already selected
-            const isSelected = prev.some(c => c.object.id === object.object.id);
-            
-            if (isSelected) {
-                // Remove it
-                return prev.filter(c => c.object.id !== object.object.id);
-            } else {
-                // Add it
-                return [...prev, object];
-            }
-        });
     };
 
-    const isObjectSelected = (objectId: string): boolean => {
-        return selectedObjects.some(c => c.object.id === objectId);
+    const handleToggleObject = async (objectId: string) => {
+        setSelectedObjects(prev => {
+            const isSelected = prev.some(o => o.object.id === objectId);
+            
+            if (isSelected) {
+                return prev.filter(o => o.object.id !== objectId);
+            } 
+            else {
+                const user = selectedObjects.find(o => o.object.id === objectId);
+                if (!user) {
+                    console.error("Object not found in selectedObjects");
+                    return prev;
+                }
+                return [...prev, user];
+            }
+        });
     };
 
     const handleRemoveObject = (objectId: string) => {
@@ -694,11 +423,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         onChange={handleScheduledDate}
                         error={errors.scheduledDate}
                     />
-                    {errors.dates && (
+                    {/*errors.dates && (
                         <Body className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.dates}
                         </Body>
-                    )}
+                    )*/}
                 </View>
 
                 {/* Project start field */}
@@ -709,11 +438,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         onChange={handleStartdDate}
                         error={errors.startDate}
                     />
-                    {errors.dates && (
+                    {/*errors.dates && (
                         <Body className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.dates}
                         </Body>
-                    )}
+                    )*/}
                 </View>
 
                 {/* Project completion field*/}
@@ -724,11 +453,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         onChange={handleCompletionDate}
                         error={errors.completionDate}
                     />
-                    {errors.completionDate && (
+                    {/*errors.completionDate && (
                         <Body className='text-red-500 font-semibold ml-2 mt-1'>
                             {errors.completionDate}
                         </Body>
-                    )}
+                    )*/}
                 </View>
 
                 {/* note input*/}
@@ -868,12 +597,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 disabled={loading}
                 className="bg-blue-600 rounded-xl py-4 items-center px-12">
                 <Body className="color-primary font-bold">
-                    {mode === "create" 
-                    ? (loading 
-                        ? "Vytvaram..." 
-                        : "Vytvoriť projekt") 
-                    : (loading 
-                        ? "Upravujem..." : "Upraviť projekt")}
+                    {
+                    mode === "create" 
+                        ? (loading ? "Vytvaram..."  : "Vytvoriť projekt") 
+                        : (loading ? "Upravujem..." : "Upraviť projekt")
+                    }
                 </Body>
             </TouchableOpacity>
         </View>
@@ -887,74 +615,13 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
           onToggle={handleToggleUser}
         />
 
-        {/* Object Selection Modal */}
-        <Modal
+        <ObjectPickerModal
             visible={showObjectModal}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setShowObjectModal(false)}
-        >
-            <View className="flex-1 bg-black/50 justify-end">
-                <View className="bg-dark-bg rounded-t-3xl h-3/4">
-                    <View className="p-6 border-b border-gray-600">
-                        <View className="flex-row items-center justify-between mb-4">
-                            <View className="flex-1">
-                                <Heading3 className="text-xl font-bold text-dark-text_color">Vyhľadajte objekty</Heading3>
-                                <BodySmall className="text-sm text-gray-500">
-                                    {selectedObjects.length} vybraných
-                                </BodySmall>
-                            </View>
-                            <TouchableOpacity
-                                onPress={() => setShowObjectModal(false)}
-                                className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
-                            >
-                                <Body className="text-white">✓</Body>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                    {loadingObjects ? 
-                    (
-                        <View className="flex-1 items-center justify-center">
-                            <Body className="text-gray-500">Vyhľadávám...</Body>
-                        </View>
-                    ) : assignedObjects.length === 0 ? (
-                        <View className="flex-1 items-center justify-center">
-                            <Body className="text-gray-500">Žiadne objekty neboli nájdene</Body>
-                        </View>
-                    ) : (
-                        <FlatList
-                            data={assignedObjects}
-                            keyExtractor={(item) => item.object.id}
-                            renderItem={({ item }) => {
-                                const selected = isObjectSelected(item.object.id);
-                                return (
-                                    <TouchableOpacity
-                                        onPress={() => handleToggleObject(item)}
-                                        className={`px-6 py-4 border-b border-gray-100 ${selected ? 'bg-blue-50' : ''}`}
-                                    >
-                                        <View className="flex-row items-center justify-between">
-                                            <View className="flex-1">
-                                                
-                                                {item.object.address && (
-                                                    <BodySmall className="text-sm text-gray-500 mt-1">
-                                                        {item.object.address}
-                                                    </BodySmall>
-                                                )}
-                                            </View>
-                                            {selected && (
-                                                <View className="w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
-                                                    <Caption className="text-white text-xs">✓</Caption>
-                                                </View>
-                                            )}
-                                        </View>
-                                    </TouchableOpacity>
-                                );
-                            }}
-                        />
-                    )}
-                </View>
-            </View>
-        </Modal>
+            onClose={() => setShowObjectModal(false)}
+            onToggleObject={handleToggleObject}
+            selectedObjectIds={selectedObjects.map(o => o.object.id)}
+            assignedObjects={assignedObjects}
+        />
     </View>
     )
 }

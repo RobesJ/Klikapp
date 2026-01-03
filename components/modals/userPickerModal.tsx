@@ -1,6 +1,6 @@
 import { useProjectStore } from "@/store/projectStore";
 import { FlatList, Modal, TouchableOpacity, View } from "react-native";
-import { Body, BodySmall, Caption, Heading3 } from "./typography";
+import { Body, BodySmall, Caption, Heading3 } from "../typography";
 
 interface UserPickerModalProps {
   visible: boolean;

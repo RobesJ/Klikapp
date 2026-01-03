@@ -15,11 +15,12 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { ModalSelector, STATE_OPTIONS } from "../badge";
+import PdfGenerationModal from '../modals/pdfGenerationModal';
+import { PDF_Viewer } from '../modals/pdfViewer';
+import { PhotoViewer } from '../modals/photoViewer';
+import UserPickerModal from '../modals/userPickerModal';
 import { NotificationToast } from '../notificationToast';
-import PdfGenerationModal from '../pdfGenerationModal';
-import { PDF_Viewer } from '../pdfViewer';
 import { Body, BodyLarge, BodySmall, Caption, Heading3 } from '../typography';
-import UserPickerModal from '../userPickerModal';
 
 interface ProjectCardDetailsProps {
   projectWithRelationsID: string;
@@ -62,18 +63,18 @@ export default function ProjectDetails({
   const [pdfGenModalVisible, setpdfGenModalVisible] = useState(false);
   
   const [chimneySums, setChimneySums] = useState<Record<string, string[]>>({});
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  //const [focusedField, setFocusedField] = useState<string | null>(null);
   const { updateProject, addProject, deleteProject, availableUsers, lockProject } = useProjectStore();
   const { updateClientCounts } = useClientStore();
   
-  type PdfFlowStep =
-  | "choice"         
-  | "selectOne"       
-  | "inputAll"        
-  | "inputOne";       
-
-  const [pdfStep, setPdfStep] = useState<PdfFlowStep>("choice");
-  const [selectedChimneyId, setSelectedChimneyId] = useState<string | null>(null);
+  //type PdfFlowStep =
+  //| "choice"         
+  //| "selectOne"       
+  //| "inputAll"        
+  //| "inputOne";       
+//
+  //const [pdfStep, setPdfStep] = useState<PdfFlowStep>("choice");
+  //const [selectedChimneyId, setSelectedChimneyId] = useState<string | null>(null);
   
   useEffect(() => {
     fetchPhotos();
@@ -787,20 +788,17 @@ export default function ProjectDetails({
         users,
         objects: projectWithRelations.objects
       }, true);
-      //useNotificationStore.getState().addNotification(
-      //  `Stav projektu bol zmenený na: ${newState}`,
-      //  "success",
-      //  3000
-      //);
   
-    } catch (error: any) {
+    } 
+    catch (error: any) {
       console.error('Error updating project state:', error);
       useNotificationStore.getState().addNotification(
         "Nepodarilo sa upraviť stav projektu",
         "error",
         4000
       );
-    } finally {
+    } 
+    finally {
       setUpdatingState(false);
     }
   };
@@ -899,32 +897,17 @@ export default function ProjectDetails({
     }
   };
 
-  const goToNextPhoto = () => {
-    if (!selectedPhoto) return;
-    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id);
-    const nextIndex = (currentIndex + 1) % photos.length;
-    setSelectedPhoto(photos[nextIndex]);
-  };
-  
-  const goToPreviousPhoto = () => {
-    if (!selectedPhoto) return;
-    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id);
-    const previousIndex = currentIndex === 0 ? photos.length - 1 : currentIndex - 1;
-    setSelectedPhoto(photos[previousIndex]);
-  };
-
   const closePdfModal = () => {
     setpdfGenModalVisible(false);
-    setPdfStep("choice");
-    setSelectedChimneyId(null);
-    setFocusedField(null);
   };
 
-  const handleClosePdfViewer = () => {
+  const handleCloseViewer = () => {
     setShowPDFReports(false);
-    setPdfStep("choice");
+    setShowGallery(false);
     setSelectedPDF(null);
+    setSelectedPhoto(null);
   };
+
 
   const handlePdfGenerationWithClose = (type: "cleaningWithPaymentReceipt" | "cleaning", chimneyId?: string) =>{
     if(chimneyId){
@@ -933,7 +916,7 @@ export default function ProjectDetails({
     else{
       handleGeneratePDF(type);
     }
-    handleClosePdfViewer();
+    handleCloseViewer();
   };
 
   return (
@@ -1155,7 +1138,6 @@ export default function ProjectDetails({
                             }
                             else{
                               handleGeneratePDF("inspection");
-                              //console.log("calling handle gen pdf for inspection");
                             }
                           }}
                           disabled={isGenerating}
@@ -1266,78 +1248,16 @@ export default function ProjectDetails({
               onToggle={toggleUserAssign}
             />
 
+            {/* Photo Viewer Modal */}
             {selectedPhoto && (
-              <Modal
+              <PhotoViewer
                 visible={showGallery}
-                transparent={false}
-                animationType="slide"
-                onRequestClose={() => {
-                  setShowGallery(false);
-                  setSelectedPhoto(null);
-                }}
-              >
-                <View 
-                  className="pt-12 pb-4 px-6 border-b border-gray-700 bg-dark-bg"
-                >
-                  <View className="flex-row items-center justify-between">
-                    <Heading3 className="text-xl font-bold text-white">
-                      Fotografie ({photos.length})
-                    </Heading3>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setShowGallery(false);
-                        setSelectedPhoto(null);
-                      }}
-                      className="w-10 h-10 rounded-full items-center justify-center"
-                      style={{ backgroundColor: '#334155' }}
-                    >
-                      <EvilIcons name="close" size={28} color="white" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                    
-                <View className="flex-1">
-                  <Image
-                    source={{ uri: selectedPhoto.storage_path }}
-                    className="w-full h-full bg-dark-bg"
-                    resizeMode="contain"
-                  />
-
-                  {/* Navigation Arrows */}
-                  {photos.length > 1 && (
-                    <>
-                      <TouchableOpacity
-                        onPress={goToPreviousPhoto}
-                        className="absolute left-4 top-1/2 bg-black/50 rounded-full p-3"
-                        style={{ transform: [{ translateY: -20 }] }}
-                      >
-                        <MaterialIcons name="chevron-left" size={32} color="white" />
-                      </TouchableOpacity>
-                  
-                      <TouchableOpacity
-                        onPress={goToNextPhoto}
-                        className="absolute right-4 top-1/2 bg-black/50 rounded-full p-3"
-                        style={{ transform: [{ translateY: -20 }] }}
-                      >
-                        <MaterialIcons name="chevron-right" size={32} color="white" />
-                      </TouchableOpacity>
-                    </>
-                  )}
-                  {canEdit && (
-                    <View className="absolute bottom-0 left-0 right-0 p-6 bg-dark-bg">
-                      <View className="flex-row justify-around">
-                        <TouchableOpacity
-                          onPress={() => deletePhoto(selectedPhoto)}
-                          className="bg-red-600 rounded-xl px-6 py-3 flex-row items-center"
-                        >
-                          <MaterialIcons name="delete" size={20} color="white" />
-                          <Body className="text-white font-semibold ml-2">Odstrániť</Body>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </Modal>
+                onClose={() => handleCloseViewer()}
+                selectedPhoto={selectedPhoto}
+                photos={photos}
+                onDelete={() => deletePhoto(selectedPhoto)}
+                canEdit={canEdit}
+              />
             )}
 
             {/* PDF Viewer Modal */}
@@ -1345,7 +1265,7 @@ export default function ProjectDetails({
               <PDF_Viewer
                 uri={selectedPDF.storage_path}
                 visible={showPDFReports}
-                onClose={() => handleClosePdfViewer()}
+                onClose={() => handleCloseViewer()}
                 selectedPDF={selectedPDF}
                 onDelete={() => deletePdf(selectedPDF)}
               />

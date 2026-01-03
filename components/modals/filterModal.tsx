@@ -1,7 +1,7 @@
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { useState } from "react";
 import { Modal, ScrollView, Switch, TouchableOpacity, View } from "react-native";
-import { Body, BodySmall, Caption, Heading3 } from './typography';
+import { Body, BodySmall, Caption, Heading3 } from '../typography';
 
 interface FilterOption {
   value: string;

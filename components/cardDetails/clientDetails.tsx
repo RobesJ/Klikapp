@@ -200,8 +200,6 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
     const handleNavigateAndRefresh = async (pathname: any, params: any) => {
         onClose(); 
         router.push({ pathname, params });
-        // Refetch clients to update counts
-        //setTimeout(() => fetchClients(100), 500); // Small delay to ensure DB is updated
     };
 
     return (

@@ -2,7 +2,7 @@ import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS_HOME, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
-import FilterModal from '@/components/filterModal';
+import FilterModal from '@/components/modals/filterModal';
 import { Body, BodyLarge, BodySmall, Heading1 } from '@/components/typography';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
@@ -16,7 +16,7 @@ import { format, isBefore, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dimensions, FlatList, PixelRatio, TouchableOpacity, View } from 'react-native';
+import { FlatList, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
@@ -48,10 +48,10 @@ export default function Home() {
 
   useEffect(() => {
 
-    const pixelRatio = PixelRatio.get();
-    console.log(pixelRatio);
-    const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-    console.log(`screen_ width: ${SCREEN_WIDTH}, screen_height: ${SCREEN_HEIGHT}`);
+    //const pixelRatio = PixelRatio.get();
+    //console.log(pixelRatio);
+    //const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+    //console.log(`screen_ width: ${SCREEN_WIDTH}, screen_height: ${SCREEN_HEIGHT}`);
     if(projects.size === 0){
       fetchActiveProjects();
       setTimeout(() => {

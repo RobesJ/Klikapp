@@ -3,13 +3,13 @@ import { EvilIcons, MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Modal, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Body, BodySmall, Heading3 } from './typography';
+import { Body, BodySmall, Heading3 } from '../typography';
 
 interface PDFViewerProps {
   uri: string;
   visible: boolean;
   onClose: () => void;
-  selectedPDF: PDF
+  selectedPDF: PDF;
   onDelete: (pdf: PDF) => void;
 }
 

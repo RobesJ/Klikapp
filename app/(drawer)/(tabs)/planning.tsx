@@ -2,7 +2,7 @@ import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
-import FilterModal from '@/components/filterModal';
+import FilterModal from '@/components/modals/filterModal';
 import { Body, BodyLarge, Heading1 } from '@/components/typography';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
@@ -679,7 +679,7 @@ function SwipeableProjectCard({
       {selectedProject && (
         <ProjectDetails 
           key={selectedProject.project.id}
-          projectWithRelations={selectedProject}
+          projectWithRelationsID={selectedProject.project.id}
           visible={showDetails}
           onClose={()=> {
             setShowDetails(false);

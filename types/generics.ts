@@ -1,6 +1,6 @@
 export interface Project {
   id: string;
-  client_id?: string;
+  client_id: string;
   type: string;
   state: string;
   scheduled_date: string | null;
@@ -59,4 +59,8 @@ export type AddressFields = {
   streetNumber?: string | null;
   city?: string | null;
   country?: string | null;
+};
+
+export type ClientField = {
+  client_id: string;
 };

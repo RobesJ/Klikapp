@@ -2,8 +2,8 @@ import { ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
-import { FormInput } from "./formInput";
-import { Body, BodyLarge, BodySmall } from "./typography";
+import { FormInput } from "../formInput";
+import { Body, BodyLarge, BodySmall } from "../typography";
 
 interface pdfGenerationModalProps {
     visible: boolean;

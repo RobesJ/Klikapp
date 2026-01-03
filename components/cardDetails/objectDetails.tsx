@@ -10,7 +10,7 @@ import { parseISO } from "date-fns";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Modal, ScrollView, TouchableOpacity, View } from "react-native";
-import { PDF_Viewer } from "../pdfViewer";
+import { PDF_Viewer } from "../modals/pdfViewer";
 import { Body, BodyLarge, Caption, Heading3 } from "../typography";
 
 interface ObjectCardDetailsProps {

@@ -1,15 +1,18 @@
+import { useObjectSubmit } from "@/hooks/submitHooks/useObjectSubmit";
 import { useGoogleSearchAddress } from "@/hooks/useGoogleAddressSearch";
+import { useSearchClient } from "@/hooks/useSearchClient";
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
-import { useNotificationStore } from "@/store/notificationStore";
-import { Client } from "@/types/generics";
 import { ChimneyInput, ChimneyType, Object as ObjectType, ObjectWithRelations } from "@/types/objectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
-import { Body, BodySmall, Caption, Heading1, Heading3 } from "../typography";
+import { ChimneyTypeCreationModal } from "../modals/chimneyTypeCreationModal";
+import { ChimneyTypeSelectionModal } from "../modals/chimneyTypeSelectionModal";
+import { Body, BodySmall, Caption, Heading1 } from "../typography";
+import ChimneyForm from "./chimneyForm";
 
 interface ObjectFormProps {
     mode: "create" | "edit";
@@ -28,33 +31,21 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         country: initialData?.object.country || ''
     });
     const router = useRouter();
-    const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [focusedField, setFocusedField] = useState<string | null>(null);
 
-    const [clientSuggestions, setClientSuggestions] = useState<Client[]>([]);
-    const [loadingClients, setLoadingClients] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-    const [timerId, setTimerId] = useState<number>();
-
-    const [searchQueryChimney, setSearchQueryChimney] = useState('');
-    const [showChimneyModal, setShowChimneyModal] = useState(false);
-    const [showChimneyDetailsModal, setShowChimneyDetailsModal] = useState(false);
     const [selectedChimneys, setSelectedChimneys] = useState<ChimneyInput[]>([]);
     const [allChimneyTypes, setAllChimneyTypes] = useState<ChimneyType[]>([]);
-    const [filteredChimneyTypes, setFilteredChimneyTypes] = useState<ChimneyType[]>([]);
+    
     const [editingChimney, setEditingChimney] = useState<ChimneyInput | null>(null);
     const [editingChimneyIndex, setEditingChimneyIndex] = useState<number | null>(null);
-    const [showChimneyTypeModal, setshowChimneyTypeModal] = useState(false);
-    const [chimneyFormData, setChimneyTypeFormData] = useState<{
-        type: string;
-        labelling: string;
-    }>({
-        type: '',
-        labelling: ''
-    });
-    
+
+    const [showChimneyTypeSelectionModal, setShowChimneyTypeSelectionModal] = useState(false);
+    const [showChimneyTypeCreationModal, setShowChimneyTypeCreationModal] = useState(false);
+    const [showChimneyModal, setShowChimneyModal] = useState(false);
+
+    const { loading, handleSubmit: submitObject } = useObjectSubmit({ mode, initialData, onSuccess});
+
     useEffect(() => {
         fetchChimneyTypes();
         if (initialData){
@@ -108,6 +99,17 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         selectAddress
     } = useGoogleSearchAddress<Omit<ObjectType, "id">>(handleChange);
 
+    const {
+        handleSearchClient,
+        handleSelectedClient,
+        clientSuggestions,
+        loadingClients,
+        searchQuery,
+        selectedClient,
+        setSearchQuery,
+        setSelectedClient
+    } = useSearchClient<Omit<ObjectType, "id">>(handleChange);
+
     async function fetchChimneyTypes() {
         try{
             const {data, error} = await supabase
@@ -118,7 +120,6 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             if (error) throw error;
             if (data) {
                 setAllChimneyTypes(data);
-                setFilteredChimneyTypes(data);
             }
         }
         catch (error: any){
@@ -126,121 +127,53 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         }
     }
 
-    const handleSearchClient = useCallback((text: string) => {
-        setSearchQuery(text);
-        
-        if(timerId) {
-            clearTimeout(timerId);
-        }
-        const timer = window.setTimeout(() => {
-            searchClient(text);
-        }, 300);
-
-        setTimerId(timer);
-    }, [timerId]);
-
-    async function searchClient(query: string) {
-        if (query.trim().length < 2){
-            setClientSuggestions([]);
-            return;
-        }
-        setLoadingClients(true);
-        try{
-            const { data, error } = await supabase
-                .from("clients")
-                .select("*")
-                .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
-                .order("name")
-                .limit(20);
-
-            if (error) throw error;
-            setClientSuggestions(data || []);
-        } 
-        catch(error: any){
-            console.error("Chyba: ", error.message);
-            setClientSuggestions([]);
-        }
-        finally{
-            setLoadingClients(false);
-        }
-    }
-
-    const handleSelectedClient = (client: Client) => {
-        setSelectedClient(client);
-        setSearchQuery(client.name);
-        setClientSuggestions([]);
-        setFormData(prev => ({ ...prev, client_id: client.id}));
-
-        if (errors.client_id){
-            setErrors(prev => {
-                const newErrors = {...prev};
-                delete newErrors.client_id;
-                return newErrors;
-            });
-        }
-    };
-
-    const handleSearchChimney = (text: string) => {
-        setSearchQueryChimney(text);
-        
-        if (text.trim().length === 0){
-            setFilteredChimneyTypes(allChimneyTypes);
-        }
-        else{
-            const filteredChimneyTypes = allChimneyTypes.filter(chimney =>
-                chimney.type.toLowerCase().includes(text.toLowerCase()) ||
-                (chimney.labelling && chimney.labelling.toLowerCase().includes(text.toLowerCase()) )
-            );
-            setFilteredChimneyTypes(filteredChimneyTypes);
-        }
-    };
-
     const handleSelectChimneyType = (chimneyType: ChimneyType) => {
         setEditingChimney({
             chimney_type_id: chimneyType.id,
+            chimney_type: chimneyType,
             placement: '',
             appliance: '',
-            note: '',
-            chimney_type: chimneyType
+            note: ''
         });
         setEditingChimneyIndex(null);
-        setShowChimneyModal(false);
-        setShowChimneyDetailsModal(true);
+        setShowChimneyTypeSelectionModal(false); 
+        setShowChimneyModal(true);
     };
 
     const handleEditChimney = (chimney: ChimneyInput, index: number) => {
         setEditingChimney(chimney);
         setEditingChimneyIndex(index);
-        setShowChimneyDetailsModal(true);
+        setShowChimneyModal(true);
     };
 
-    const handleSaveChimneyDetails = () => {
-        if (!editingChimney) return;
-
-        if (editingChimneyIndex !== null) {
+    const handleSaveChimney = (chimney: ChimneyInput, isEdit: boolean, editIndex?: number) => {
+        if (isEdit && editIndex !== null && editIndex !== undefined) {
             // Update existing chimney
             setSelectedChimneys(prev => 
-                prev.map((c, i) => i === editingChimneyIndex ? editingChimney : c)
+                prev.map((c, i) => i === editIndex ? chimney : c)
             );
         } else {
             // Add new chimney
-            setSelectedChimneys(prev => [...prev, editingChimney]);
+            setSelectedChimneys(prev => [...prev, chimney]);
         }
-
-        setShowChimneyDetailsModal(false);
+        
+        // Reset editing state
         setEditingChimney(null);
         setEditingChimneyIndex(null);
+    };
+
+    const handleChimneyTypeCreated = (chimneyType: ChimneyType) => {
+        setAllChimneyTypes(prev => [...prev, chimneyType]);
+        handleSelectChimneyType(chimneyType);
     };
 
     const handleRemoveChimney = (index: number) => {
         setSelectedChimneys(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleAddChimney = () => {
-        setFilteredChimneyTypes(allChimneyTypes);
-        setSearchQueryChimney('');
-        setShowChimneyModal(true);
-    }
+    const handleAddChimney = () => {        
+        setShowChimneyTypeSelectionModal(true);
+    };
 
     const validate = () : boolean => {
         const newErrors : Record<string, string> = {};
@@ -260,238 +193,18 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         setErrors(newErrors);
         console.log(newErrors);
         return Object.keys(newErrors).length === 0;
-    }
+    };
 
     const handleSubmit = async () => {
-         if(!validate()){
-             return;
-         }
-
-        setLoading(true);
-        try{
-            let objectId: string;
-    
-            if (mode === "create"){
-                const {data: objectData, error: objectError} = await supabase
-                .from('objects')
-                .insert([formData])
-                .select()
-                .single();
-                
-                if (objectError) throw objectError;
-                objectId = objectData.id;
-    
-                // Insert chimneys with all fields
-                if (selectedChimneys.length > 0) {
-                    const chimneyData = selectedChimneys.map(chimney => ({
-                        object_id: objectId,
-                        chimney_type_id: chimney.chimney_type_id,
-                        placement: chimney.placement,
-                        appliance: chimney.appliance,
-                        note: chimney.note
-                    }));
-    
-                    const { error: chimneysError } = await supabase
-                        .from('chimneys')
-                        .insert(chimneyData);
-    
-                    if (chimneysError) throw chimneysError;
-                }
-                
-                // Fetch complete object with relations for store update
-                const { data: completeObject, error: fetchError } = await supabase
-                    .from('objects')
-                    .select(`
-                        *,
-                        clients (*),
-                        chimneys (
-                            id,
-                            object_id,
-                            chimney_type_id,
-                            placement,
-                            appliance,
-                            note,
-                            chimney_types (
-                                id,
-                                type,
-                                labelling
-                            )
-                        )
-                    `)
-                    .eq('id', objectId)
-                    .single();
-                
-                const transformedObject = {
-                    object: {
-                      id: completeObject.id,
-                      client_id: completeObject.client_id,
-                      address: completeObject.address,
-                      streetNumber: completeObject.streetNumber,
-                      city: completeObject.city,
-                      country: completeObject.country
-                    },
-                    client: completeObject.clients,  // Rename 'clients' to 'client'
-                    chimneys: completeObject.chimneys || []
-                };
-
-                if (fetchError) throw fetchError;
-                
-                onSuccess?.(transformedObject);
-            }
-            else { 
-                const {data: objectData, error: objectError} = await supabase
-                .from('objects')
-                .update(formData)
-                .eq('id', initialData?.object.id)
-                .select()
-                .single()
-    
-                if (objectError) throw objectError;
-                objectId = objectData.id;
-    
-                // Delete ALL existing chimneys for this object
-                const { error: deleteError } = await supabase
-                    .from('chimneys')
-                    .delete()
-                    .eq('object_id', objectId);
-    
-                if (deleteError) throw deleteError;
-    
-                // Insert new chimneys with all fields
-                if (selectedChimneys.length > 0) {
-                    const chimneyData = selectedChimneys.map(chimney => ({
-                        object_id: objectId,
-                        chimney_type_id: chimney.chimney_type_id,
-                        placement: chimney.placement,
-                        appliance: chimney.appliance,
-                        note: chimney.note
-                    }));
-    
-                    const { error: chimneysError } = await supabase
-                        .from('chimneys')
-                        .insert(chimneyData);
-    
-                    if (chimneysError) throw chimneysError;
-                }
-                
-                // Fetch complete object with relations for store update
-                const { data: completeObject, error: fetchError } = await supabase
-                    .from('objects')
-                    .select(`
-                        *,
-                        clients (*),
-                        chimneys (
-                            id,
-                            object_id,
-                            chimney_type_id,
-                            placement,
-                            appliance,
-                            note,
-                            chimney_types (
-                                id,
-                                type,
-                                labelling
-                            )
-                        )
-                    `)
-                    .eq('id', objectId)
-                    .single();
-                const transformedObject = {
-                    object: {
-                      id: completeObject.id,
-                      client_id: completeObject.client_id,
-                      address: completeObject.address,
-                      streetNumber: completeObject.streetNumber,
-                      city: completeObject.city,
-                      country: completeObject.country
-                    },
-                    client: completeObject.clients,  // Rename 'clients' to 'client'
-                    chimneys: completeObject.chimneys || []
-                };
-                if (fetchError) throw fetchError;
-                
-                onSuccess?.(transformedObject);
-            }
-        }
-        catch (error: any){
-            console.error("Error saving object: ", error);
-            if (mode === "create"){
-                useNotificationStore.getState().addNotification(
-                    'Nepodarilo sa vytvoriť objekt',
-                    'error',
-                    4000
-                );
-            }
-            else{
-                useNotificationStore.getState().addNotification(
-                    'Nepodarilo sa upraviť objekt',
-                    'error',
-                    4000
-                );
-            }
-        }
-        finally{
-            setLoading(false);
-        }
-    };
-
-    const validateNewChimneyType = () : boolean => {
-        const newErrors : Record<string, string> = {};
-
-        if (!chimneyFormData.type.trim()) {
-            newErrors.chimneyType = "Typ komína je povinná položka!";
-        }
-
-        if (!chimneyFormData.labelling.trim()) {
-            newErrors.chimneyLabelling = "Označenie komína je povinná položka!";
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-    
-    const handleSubmitNewChimneyType = async () => {
-        if(!validateNewChimneyType()){
+        if(!validate()){
             return;
         }
-    
-        setLoading(true);
-        try{
-            const {data: chimneyTypeData, error: chimneyTypeError } = await supabase
-                .from("chimney_types")
-                .insert([chimneyFormData])
-                .select()
-                .single();
-            
-            if (chimneyTypeError) throw chimneyTypeError;
-            useNotificationStore.getState().addNotification(
-                "Nový typ komina bol vytvorený!",
-                "success",
-                3000
-            );
-            // append new chimney type to all types and clear form
-            setAllChimneyTypes(prev => [...prev, chimneyTypeData]);
-            setFilteredChimneyTypes(prev => [...prev, chimneyTypeData]);
-            setChimneyTypeFormData({ type: '', labelling: ''});
-            setshowChimneyTypeModal(false);
+        try {
+            await submitObject(formData, selectedChimneys);
         }
-        catch (error: any){
-            console.error("Error saving object: ", error);
-            useNotificationStore.getState().addNotification(
-                "Nastala chyba pri vytváraní nového typu komina!",
-                "error",
-                4000
-            );
-        }
-        finally{
-            setLoading(false);
-        }
+        catch (error){}
     };
-
-    const handleChimneyTypeChange = (field: "type" | "labelling", value: string) => {
-        setChimneyTypeFormData(prev => ({...prev, [field]: value}));
-    };
-
+   
     return (
         <View className="flex-1">
             <KeyboardAvoidingView
@@ -760,231 +473,31 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         </KeyboardAvoidingView>
 
         {/* Chimney Type Selection Modal */}
-        <Modal
-            visible={showChimneyModal}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setShowChimneyModal(false)}
-        >
-            <View className="flex-1 bg-black/50 justify-end">
-                <View className="bg-dark-bg rounded-t-3xl border-2 border-gray-500" style={{height: "75%" }}>
-                    {/* header */}
-                    <View className="p-6 border-b border-gray-700">
-                        <View className="flex-row items-center justify-between mb-4">
-                            <Heading3 className="text-xl text-dark-text_color font-bold">Vyberte typ komína</Heading3>
-                            <TouchableOpacity
-                                onPress={() => setShowChimneyModal(false)}
-                                className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
-                            >
-                                <EvilIcons name="close" size={20} color="white" />
-                            </TouchableOpacity>
-                        </View>
-                        <View className="flex-row items-center bg-gray-800 rounded-xl border-2 px-4 py-1 border-gray-700">
-                            <EvilIcons name="search" size={20} color="gray" />
-                            <FormInput
-                              placeholder="Hľadať komín (typ, označenie)"
-                              value={searchQueryChimney}
-                              onChange={handleSearchChimney}
-                              fieldName="chimneySearch"
-                              focusedField={focusedField}
-                              setFocusedField={setFocusedField}
-                            />
-                        </View>
-                    </View>
-                    <View className="flex-1">
-                        {filteredChimneyTypes.length === 0 ? (
-                            <View className="flex-1 items-center justify-center">
-                                <Heading3 className="mb-4">🔍</Heading3>
-                                <Body className="text-gray-400 text-base">Žiadne komíny nenájdené</Body>
-                            </View>
-                        ) : (
-                            <FlatList
-                                data={filteredChimneyTypes}
-                                keyExtractor={(item) => item.id}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        onPress={() => handleSelectChimneyType(item)}
-                                        className="px-6 py-4 border-b border-gray-600"
-                                    >
-                                        <Body className="text-base font-semibold text-dark-text_color">
-                                            {item.type}
-                                        </Body>
-                                        {item.labelling && (
-                                            <BodySmall className="text-sm text-gray-500 mt-1">
-                                                {item.labelling}
-                                            </BodySmall>
-                                        )}
-                                    </TouchableOpacity>
-                                )}
-                                contentContainerStyle={{ paddingBottom: 100}}
-                            />
-                        )}
-                    </View>
-                </View>
-                
-                {/* Create new chimney type button */}
-                <View className="absolute bottom-10 left-0 right-0 bg-dark-bg items-center justify-center">
-                    <TouchableOpacity
-                      onPress={()=>setshowChimneyTypeModal(true)}
-                      className="rounded-xl bg-slate-500 py-4 px-12 active:bg-slate-800"
-                    >
-                        <Body className="text-white font-semibold">
-                           + Vytvoriť nový typ komína
-                        </Body>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </Modal>
+        <ChimneyTypeSelectionModal
+            visible={showChimneyTypeSelectionModal}
+            onClose={ () => setShowChimneyTypeSelectionModal(false)}
+            onSelectChimneyType={handleSelectChimneyType}
+            onCreateNewType={() => setShowChimneyTypeCreationModal(true)} 
+            chimney_types={allChimneyTypes}
+        />
         
-        {/* Chimney Type Creating Form Modal */}
-        <Modal
-            visible={showChimneyTypeModal}
-            animationType="fade"
-            transparent={true}
-            onRequestClose={() => setshowChimneyTypeModal(false)}
-        >
-            <View className="flex-1 bg-black/50 justify-center items-center">
-                <View className="w-3/4 bg-dark-bg rounded-2xl overflow-hidden border-2 border-gray-500">
-                    {/* Header*/}
-                    <View className="p-6 border-b border-gray-600">
-                        <View className="flex-row items-center justify-between">
-                            <Heading3 className="text-xl text-dark-text_color font-bold">Vytvorte typ komína</Heading3>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setshowChimneyTypeModal(false);
-                                    setChimneyTypeFormData({ type: '', labelling: ''});
-                                }}
-                                className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
-                            >
-                                <EvilIcons name="close" size={18} color="white"/>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                    
-                    {/* Form */}
-                    <View className="p-4 mb-4">
-                        {/* Type field*/}
-                        <FormInput
-                          label="Typ"
-                          placeholder="Napíšte typ komína"
-                          value={chimneyFormData.type}
-                          onChange={(text) => handleChimneyTypeChange("type", text)}
-                          fieldName="chimney_type"
-                          focusedField={focusedField}
-                          setFocusedField={setFocusedField}
-                        />
-                        
-                        {/* Labelling field*/}
-                        <FormInput
-                          label="Označenie"
-                          placeholder="Napíšte označenie komína"
-                          value={chimneyFormData.labelling}
-                          onChange={(text) => handleChimneyTypeChange("labelling", text)}
-                          fieldName="chimney_labelling"
-                          focusedField={focusedField}
-                          setFocusedField={setFocusedField}
-                        />
-                    </View>
+        {/* Chimney Type Creation Modal */}
+        <ChimneyTypeCreationModal 
+            visible={showChimneyTypeCreationModal}
+            onClose={() => setShowChimneyTypeCreationModal(false)}
+            onChimneyTypeCreated={handleChimneyTypeCreated} 
+        />
 
-                    {/* Create button */}
-                    <View className="items-center justify-center mb-6">
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={handleSubmitNewChimneyType}
-                          disabled={loading}
-                          className="rounded-xl bg-slate-500 p-4 px-12 active:bg-slate-800"
-                        >
-                            <Body className="text-white font-bold">
-                                {mode === "create" ? (loading ? "Vytváram..." : "Vytvoriť") : (loading ? "Upraviť objekt" : "Upravujem...")}
-                            </Body>
-                        </TouchableOpacity>
-                    </View>   
-                </View>
-            </View>
-        </Modal>
-
-        {/* Chimney Details Modal */}
-        <Modal
-            visible={showChimneyDetailsModal}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setShowChimneyDetailsModal(false)}
-        >
-            <View className="flex-1 bg-black/50 justify-end">
-                <View className="bg-dark-bg rounded-t-3xl">
-                    <View className="p-6 border-b border-gray-600">
-                        <View className="flex-row items-center justify-between">
-                            <Heading3 className="text-xl font-bold text-dark-text_color">Detail komína</Heading3>
-                            <TouchableOpacity
-                                onPress={() => setShowChimneyDetailsModal(false)}
-                                className="w-8 h-8 bg-gray-700 rounded-full items-center justify-center active:bg-gray-600"
-                            >
-                                <EvilIcons name="close" size={20} color="white" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    <View className="p-6">
-                        {/* Chimney Type (read-only) */}
-                        <View className="mb-4">
-                            <Body className="mb-2 ml-1 font-semibold text-dark-text_color">Typ</Body>
-                            <View className="bg-gray-800 rounded-xl border-2 px-4 py-3 border-gray-700 text-white">
-                                <Body className="font-semibold text-white">{editingChimney?.chimney_type?.type}</Body>
-                                {editingChimney?.chimney_type?.labelling && (
-                                    <BodySmall className="text-sm text-gray-300">{editingChimney.chimney_type.labelling}</BodySmall>
-                                )}
-                            </View>
-                        </View>
-
-                        {/* Placement */}
-                        <FormInput
-                          label= "Umiestnenie spotrebiča"
-                          value={editingChimney?.placement || ''}
-                          placeholder= "Napr. Kuchyňa, Obývačka..."
-                          onChange= {(text) => setEditingChimney(prev => prev ? {...prev, placement: text} : null)}
-                          fieldName= "placement"
-                          focusedField= {focusedField}
-                          setFocusedField= {setFocusedField}
-                        />
-                        
-                        {/* Appliance */}
-                        <FormInput
-                          label= "Druh spotrebiča"
-                          value={editingChimney?.appliance || ''}
-                          placeholder="Napr. Plynový kotol, Krb..."
-                          onChange= {(text) => setEditingChimney(prev => prev ? {...prev, appliance: text} : null)}
-                          fieldName= "appliance"
-                          focusedField= {focusedField}
-                          setFocusedField= {setFocusedField}
-                        />
-
-                        {/* Note */}
-                        <FormInput
-                          label= "Poznámka"
-                          value={editingChimney?.note|| ''}
-                          placeholder="Dodatočné informácie..."
-                          onChange= {(text) => setEditingChimney(prev => prev ? {...prev, note: text} : null)}
-                          fieldName= "note"
-                          focusedField= {focusedField}
-                          setFocusedField= {setFocusedField}
-                          multiline
-                        />
-                        
-                    </View>
-
-                    {/* Save Chimney Button */}
-                    <View className="items-center justify-center mb-10">
-                        <TouchableOpacity
-                            onPress={handleSaveChimneyDetails}
-                            className="rounded-xl bg-slate-500 p-4 px-12 active:bg-slate-800"
-                        >
-                            <Body className="text-white font-bold">Uložiť komín</Body>
-                        </TouchableOpacity>
-                    </View>
-
-                </View>
-            </View>
-        </Modal>
+        {/* Chimney Details Modal*/}
+        <ChimneyForm
+            visible={showChimneyModal}
+            onClose={() => setShowChimneyModal(false)}
+            mode={editingChimneyIndex !== null ? "edit" : "create"}
+            onSaveChimney={handleSaveChimney}
+            chimneyType={editingChimney?.chimney_type || allChimneyTypes[0] || { id: '', type: '', labelling: '' }}
+            chimneyToEdit={editingChimney || undefined}
+            editIndex={editingChimneyIndex ?? undefined}
+        />          
     </View>
     )
 }

@@ -2,7 +2,7 @@ import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
-import FilterModal from '@/components/filterModal';
+import FilterModal from '@/components/modals/filterModal';
 import { NotificationToast } from '@/components/notificationToast';
 import { Body, Heading1 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';

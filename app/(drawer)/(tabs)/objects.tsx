@@ -99,7 +99,6 @@ export default function Objects() {
     };
   },[]);
 
-
   const renderItem = useCallback(({ item }: { 
     item: ObjectSection;
   }) => {
