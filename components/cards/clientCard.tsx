@@ -45,9 +45,9 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
                         <View className="mb-2">
                             <Body className="text-dark-text_color">
                                 {client.projectsCount} 
-                                {client.projectsCount===1
+                                {client.projectsCount=== 1
                                 ? " projekt" 
-                                : (client.projectsCount ===2 || client.projectsCount ===3 || client.projectsCount === 4
+                                : (client.projectsCount === 2 || client.projectsCount === 3 || client.projectsCount === 4
                                     ? " projekty":
                                     " projektov"
                                 )}
@@ -59,9 +59,9 @@ export default function ClientCard({ client, onPress } : ClientCardProps) {
                         <View>
                             <Body className="text-dark-text_color">
                                 {client.objectsCount}
-                                {client.objectsCount===1
+                                {client.objectsCount=== 1
                                 ? " objekt" 
-                                : (client.objectsCount ===2 || client.objectsCount ===3 || client.objectsCount === 4
+                                : (client.objectsCount === 2 || client.objectsCount === 3 || client.objectsCount === 4
                                     ? " objekty":
                                     " objektov"
                                 )}

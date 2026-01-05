@@ -12,12 +12,12 @@ export default function AddProjectScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { addProject, updateProject, unlockProject } = useProjectStore();
-  const { project, mode, preselectedClientID } = useLocalSearchParams();
+  const { project, mode } = useLocalSearchParams();
 
   const parsedProject = project ? (JSON.parse(project as string) as ProjectWithRelations) : undefined;
-  const parsedClientID =  preselectedClientID ? preselectedClientID as string : undefined;
   const { updateClientCounts } = useClientStore();
 
+  // unlock project when leaving project form
   useEffect(() => {
     return () => {
       if (mode === "edit" && parsedProject?.project.id && user){
@@ -26,6 +26,7 @@ export default function AddProjectScreen() {
     }
   },[parsedProject?.project.id, user?.id]);
 
+  // lock renewal in intervals
   useEffect(() => {
     if(!user) return;
     
@@ -40,14 +41,12 @@ export default function AddProjectScreen() {
     return () => clearInterval(interval);
   }, [parsedProject?.project.id, user?.id]);
 
+  // if success adding / updating project in store
   const handleSuccess = (projectData: ProjectWithRelations) => {
     if (mode === "create"){
-      console.log("trying to create project");
       if(projectData.project){
-        addProject(projectData);
-        if(parsedClientID){
-          updateClientCounts(parsedClientID, 1,0);
-        }
+        addProject(projectData);        
+        updateClientCounts(projectData.client.id, 1,0);
       }
     }
     else{
@@ -62,10 +61,9 @@ export default function AddProjectScreen() {
   return (
     <SafeAreaView className= "flex-1 bg-dark-bg">
       <ProjectForm
-        mode={(mode as "create" | "edit") || "create"}
-        initialData={parsedProject}
-        onSuccess={handleSuccess}
-        preselectedClient={parsedClientID}
+          mode={(mode as "create" | "edit") || "create"}
+          initialData={parsedProject}
+          onSuccess={handleSuccess}
       />
     </SafeAreaView>
   );

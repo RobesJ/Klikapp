@@ -2,7 +2,7 @@ import { AnimatedScreen } from '@/components/animatedScreen';
 import ObjectDetails from '@/components/cardDetails/objectDetails';
 import ObjectCard from '@/components/cards/objectCard';
 import { NotificationToast } from '@/components/notificationToast';
-import { Body, BodyLarge, Heading1 } from '@/components/typography';
+import { Body, BodyLarge, Heading1, Heading2 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';
 import { ObjectSection, useObjectStore } from '@/store/objectStore';
 import { ObjectWithRelations } from '@/types/objectSpecific';
@@ -10,15 +10,16 @@ import { FONT_SIZES } from '@/utils/responsive';
 import { EvilIcons } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
-import { useNavigation, useRouter } from 'expo-router';
+import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import debounce from 'lodash.debounce';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
+import { PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Objects() {
   const router = useRouter();
   const { user } = useAuth();
+  const dpi = PixelRatio.get();
   const navigation = useNavigation();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedObject, setSelectedObject] = useState<ObjectWithRelations | null>(null);
@@ -35,11 +36,12 @@ export default function Objects() {
     unlockObject
   } = useObjectStore();
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     return () => {
       clearFilters();
+      setSearchText('');
     };
-  }, [clearFilters]);
+  }, [clearFilters]));
 
   const displayedGroups = useMemo(() => {
     return searchText.trim() ? filteredGroupedObjects : groupedObjects;
@@ -110,7 +112,7 @@ export default function Objects() {
             </BodyLarge>
           </View>
         {item.data.map(obj => (
-         <View key={obj.object.id} className="px-4 pt-1 border-b border-dark-card-border_color last:border-b-0">
+         <View key={obj.object.id} className="bg-dark-card-bg px-4 pt-1 border-b border-dark-card-border_color last:border-b-0">
            <ObjectCard
               object={obj.object}
               chimneys={obj.chimneys}
@@ -176,9 +178,9 @@ export default function Objects() {
           pathname: "/addObjectScreen",
           params: { mode: "create" }
         })}
-        className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
+        className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
       >
-        <Heading1 className='text-white text-3xl'>+</Heading1>
+        <Heading2 className='text-white text-3xl'>+</Heading2>
       </TouchableOpacity>
       
       {/* Object details modal */}

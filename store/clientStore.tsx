@@ -187,23 +187,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     }));
   },
 
-  //refreshClientLock: async (id: string, userId: string) => {
-  //  try {
-  //    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  //    
-  //    const { error } = await supabase
-  //      .from('clients')
-  //      .update({ lock_expires_at: expiresAt })
-  //      .eq('id', id)
-  //      .eq('locked_by', userId); 
-  //
-  //    if (error) throw error;
-  //    
-  //  } catch (error) {
-  //    console.error('Error refreshing lock:', error);
-  //  }
-  //},
-
   setFilters: (newFilters) => {
     const { filters } = get(); 
     
@@ -218,8 +201,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
   clearFilters: () => {
     set({ filters: initialFilters });
-    const filtered = get().applyFilters();
-    set({filteredClients: filtered});
+    set({filteredClients: []});
   },
 
   applyFilters: () => {

@@ -5,7 +5,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Benchmark configuration
 const BENCHMARK_WIDTH = 375; // iPhone 11/12/13/14 standard width
-const BENCHMARK_PIXEL_RATIO = 2.0; // Standard @2x displays
+const BENCHMARK_PIXEL_RATIO = 2.3; // Standard @2x displays
 
 // Device size categories
 export const DEVICE_SIZE = {
@@ -77,7 +77,7 @@ export const getDeviceSizeMultiplier = (): number => {
     case DEVICE_SIZE.SMALL:
       return 0.92; 
     case DEVICE_SIZE.LARGE:
-      return 1.15; 
+      return 1.1; 
     case DEVICE_SIZE.MEDIUM:
     default:
       return 1.0;

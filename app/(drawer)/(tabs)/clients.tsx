@@ -2,7 +2,7 @@ import { AnimatedScreen } from "@/components/animatedScreen";
 import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/cards/clientCard";
 import { NotificationToast } from "@/components/notificationToast";
-import { Body, Heading1 } from "@/components/typography";
+import { Body, Heading1, Heading2 } from "@/components/typography";
 import { useAuth } from "@/context/authContext";
 import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
@@ -12,7 +12,7 @@ import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from "expo-router";
 import debounce from "lodash.debounce";
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
+import { FlatList, PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Clients() {
@@ -20,6 +20,7 @@ export default function Clients() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [searchText, setSearchText] = useState('');
   const { user } = useAuth();
+  const dpi = PixelRatio.get();
 
   const {
     filteredClients,
@@ -28,16 +29,24 @@ export default function Clients() {
     loadMore,
     fetchClients,
     setFilters, 
+    clearFilters,
     unlockClient
   } = useClientStore();
 
   const router = useRouter();
   const navigation = useNavigation();
-  
+
+  useFocusEffect(useCallback(() => {
+    return () => {
+      clearFilters();
+      setSearchText('');
+    };
+  }, [clearFilters]));
+
   useFocusEffect(
     useCallback(() => {
       fetchClients(50);
-    }, [fetchClients]),  // clients.length, selectedClient?.objectsCount, selectedClient?.projectsCount])
+    }, [fetchClients]),
   );
   
   const handleModalVisibility = (client: Client, value: boolean) => {
@@ -118,7 +127,6 @@ export default function Clients() {
         <FlatList
           data={searchText.length > 0 ? filteredClients : clients }
           keyExtractor={(item) => item.id}
-          //extraData={clients}
           renderItem={({item}) =>(
             <ClientCard
                 key={item.id}
@@ -146,12 +154,11 @@ export default function Clients() {
             params: { mode: "create" }
           })}
           activeOpacity={0.8}
-          className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
+          className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
         >
-          <Heading1 className='text-white text-3xl'>+</Heading1>
+          <Heading2 className='text-white'>+</Heading2>
         </TouchableOpacity>
       
-
         {/* Client details modal*/}
         {selectedClient && (
           <ClientDetails 

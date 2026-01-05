@@ -238,9 +238,12 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                         <View>
 
                             {client &&
-                                <Body className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-700 text-white">
-                                    {selectedClient?.name}
-                                </Body>
+                                <View>
+                                    <Body className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Body>
+                                    <Body className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-500 text-white">
+                                        {selectedClient?.name}
+                                    </Body>
+                                </View>
                             }
                             {!client && (
                                 <FormInput
@@ -257,7 +260,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                 />
                             )}
                             {loadingClients && !client && (
-                                <View className="absolute right-4 top-4">
+                                <View className="absolute right-4 top-9">
                                     <Body className="text-gray-400">🔍</Body>
                                 </View>
                             )}

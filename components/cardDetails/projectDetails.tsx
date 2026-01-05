@@ -1,19 +1,17 @@
-import { getFooterImageBase64, getWatermarkBase64 } from '@/constants/icons';
 import { useAuth } from '@/context/authContext';
+import { useProjectSubmit } from '@/hooks/submitHooks/useProjectSubmit';
+import { useHandlePDFs } from '@/hooks/useHandlePDFs';
+import { useHandlePhotos } from '@/hooks/useHandlePhotos';
 import { supabase } from "@/lib/supabase";
-import { generateRecord } from "@/services/pdfService";
 import { useClientStore } from '@/store/clientStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useProjectStore } from "@/store/projectStore";
-import { PDF, User } from "@/types/generics";
-import { Chimney } from "@/types/objectSpecific";
-import { Photo } from "@/types/projectSpecific";
+import { User } from "@/types/generics";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { format, parseISO } from 'date-fns';
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Image, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { ModalSelector, STATE_OPTIONS } from "../badge";
 import PdfGenerationModal from '../modals/pdfGenerationModal';
 import { PDF_Viewer } from '../modals/pdfViewer';
@@ -23,901 +21,254 @@ import { NotificationToast } from '../notificationToast';
 import { Body, BodyLarge, BodySmall, Caption, Heading3 } from '../typography';
 
 interface ProjectCardDetailsProps {
-  projectWithRelationsID: string;
-  visible: boolean;
-  onClose: () => void;
-  onCloseWithUnlock: () => void;
+    projectWithRelationsID: string;
+    visible: boolean;
+    onClose: () => void;
+    onCloseWithUnlock: () => void;
 }
 
 export default function ProjectDetails({ 
-  projectWithRelationsID, 
-  visible,
-  onClose,
-  onCloseWithUnlock
+    projectWithRelationsID, 
+    visible,
+    onClose,
+    onCloseWithUnlock
 }: ProjectCardDetailsProps) {
-  const router = useRouter();
-  const { user } = useAuth();
-  const projectWithRelations = useProjectStore(state => state.projects.get(projectWithRelationsID));
-  if (!projectWithRelations) {
-    return null;
-  }
-  const [currentState, setCurrentState] = useState(projectWithRelations.project.state);
-  const [users, setUsers] = useState<User[]>(projectWithRelations.users);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [updatingState, setUpdatingState] = useState(false);
-  const [canEdit, setCanEdit] = useState(false);
-  const [lockedByName, setLockedByName] = useState<string | null>(null);
-
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [loadingPhotos, setLoadingPhotos] = useState(false);
-  const [uploadingPhotos, setUploadingPhotos] = useState(false);
-  const [showGallery, setShowGallery] = useState(false);
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-
-  const [PDFs, setPDFs] = useState<PDF[]>([]);
-  const [loadingPDFs, setLoadingPDFs] = useState(false);
-  const [uploadingPDFs, setUploadingPDFs] = useState(false);
-  const [showPDFReports, setShowPDFReports] = useState(false);
-  const [selectedPDF, setSelectedPDF] = useState<PDF | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [pdfGenModalVisible, setpdfGenModalVisible] = useState(false);
-  
-  const [chimneySums, setChimneySums] = useState<Record<string, string[]>>({});
-  //const [focusedField, setFocusedField] = useState<string | null>(null);
-  const { updateProject, addProject, deleteProject, availableUsers, lockProject } = useProjectStore();
-  const { updateClientCounts } = useClientStore();
-  
-  //type PdfFlowStep =
-  //| "choice"         
-  //| "selectOne"       
-  //| "inputAll"        
-  //| "inputOne";       
-//
-  //const [pdfStep, setPdfStep] = useState<PdfFlowStep>("choice");
-  //const [selectedChimneyId, setSelectedChimneyId] = useState<string | null>(null);
-  
-  useEffect(() => {
-    fetchPhotos();
-    fetchPDFs();
-  }, [projectWithRelations.project.id]);
-
-  useEffect(() => {
-    setCurrentState(projectWithRelations.project.state);
-    setUsers(projectWithRelations.users);
-  }, [projectWithRelations.project.state, projectWithRelations.users]);
-  
-  useEffect(() => {
-    if(!visible || !projectWithRelations.project.id || !user) return;
-    let active = true;
-
-    (async () => {
-      const result = await lockProject(projectWithRelations.project.id, user.id, user.user_metadata.name);
-      if(!active) return;
-
-      if(result.success){
-        setCanEdit(true);
-        console.log("Project lock aquired");
-      }
-      else{
-        setCanEdit(false);
-        setLockedByName(result.lockedByName);
-      }
-    })();
-
-  }, [visible, user?.id, projectWithRelations?.project?.id]);
-  
-  useEffect(() => {
-    if(!canEdit || !visible ||  !user) return;
     
-    const interval = setInterval(() => {
-      supabase
-      .from("projects")
-      .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
-      .eq('id', projectWithRelations.project.id)
-      .eq('locked_by', user.id);
-    },120_000);
+    const { user } = useAuth();
+    const projectWithRelations = useProjectStore(state => state.projects.get(projectWithRelationsID));
+    const { handleStateChange: handleStateChangeFromHook } = useProjectSubmit({
+      mode: "edit",
+      oldState: projectWithRelations?.project.state,
+      initialData: projectWithRelations
+    });
+
+    const { 
+      uploadingPDFs, 
+      loadingPDFs, 
+      generatingPDFs, 
+      selectedPDF, 
+      PDFs,   
+      setSelectedPDF, 
+      handleGeneratePDF,
+      deletePdf,
+      fetchPDFs
+    } = useHandlePDFs({ 
+      projectWithRelations: projectWithRelations!,
+      users: projectWithRelations?.users || []
+     });
+  
+    const { 
+      uploadingPhotos, 
+      loadingPhotos, 
+      photos, 
+      setSelectedPhoto,
+      selectedPhoto,
+      fetchPhotos,
+      takePhoto,
+      deletePhoto
+    } = useHandlePhotos({ 
+      projectWithRelations: projectWithRelations!
+    });
+
+    if (!projectWithRelations) {
+        return null;
+    }
+
+    const router = useRouter();
+    const { users, objects, client, project } = projectWithRelations;
+    // const [localState, setLocalState] = useState(projectWithRelations.project.state);
+   
+    const [showUserModal, setShowUserModal] = useState(false);
+    // const [updatingState, setUpdatingState] = useState(false);
+    const [canEdit, setCanEdit] = useState(false);
+    const [lockedByName, setLockedByName] = useState<string | null>(null);
+
+    const [showGallery, setShowGallery] = useState(false);
+    const [showPDFReports, setShowPDFReports] = useState(false);
+    const [pdfGenModalVisible, setpdfGenModalVisible] = useState(false);
     
-    return () => clearInterval(interval);
-  }, [visible, user?.id, canEdit]);
+    const { updateProject, deleteProject, availableUsers, lockProject } = useProjectStore();
+    const { updateClientCounts } = useClientStore();
+    const projectId = projectWithRelations.project.id;
 
+    useEffect(() => {
+        fetchPhotos();
+        fetchPDFs();
+    }, [projectId, fetchPDFs, fetchPhotos]);
 
-  const fetchPhotos = async () => {
-    setLoadingPhotos(true);
-    try{
-        const {data, error} = await supabase
-            .from("photos")
-            .select('*')
-            .eq("project_id", projectWithRelations.project.id)
-            .order("uploaded_at", {ascending: false});
-        
-        if (error) throw error;
-        setPhotos(data || []);
-    }
-    catch(error: any){
-        console.log("Error fetching photos:", error);
-    }
-    finally{
-        setLoadingPhotos(false);
-    }
-  };
+    useEffect(() => {
+        if(!visible || !projectWithRelations.project.id || !user) return;
+        let active = true ;
 
-  const fetchPDFs = async () => {
-    setLoadingPDFs(true);
-    try{
-        const {data, error} = await supabase
-            .from("pdfs")
-            .select('*')
-            .eq("project_id", projectWithRelations.project.id)
-            .order("generated_at", {ascending: false});
-        
-        if (error) throw error;
-        setPDFs(data || []);
-    }
-    catch(error: any){
-        console.log("Error fetching pdfs:", error);
-    }
-    finally{
-        setLoadingPDFs(false);
-    }
-  };
+        (async () => {  
+            const result = await lockProject(projectWithRelations.project.id, user.id, user.user_metadata.name);
+            if(!active) return;
 
-  const requestCameraPermission = async () => {
-    const {status} = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted"){
-        Alert.alert(
-            "Povolenie potrebné",
-            "Na použitie fotoaparátu je potrebné udeliť povolenie."
-        );
-        return false;
-    }
-    return true;
-  };
+            if(result.success ){
+                setCanEdit(true );
+                console.log("Project lock aquired");
+            } 
+            else{ 
+                setCanEdit(false);
+                setLockedByName(result.lockedByName);
+          }
+        })();
 
-  const takePhoto = async () => {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) return;
+        return () => {
+            active = false;
+        };
+    }, [visible, user?.id, projectWithRelations.project.id, lockProject]);
 
-    try{
-        const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ["images"],
-            quality: 0.7
-        });
+    useEffect(() => {
+        if(!canEdit || !visible ||  !user) return;
 
-        if (!result.canceled && result.assets[0]){
-            await uploadPhoto(result.assets[0].uri);
-        }
-    }
-    catch(error: any){
-        console.log("Error taking photos:", error);
-        useNotificationStore.getState().addNotification(
-            'Nepodarilo sa otvorit fotoaparát',
-            'error',
-            4000
-        );
-    }
-  };
-
-  const uploadPhoto = async (uri: string) => {
-    setUploadingPhotos(true);
-    try {
-      // Create unique filename
-      const timestamp = Date.now();
-      const filename = `${projectWithRelations.project.id}/${timestamp}.jpg`;
-      
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const arrayBuffer = await new Response(blob).arrayBuffer();
-      
-    
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabase
-      .storage
-      .from("project-photos")
-      .upload(filename, arrayBuffer, {
-        contentType: 'image/jpeg',
-        upsert: false,
-      });
-
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("project-photos")
-        .getPublicUrl(filename);
-      
-      // Save to database
-      const { data: photoData, error: dbError } = await supabase
-        .from("photos")
-        .insert({
-          project_id: projectWithRelations.project.id,
-          file_name: `${timestamp}.jpg`,
-          file_size: blob.size,
-          file_type: blob.type.toString(),
-          storage_path: urlData.publicUrl,
-        })
-        .select()
-        .single();
-      
-      if (dbError) throw dbError;
-      
-      // Update local state
-      setPhotos([photoData, ...photos]);
-      useNotificationStore.getState().addNotification(
-          'Fotografia bola pridaná',
-          "success",
-          3000
-      );
-    } catch (error: any) {
-      console.error('Error uploading photo:', error);
-      useNotificationStore.getState().addNotification(
-        'Nepodarilo sa nahrať fotografiu',
-        "error",
-        4000
-    );
-    } finally {
-      setUploadingPhotos(false);
-    }
-  };
-
-  const deletePhoto = async (photo: Photo) => {
-    const parts = photo.storage_path.split("project-photos/");
-    const filename = parts[1];
-
-    Alert.alert(
-      'Odstrániť fotografiu',
-      'Naozaj chcete odstrániť túto fotografiu?',
-      [
-        { text: 'Zrušiť', style: 'cancel' },
-        {
-          text: 'Odstrániť',
-          style: 'destructive',
-          onPress: async () => {
+        const interval = setInterval(async () => {
             try {
-              // Delete from storage
-              const { error: storageError } = await supabase.storage
-                .from("project-photos")
-                .remove([filename]);
-
-              if (storageError) throw storageError;
-
-              // Delete from database
-              const { error: dbError } = await supabase
-                .from("photos")
-                .delete()
-                .eq('id', photo.id);
-
-              if (dbError) throw dbError;
-
-              // Update local state
-              setPhotos(photos.filter(p => p.id !== photo.id));
-              setSelectedPhoto(null);
+                const { error } = await supabase
+                    .from("projects")
+                    .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
+                    .eq('id', projectWithRelations.project.id)
+                    .eq('locked_by', user.id);
               
-              useNotificationStore.getState().addNotification(
-                "Fotografia bola odstránená",
-                "success",
-                3000
-              );
-            } catch (error: any) {
-              console.error('Error deleting photo:', error);
-              useNotificationStore.getState().addNotification(
-                "Nepodarilo sa odstrániť fotografiu",
+                if (error) {
+                    console.error('Failed to renew lock:', error);
+                    useNotificationStore.getState().addNotification(
+                        "Nepodarilo sa obnoviť zámok projektu",
+                        "warning",
+                        3000
+                    );
+                }
+            }
+            catch (error: any){
+                console.error("lock renewal error:", error);
+            }
+        }, 120_000);
+
+        return () => clearInterval(interval);
+    }, [visible, user?.id, canEdit, projectWithRelations.project.id]);
+
+    // Handle state change with auto-completion
+    const handleStateChange = async (newState: string) => {
+        await handleStateChangeFromHook(newState, projectWithRelations.project.state);
+    };
+
+    const handleAddUser = useCallback(async (user: User) => {
+        // Check if already assigned
+        if (users.some(u => u.id === user.id)) {
+            useNotificationStore.getState().addNotification(
+                "Tento používateľ je už priradený",
                 "error",
                 4000
-              );
-            }
-          }
+            );
+            return;
         }
-      ]
-    );
-  };
 
-  const handleGeneratePDF = async (
-    type: "cleaning" | "inspection" | "cleaningWithPaymentReceipt",
-    receiptOnlyForChimneyId?: string
-  ) => {
-    try {
-      setIsGenerating(true);
-  
-      const watermarkBase64 = await getWatermarkBase64();
-      const footerBase64 = await getFooterImageBase64();
-  
-      /* ----------------------------------------------------
-         RECEIPT LOGIC
-         ---------------------------------------------------- */
-      if (type === "cleaningWithPaymentReceipt") {
-        console.log("inside of this condition");
-        // ALL chimneys → receipt for all
-        if (!receiptOnlyForChimneyId) {
-          console.log("inside of generate amount for all condition");
-          for (const object of projectWithRelations.objects) {
-            for (const chimney of object.chimneys) {
-              const sums = chimneySums[chimney.id] || ["", ""];
-              console.log(sums);
-              try {
-                const uri = await generateRecord(
-                  projectWithRelations.project,
-                  users[0],
-                  projectWithRelations.client,
-                  object,
-                  chimney,
-                  watermarkBase64,
-                  footerBase64,
-                  type,
-                  sums
-                );
-  
-                if (uri) {
-                  await uploadPDF(
-                    uri,
-                    type,
-                    object.object.id,
-                    chimney,
-                    sums
-                  );
-                }
-              } catch (err) {
-                console.error("Failed uploading or generation of cleaning record with receipt", err);
-              }
-            }
-          }
-        }
-  
-        // ONE chimney → receipt only for selected
-        else {
-          for (const object of projectWithRelations.objects) {
-            for (const chimney of object.chimneys) {
-            const theOneChimney = chimney.id === receiptOnlyForChimneyId ? chimney : null;
-            
-            if (theOneChimney){
-              const sums = chimneySums[theOneChimney.id];
-              try {
-                const uri = await generateRecord(
-                  projectWithRelations.project,
-                  users[0],
-                  projectWithRelations.client,
-                  object,
-                  theOneChimney,
-                  watermarkBase64,
-                  footerBase64,
-                  type,
-                  sums
-                );
-    
-                if (uri) {
-                  await uploadPDF(
-                    uri,
-                    type,
-                    object.object.id,
-                    chimney,
-                    sums
-                  );
-                }
-              } catch (err) {
-                console.error(`Single receipt failed`, err);
-              }
-            }
-            else{
-              try {
-                const uri = await generateRecord(
-                  projectWithRelations.project,
-                  users[0],
-                  projectWithRelations.client,
-                  object,
-                  chimney,
-                  watermarkBase64,
-                  footerBase64,
-                  "cleaning",
-                  null
-                );
-              
-                if (uri) {
-                  await uploadPDF(
-                    uri,
-                    "cleaning",
-                    object.object.id,
-                    chimney,
-                    null
-                  );
-                }
-              } catch (err) {
-                console.error("Failed uploading or generation of cleaning record", err);
-              }
-            }
-          }
-        }
-        }
+        try {
+            const { error } = await supabase
+                .from("project_assignments")
+                .insert({
+                  project_id: projectWithRelations.project.id,
+                  user_id: user.id,
+                });
+
+            if (error) throw error;
+
+            // Update local state
+            const updatedUsers = [...users, user];
+
+          // Update store
+          updateProject(
+              projectWithRelations.project.id, 
+              {
+                  project: projectWithRelations.project,
+                  client: projectWithRelations.client,
+                  users: updatedUsers,
+                  objects: projectWithRelations.objects
+              }, 
+              false);
+
+          setShowUserModal(false);
+          useNotificationStore.getState().addNotification(
+              `${user.name} bol priradený k projektu`,
+              "success",
+              3000
+          );
+      } 
+      catch (error: any) {
+          console.error('Error adding user:', error);
+          useNotificationStore.getState().addNotification(
+              "Nepodarilo sa priradiť používateľa",
+              "error",
+              4000
+          );
       }
-  
-      else {
-        for (const object of projectWithRelations.objects) {
-          for (const chimney of object.chimneys) {
-            try {
-              const uri = await generateRecord(
-                projectWithRelations.project,
-                users[0],
-                projectWithRelations.client,
-                object,
-                chimney,
-                watermarkBase64,
-                footerBase64,
-                type,
-                null
-              );
-  
-              if (uri) {
-                await uploadPDF(
-                  uri,
-                  type,
-                  object.object.id,
-                  chimney,
-                  null
-                );
-              }
-            } catch (err) {
-              console.error("Generation of basic report failed", err);
-            }
-          }
-        }
-      }
-      useNotificationStore.getState().addNotification(
-        "PDF dokumenty boli vygenerované",
-        "success",
-        3000
-      );
-    } catch (error) {
-      console.error("handleGeneratePDF failed:", error);
-      useNotificationStore.getState().addNotification(
-        "Nepodarilo sa vygenerovať PDF",
-        "error",
-        3000
-      );
-    } finally {
-      setIsGenerating(false);
-      setChimneySums({});
-    }
-  };
+    }, [users, projectWithRelations.project.id, updateProject]);
 
-  const uploadPDF = async (uri: string | null, report_type: string, object_id: string, chimney: Chimney, sums: string[] | null) => {
-    if (uri === null){
-      return;
-    }
-              
-    setUploadingPDFs(true);
-    try {
-      let filename;
-      if(report_type === "cleaning" ||  report_type === "cleaningWithPaymentReceipt"){
-        filename =`cleaning_${chimney.id}_${projectWithRelations.project.id}.pdf`;
-      }
-      else{
-        filename =`inspection_${chimney.id}_${projectWithRelations.project.id}.pdf`;
-      }
-      
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const arrayBuffer = await new Response(blob).arrayBuffer();
-  
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase
-        .storage
-        .from("pdf-reports")
-        .upload(filename, arrayBuffer, {
-          contentType: 'application/pdf',
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("pdf-reports")
-        .getPublicUrl(filename);
-      
-      console.log(`PDF for chimney ${chimney.id} uploaded`);
-      
-      // Save to database
-      if( sums  !== null){
-        const { data: pdfData, error: dbError } = await supabase
-          .from("pdfs")
-          .insert({
-            project_id: projectWithRelations.project.id,
-            object_id: object_id,
-            chimney_id: chimney.id,
-            report_type: report_type,
-            file_name: filename,
-            file_size: blob.size,
-            file_type: blob.type.toString(),
-            storage_path: urlData.publicUrl,
-            amount: sums[0],
-            amountByWords: sums[1]
-          })
-          .select()
-          .single();
-
-          if (dbError) throw dbError;
-          // Update local state
-          setPDFs([pdfData, ...PDFs]);
-      }
-      else{
-        const { data: pdfData, error: dbError } = await supabase
-          .from("pdfs")
-          .insert({
-            project_id: projectWithRelations.project.id,
-            object_id: object_id,
-            chimney_id: chimney.id,
-            report_type: report_type,
-            file_name: filename,
-            file_size: blob.size,
-            file_type: blob.type.toString(),
-            storage_path: urlData.publicUrl
-          })
-          .select()
-          .single();
-
-          if (dbError) throw dbError;
-          // Update local state
-          setPDFs([pdfData, ...PDFs]);
-      }
-
-      await fetchPDFs();
-      useNotificationStore.getState().addNotification(
-        "PDF záznam bol pridaný",
-        "success",
-        3000
-      );
-    } 
-    catch (error: any) {
-      console.error('Error uploading pdf', error);
-      useNotificationStore.getState().addNotification(
-        "Nepodarilo sa nahrať PDF",
-        "error",
-        4000
-      );
-    } 
-    finally {
-      setUploadingPDFs(false);
-    }
-  };
-
-  const deletePdf = async (pdf: PDF) => {
-    const parts = pdf.storage_path.split("pdf-reports/");
-    const filename = parts[1];
-    
-    Alert.alert(
-      'Odstrániť PDF',
-      'Naozaj chcete odstrániť tento PDF záznam?',
-      [
-        { text: 'Zrušiť', style: 'cancel' },
-        {
-          text: 'Odstrániť',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Delete from storage
-              const { error: storageError } = await supabase.storage
-                .from("pdf-reports")
-                .remove([filename]);
-
-              if (storageError) throw storageError;
-
-              // Delete from database
-              const { error: dbError } = await supabase
-                .from("pdfs")
+    const handleRemoveUser = useCallback(async (userId: string) => {
+        try {
+            const { error } = await supabase
+                .from("project_assignments")
                 .delete()
-                .eq('id', pdf.id);
+                .eq("project_id", projectWithRelations.project.id)
+                .eq("user_id", userId);
+          
+            if (error) throw error;
+          
+            // Update local state
+            const updatedUsers = users.filter(u => u.id !== userId);
 
-              if (dbError) throw dbError;
-
-              // Update local state
-              setPDFs(PDFs.filter(p => p.id !== pdf.id));
-              setSelectedPDF(null);
-              useNotificationStore.getState().addNotification(
-                "PDF záznam bol odstránený",
-                "success",
-                3000
-              );
-            } catch (error: any) {
-              console.error('Error deleting pdf:', error);
-              useNotificationStore.getState().addNotification(
-                "Nepodarilo sa odstrániť PDF záznam",
+            // Update store
+            updateProject(
+                projectWithRelations.project.id, 
+                {
+                  project: projectWithRelations.project,
+                  client: projectWithRelations.client,
+                  users: updatedUsers,
+                  objects: projectWithRelations.objects 
+                },
+                false);
+          
+        } 
+        catch (error: any) {
+            console.error('Error removing user:', error);
+            useNotificationStore.getState().addNotification(
+                "Nepodarilo sa odstrániť používateľa z projektu",
                 "error",
                 4000
-              );
-            }
-          }
+            );
         }
-      ]
-    );
-  };
-
-  // Handle state change with auto-completion
-  const handleStateChange = async (newState: string) => {
-    if (updatingState) return;
-    setUpdatingState(true);
-
-    const oldState = projectWithRelations.project.state;
-    let startDate =  projectWithRelations.project.start_date;
-    let completionDate =  projectWithRelations.project.completion_date;
-
-    if (newState === "Nový"){
-      startDate = null;
-      completionDate = null;
-    }
-    else if (["Prebieha", "Pozastavený", "Naplánovaný"].includes(newState)){
-      if (oldState === "Nový"){
-        startDate = new Date().toISOString().split('T')[0]; 
-      }
-      else if (["Ukončený","Zrušený"].includes(oldState)){
-        completionDate = null;
-      }
-    }
-    else if (["Ukončený","Zrušený"].includes(newState)){
-      if (!["Ukončený","Zrušený"].includes(oldState)){
-        completionDate = new Date().toISOString().split('T')[0];
-      }
-    }
-    
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ 
-          state: newState,
-          start_date: startDate,
-          completion_date: completionDate 
-        })
-        .eq('id',  projectWithRelations.project.id);
-
-      if (error) throw error;
-      
-      // Update local state
-      setCurrentState(newState);
-      
-      // create new automated project
-      if(newState === "Ukončený"){
-        let newType;
-        const completion = new Date(completionDate!);
-        let scheduledDate: string;
+    }, [users, projectWithRelations, updateProject]);
   
-        if (projectWithRelations.project.type === "Obhliadka") {
-            newType = "Montáž";
-            // + 7 days
-            const nextWeek = new Date(completion);
-            nextWeek.setDate(nextWeek.getDate() + 7);
-            scheduledDate = nextWeek.toISOString().split("T")[0];
+    const toggleUserAssign = async (userId: string) => {
+        const exists = users.some(u => u.id === userId);
+      
+        if (!exists) {
+            await handleAddUser(availableUsers.find((u) => u.id === userId)!);
         } else {
-            newType = "Čistenie";
-            // + 1 year
-            const nextYear = new Date(completion);
-            nextYear.setFullYear(nextYear.getFullYear() + 1);
-            scheduledDate = nextYear.toISOString().split("T")[0];
+            await handleRemoveUser(userId);
         }
-        
-        const {data: autoProject , error: autoProjectError} = await supabase
-          .from("projects")
-          .insert({
-              state: "Nový",
-              client_id: projectWithRelations.client.id,
-              type: newType,
-              scheduled_date: scheduledDate
-          })
-          .select()
-          .single();
-        
-        if (autoProjectError) throw autoProjectError;
-        
-        // fetch new project with relations of type Montaz and 
-        // add it to state.projects
-        if (autoProject && (newType === "Montáž")){
-          const { data: completeProject, error: fetchError } = await supabase
-            .from("projects")
-            .select(`
-              *,
-              clients (*),
-              project_assignments (
-                user_profiles (id, name, email)
-              ),
-              project_objects (
-                objects (
-                  id,
-                  client_id,
-                  address,
-                  city, 
-                  streetNumber,
-                  country,
-                  chimneys (
-                    id,
-                    chimney_types (id, type, labelling),
-                    placement,
-                    appliance,
-                    note
-                  )
-                )
-              )
-            `,)
-            .eq("id", autoProject.id)
-            .single();
+    };
 
-          if (fetchError) throw fetchError;
+    const closePdfModal = () => {
+        setpdfGenModalVisible(false);
+    };
 
-          // Transform the data to match ProjectWithRelations format
-          if (completeProject) {
-            const transformedProject = {
-              project: completeProject,
-              client: completeProject.clients,
-              users: completeProject.project_assignments
-                ?.map((pa: any) => pa.user_profiles)
-                .filter(Boolean) || [],
-              objects: completeProject.project_objects
-                ?.map((po: any) => {
-                  if (!po.objects) return null;
-                  const chimneys = po.objects.chimneys
-                    ?.map((c: any) => ({
-                      id: c.id,
-                      type: c.chimney_types?.type || null,
-                      labelling: c.chimney_types?.labelling || null,
-                      appliance: c.appliance,
-                      placement: c.placement,
-                      note: c.note
-                    }))
-                    .filter(Boolean) || [];
-                  return {
-                    object: po.objects,
-                    chimneys: chimneys
-                  };
-                })
-                .filter(Boolean) || []
-            };
-            addProject(transformedProject);
-          }
+    const handleCloseViewer = () => {
+        setShowPDFReports(false);
+        setShowGallery(false);
+        setSelectedPDF(null);
+        setSelectedPhoto(null);
+    };
+
+    const handlePdfGenerationWithClose = (type: "cleaningWithPaymentReceipt" | "cleaning", chimneyId?: string) =>{
+        if (chimneyId) {
+            handleGeneratePDF(type, chimneyId);
         }
-        useNotificationStore.getState().addNotification(
-          `Bol vytvorený nový projekt typu: ${newType}`,
-          "success",
-          3000
-        );
-      }
-      // Update store
-      updateProject(projectWithRelations.project.id, {
-        project: 
-          {   
-            ...projectWithRelations.project, 
-            state: newState,
-            start_date: startDate,
-            completion_date: completionDate 
-          },
-        client: projectWithRelations.client,
-        users,
-        objects: projectWithRelations.objects
-      }, true);
-  
-    } 
-    catch (error: any) {
-      console.error('Error updating project state:', error);
-      useNotificationStore.getState().addNotification(
-        "Nepodarilo sa upraviť stav projektu",
-        "error",
-        4000
-      );
-    } 
-    finally {
-      setUpdatingState(false);
-    }
-  };
-
-  const handleAddUser = async (user: User) => {
-    // Check if already assigned
-    if (users.some(u => u.id === user.id)) {
-      useNotificationStore.getState().addNotification(
-        "Tento používateľ je už priradený",
-        "error",
-        4000
-      );
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("project_assignments")
-        .insert({
-          project_id: projectWithRelations.project.id,
-          user_id: user.id,
-        });
-
-      if (error) throw error;
-
-      // Update local state
-      const updatedUsers = [...users, user];
-      setUsers(updatedUsers);
-
-      // Update store
-      updateProject(projectWithRelations.project.id, {
-        project: projectWithRelations.project,
-        client: projectWithRelations.client,
-        users: updatedUsers,
-        objects: projectWithRelations.objects
-      }, false);
-
-      setShowUserModal(false);
-      useNotificationStore.getState().addNotification(
-        `${user.name} bol priradený k projektu`,
-        "success",
-        3000
-      );
-    } catch (error: any) {
-      console.error('Error adding user:', error);
-      useNotificationStore.getState().addNotification(
-        "Nepodarilo sa priradiť používateľa",
-        "error",
-        4000
-      );
-    }
-  };
-
-  const handleRemoveUser = async (userId: string) => {
-    try {
-      const { error } = await supabase
-        .from("project_assignments")
-        .delete()
-        .eq("project_id", projectWithRelations.project.id)
-        .eq("user_id", userId);
-
-      if (error) throw error;
-
-      // Update local state
-      const updatedUsers = users.filter(u => u.id !== userId);
-      setUsers(updatedUsers);
-
-      // Update store
-      updateProject(
-        projectWithRelations.project.id, 
-        {
-          project: projectWithRelations.project,
-          client: projectWithRelations.client,
-          users: updatedUsers,
-          objects: projectWithRelations.objects 
-        },
-        false);
-
-    } catch (error: any) {
-      console.error('Error removing user:', error);
-      useNotificationStore.getState().addNotification(
-        "Nepodarilo sa odstrániť používateľa z projektu",
-        "error",
-        4000
-      );
-    }
-  };
-  
-  const toggleUserAssign = async (userId: string) => {
-    const exists = users.some(u => u.id === userId);
-  
-    if (!exists) {
-      await handleAddUser(availableUsers.find((u) => u.id === userId)!);
-    } else {
-      await handleRemoveUser(userId);
-    }
-  };
-
-  const closePdfModal = () => {
-    setpdfGenModalVisible(false);
-  };
-
-  const handleCloseViewer = () => {
-    setShowPDFReports(false);
-    setShowGallery(false);
-    setSelectedPDF(null);
-    setSelectedPhoto(null);
-  };
-
-
-  const handlePdfGenerationWithClose = (type: "cleaningWithPaymentReceipt" | "cleaning", chimneyId?: string) =>{
-    if(chimneyId){
-      handleGeneratePDF(type, chimneyId);
-    }
-    else{
-      handleGeneratePDF(type);
-    }
-    handleCloseViewer();
-  };
+        else {
+            handleGeneratePDF(type);
+        }
+        handleCloseViewer();
+    };
 
   return (
     <Modal
@@ -964,8 +315,8 @@ export default function ProjectDetails({
                   <View className="flex-2">
                   <ModalSelector
                     options={STATE_OPTIONS}
-                    selectedValue={currentState}
-                    onSelect={handleStateChange}
+                    selectedValue={projectWithRelations.project.state}
+                    onSelect={(newState) => handleStateChange(newState)}
                     label="Stav: "
                     inDetailsModal={true}
                   />
@@ -975,7 +326,7 @@ export default function ProjectDetails({
                 {/* Dates */}
                 <View className='flex-2 mb-3'>
                 <Body className="text-gray-400 mb-1">TERMÍN</Body>
-                {projectWithRelations.project.scheduled_date && (currentState === "Nový") && (
+                {projectWithRelations.project.scheduled_date && (projectWithRelations.project.state === "Nový") && (
                   <View className="flex-row">
                     <Body className="mr-2 text-dark-text_color">Plánované na:</Body>
                     <Body className="font-semibold text-dark-text_color">
@@ -984,7 +335,7 @@ export default function ProjectDetails({
                   </View>
                 )}
 
-                {projectWithRelations.project.start_date && (currentState !== "Nový") && (currentState !== "Ukončený") && (currentState !== "Zrušený") && (
+                {projectWithRelations.project.start_date && (projectWithRelations.project.state !== "Nový") && (projectWithRelations.project.state !== "Ukončený") && (projectWithRelations.project.state !== "Zrušený") && (
                   <View className="flex-row">
                     <Body className="mr-2 text-dark-text_color">Začiatok:</Body>
                     <Body className="font-semibold text-dark-text_color">
@@ -993,7 +344,7 @@ export default function ProjectDetails({
                   </View>
                 )}
 
-                {projectWithRelations.project.completion_date && ((currentState === "Ukončený") || (currentState === "Zrušený")) &&(
+                {projectWithRelations.project.completion_date && ((projectWithRelations.project.state === "Ukončený") || (projectWithRelations.project.state === "Zrušený")) &&(
                   <View className="flex-row">
                     <Body className="mr-2 text-dark-text_color">Ukončenie:</Body>
                     <Body className="font-semibold text-dark-text_color">
@@ -1140,7 +491,7 @@ export default function ProjectDetails({
                               handleGeneratePDF("inspection");
                             }
                           }}
-                          disabled={isGenerating}
+                          disabled={generatingPDFs}
                           className="bg-blue-600 rounded-full px-4 py-2 flex-row items-center"
                       >
                           {uploadingPDFs ? (
@@ -1148,7 +499,7 @@ export default function ProjectDetails({
                           ) : (
                             <View className='flex-row'>
                               <MaterialIcons name="picture-as-pdf" size={16} color={"#FFFFFF"}/>
-                              <Body className="text-white font-semibold ml-2">{isGenerating ? 'Generujem...' : 'Generovať'}</Body>
+                              <Body className="text-white font-semibold ml-2">{generatingPDFs? 'Generujem...' : 'Generovať'}</Body>
                             </View>
                           )}
                           </TouchableOpacity>
@@ -1225,8 +576,7 @@ export default function ProjectDetails({
                       pathname: "/addProjectScreen",
                       params: { 
                         project: JSON.stringify(projectWithRelations), 
-                        mode: "edit", 
-                        preselectedClient: JSON.stringify(projectWithRelations.client)
+                        mode: "edit"
                       }
                     });
                   }}
@@ -1281,5 +631,5 @@ export default function ProjectDetails({
           </View>
         </View>  
       </Modal>
-  );
+    );
 }

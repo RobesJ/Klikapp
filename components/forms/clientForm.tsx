@@ -273,7 +273,8 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                             <View className="flex-row">
                                 <TouchableOpacity
                                     onPress={() => handleSelectedType("Fyzická osoba")}
-                                    className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-300" : "border-gray-700 bg-gray-800"} rounded-xl p-4 mr-3 w-36 items-center`}
+                                    className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-300" : "border-gray-700 bg-gray-800"} rounded-xl p-4 mr-2 items-center`}
+                                    style={{width: "50%"}}
                                 >
                                     <Body
                                       style={{ color: selectedType === "Fyzická osoba" ? '#FFFFFF' : '#ABABAB' }}
@@ -283,8 +284,9 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                                     </Body>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-300 " : "border-gray-700 bg-gray-800"} rounded-xl p-4 w-36 items-center`}
+                                    className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-300 " : "border-gray-700 bg-gray-800"} rounded-xl p-4 items-center`}
                                     onPress={() => handleSelectedType("Právnická osoba")}
+                                    style={{width: "50%"}}
                                 >
                                     <Body
                                       style={{ color: selectedType === "Právnická osoba" ? '#FFFFFF' : '#ABABAB' }}

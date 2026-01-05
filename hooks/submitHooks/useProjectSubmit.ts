@@ -1,9 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/notificationStore";
+import { useProjectStore } from "@/store/projectStore";
 import { Project, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseProjectSubmitProps {
     mode: "create" | "edit";
@@ -13,9 +14,130 @@ interface UseProjectSubmitProps {
 }
 
 export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: UseProjectSubmitProps) {
-    const [loading, setLoading]= useState(false);
+    const initialDataRef = useRef(initialData);
+    const oldStateRef = useRef(oldState);
 
-    const cleanFormData = (formData: Omit<Project, "id">): Omit<Project, "id"> => {
+    const [loading, setLoading]= useState(false);
+    const [updatingState, setUpdatingState] = useState(false);
+    const { addProject, updateProject } = useProjectStore();
+
+    useEffect(() => {
+        initialDataRef.current = initialData;
+        oldStateRef.current = oldState;
+    }, [initialData, oldState]);
+
+    const calculateDatesForstateChange = (
+        newState: string,
+        oldState: string,
+        currentStartDate: string | null,
+        currentCompletionDate: string | null
+    ) => {
+        let startDate =  currentStartDate;
+        let completionDate =  currentCompletionDate;
+
+        if (newState === "Nový"){
+            startDate = null;
+            completionDate = null;
+        }
+
+        else if (["Prebieha", "Pozastavený", "Naplánovaný"].includes(newState)){
+            if (oldState === "Nový"){
+              startDate = startDate ||  new Date().toISOString().split('T')[0]; 
+            }
+            else if (["Ukončený","Zrušený"].includes(oldState)){
+              completionDate = null;
+            }
+        }
+
+        else if (["Ukončený","Zrušený"].includes(newState)){
+            if (!["Ukončený","Zrušený"].includes(oldState)){
+                completionDate = completionDate || new Date().toISOString().split('T')[0];
+            }
+        }
+
+        return { startDate, completionDate };
+    }
+
+    const handleStateChange = useCallback(async (newState: string, projectOldState: string) => {
+        if (updatingState || !initialDataRef.current) return;
+        setUpdatingState(true);
+
+        const { startDate, completionDate } = calculateDatesForstateChange(
+            newState,
+            projectOldState,
+            initialDataRef.current.project.start_date,
+            initialDataRef.current.project.completion_date
+        );
+
+        try {
+            const updateData: Omit<Project, "id"> ={
+                state: newState,
+                client_id: initialDataRef.current.client.id,
+                type: initialDataRef.current.project.type,
+                scheduled_date: initialDataRef.current.project.scheduled_date,
+                start_date: startDate,
+                completion_date: completionDate, 
+                note: initialDataRef.current.project.note     
+            }
+        
+            await updateProjectInDBS(
+                updateData, 
+                initialDataRef.current.users, 
+                initialDataRef.current.objects
+            );
+
+
+            if(newState === "Ukončený"){
+                let newType;
+                const completion = new Date(completionDate!);
+                let scheduledDate: string;
+          
+                if (initialDataRef.current.project.type === "Obhliadka") {
+                    newType = "Montáž";
+                    const nextWeek = new Date(completion);
+                    nextWeek.setDate(nextWeek.getDate() + 7);
+                    scheduledDate = nextWeek.toISOString().split("T")[0];
+                } else {
+                    newType = "Čistenie";
+                    const nextYear = new Date(completion);
+                    nextYear.setFullYear(nextYear.getFullYear() + 1);
+                    scheduledDate = nextYear.toISOString().split("T")[0];
+                }
+
+                const insertData: Omit<Project, "id"> ={
+                    state: "Nový",
+                    client_id: initialDataRef.current.client.id,
+                    type: newType,
+                    scheduled_date: scheduledDate,
+                    start_date: null,
+                    completion_date: null,
+                    note: ''     
+                }
+                await createProject(insertData, [], []);
+                useNotificationStore.getState().addNotification(
+                    `Bol vytvorený nový projekt typu: ${newType}`,
+                    "success",
+                    3000
+                );
+            }
+        }
+        catch (error: any) {
+            console.error('Error updating project state:', error);
+            useNotificationStore.getState().addNotification(
+              "Nepodarilo sa upraviť stav projektu",
+              "error",
+              4000
+            );
+        } 
+        finally {
+            setUpdatingState(false);
+        }
+    }, [updatingState, addProject, updateProject]);
+
+    const cleanFormData = (
+        formData: Omit<Project, "id">,
+        currentOldState?: string
+    ): Omit<Project, "id"> => {
         const cleanedFormData = {
             ...formData,
             scheduled_date: formData.scheduled_date || null,
@@ -24,29 +146,18 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
         };
         
         // check the oldState and check/change date values
-        if(oldState && oldState !== cleanedFormData.state){
-            if (cleanedFormData.state === "Nový"){
-                cleanedFormData.start_date = null;
-                cleanedFormData.completion_date = null;
-            }
-            else if (["Prebieha", "Pozastavený", "Naplánovaný"].includes(cleanedFormData.state)){
-                if (oldState === "Nový"){
-                    cleanedFormData.start_date = cleanedFormData.start_date || new Date().toISOString().split('T')[0]; 
-                }
-                else if (["Ukončený","Zrušený"].includes(oldState)){
-                  cleanedFormData.completion_date = null;
-                }
-            }
-            else if (["Ukončený","Zrušený"].includes(cleanedFormData.state)){
-              if (!["Ukončený","Zrušený"].includes(oldState)){
-                  cleanedFormData.completion_date = cleanedFormData.completion_date || new Date().toISOString().split('T')[0]; 
-              }
-            }
+        if(currentOldState && currentOldState !== cleanedFormData.state){
+            const { startDate, completionDate } = calculateDatesForstateChange(
+                cleanedFormData.state,
+                currentOldState,
+                cleanedFormData.start_date,
+                cleanedFormData.completion_date
+            );
+            cleanedFormData.start_date = startDate;
+            cleanedFormData.completion_date = completionDate;
         }   
 
-        return (
-            cleanedFormData
-        );
+        return cleanedFormData;
     };
 
     const transformCompleteProject = (completeProject: any) : ProjectWithRelations => {
@@ -193,15 +304,20 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
         if (projectError) throw projectError;
         await saveUserRelations(projectData.id, users);
         await saveObjectRelations(projectData.id, objects);
-        return await fetchCompleteProject(projectData.id);
+        const newProject = await fetchCompleteProject(projectData.id);
+        addProject(newProject);
+        return newProject;
     };
 
-
-    const updateProject = async (
+    const updateProjectInDBS = async (
         formData: Omit<Project, "id">,
         users: User[],
         objects: ObjectWithRelations[]
     ) => {
+        if (!initialDataRef.current?.project.id) {
+            throw new Error("Project ID is required for update");
+        }
+
         const {data: projectData, error: projectError} = await supabase
             .from('projects')
             .update(formData)
@@ -214,20 +330,22 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
         await deleteObjectRelations(projectData.id);
         await saveUserRelations(projectData.id, users);
         await saveObjectRelations(projectData.id, objects);
-        return await fetchCompleteProject(projectData.id);
+        const updatedProject =  await fetchCompleteProject(projectData.id);
+        updateProject(initialDataRef.current.project.id, updatedProject, true);
+        return updatedProject;
     };
 
-    const submitProject = async (
+    const submitProject = useCallback(async (
         formData: Omit<Project, "id">,
         users: User[],
         objects: ObjectWithRelations[]
     ) => {
         setLoading(true);
         try{
-            const cleanedFormData = cleanFormData(formData);
+            const cleanedFormData = cleanFormData(formData, oldState);
             const completeProject = mode === "create"
                 ? await createProject(cleanedFormData, users, objects)
-                : await updateProject(cleanedFormData, users, objects);
+                : await updateProjectInDBS(cleanedFormData, users, objects);
 
             onSuccess?.(completeProject);
 
@@ -252,10 +370,12 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
         finally{
             setLoading(false);
         }
-    };
+    }, [mode, createProject, updateProjectInDBS, onSuccess]);
 
     return {
         loading,
-        submitProject
-    }
+        submitProject,
+        handleStateChange,
+        updatingState
+    };
 }

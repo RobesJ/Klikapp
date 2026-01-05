@@ -167,10 +167,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               country,
               chimneys (
                 id,
-                chimney_types (id, type, labelling),
+                chimney_type_id,
                 placement,
                 appliance,
-                note
+                note,
+                chimney_types!chimneys_chimney_type_id_fkey (
+                  id,
+                  type, 
+                  labelling
+                )
               )
             )
           )
@@ -250,10 +255,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               country,
               chimneys (
                 id,
-                chimney_types (id, type, labelling),
+                chimney_type_id,
                 placement,
                 appliance,
-                note
+                note,
+                chimney_types!chimneys_chimney_type_id_fkey (
+                  id,
+                  type, 
+                  labelling
+                )
               )
             )
           )
@@ -950,8 +960,14 @@ function transformProjects(data: any): ProjectWithRelations[]{
         const chimneys: Chimney[] = po.objects.chimneys
           ?.map((c: any) => ({
             id: c.id,
-            type: c.chimney_types?.type || null,
-            labelling: c.chimney_types?.labelling || null,
+            chimney_type_id: c.chimney_type_id,
+            chimney_type: c.chimney_types
+              ? {
+                  id: c.chimney_types.id,
+                  type: c.chimney_types.type,
+                  labelling: c.chimney_types.labelling
+                }
+              : undefined,
             appliance: c.appliance,
             placement: c.placement,
             note: c.note
@@ -1006,11 +1022,16 @@ async function buildQuery (startDate: string, limit: number) {
             streetNumber,
             country,
             chimneys (
-              id,
-              chimney_types (id, type, labelling),
-              placement,
-              appliance,
-              note
+                id,
+                chimney_type_id,
+                placement,
+                appliance,
+                note,
+                chimney_types!chimneys_chimney_type_id_fkey (
+                  id,
+                  type, 
+                  labelling
+                )
             )
           )
         )
@@ -1038,11 +1059,16 @@ async function buildFilteredQuery(filters: ProjectFilters, offset: number, limit
             streetNumber,
             country,
             chimneys (
-              id,
-              chimney_types (id, type, labelling),
-              placement,
-              appliance,
-              note
+                id,
+                chimney_type_id,
+                placement,
+                appliance,
+                note,
+                chimney_types!chimneys_chimney_type_id_fkey (
+                  id,
+                  type, 
+                  labelling
+                )  
             )
           )
         )

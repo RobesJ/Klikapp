@@ -1,7 +1,6 @@
 import { useProjectSubmit } from "@/hooks/submitHooks/useProjectSubmit";
 import { useSearchClient } from "@/hooks/useSearchClient";
 import { supabase } from "@/lib/supabase";
-import { useClientStore } from "@/store/clientStore";
 import { useProjectStore } from "@/store/projectStore";
 import { Project, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
@@ -21,10 +20,9 @@ interface ProjectFormProps{
     mode: "create" | "edit";
     initialData?: ProjectWithRelations;
     onSuccess?: (project: ProjectWithRelations) => void;
-    preselectedClient?: string;
 }
 
-export default function ProjectForm({ mode, initialData, onSuccess, preselectedClient} : ProjectFormProps) {
+export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFormProps) {
 
     const [formData, setFormData] =  useState<Omit<Project, 'id'> & { id?: string }>({
         client_id: initialData?.client.id ?? "",
@@ -48,7 +46,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [completionDate, setCompletionDate] = useState<Date | null>(null);
 
-    // const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<User[]>(initialData?.users ?? [] );
     const [showUserModal, setShowUserModal] = useState(false);
 
@@ -57,52 +54,8 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [selectedObjects, setSelectedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
     const [showObjectModal, setShowObjectModal] = useState(false);
     let oldState: string = initialData ? initialData.project.state : '';
+
     const {loading, submitProject } = useProjectSubmit({mode, oldState, initialData, onSuccess}); 
-
-    useEffect(() => {
-        if (!initialData) return;
-
-        setFormData({
-            client_id: initialData?.client.id,
-            type: initialData?.project.type,
-            state: initialData?.project.state,
-            scheduled_date: initialData?.project.scheduled_date ?? null,
-            start_date: initialData?.project.start_date ?? null,
-            completion_date: initialData?.project.completion_date ?? null,
-            note: initialData?.project.note ?? "",
-        });
-        
-        const dates = {
-            scheduled: initialData.project.scheduled_date,
-            start: initialData.project.start_date,
-            completion: initialData.project.completion_date
-        };
-
-        if (dates.scheduled)  setScheduledDate(new Date(dates.scheduled));
-        if (dates.start)      setStartDate(new Date(dates.start));
-        if (dates.completion) setCompletionDate(new Date(dates.completion));
-       
-        if (initialData.users?.length > 0) setSelectedUsers(initialData.users);
-        if (initialData.objects?.length > 0) setAssignedObjects(initialData.objects);
-    }, [initialData]);
-
-    const client = useClientStore(
-        s => s.clients.find(c => c.id === preselectedClient)
-    );
-
-    useEffect(() => {
-        if (!client || initialData) return;
-        setSelectedClient(client);
-        setFormData(prev => ({ ...prev, client_id: client.id }));
-      }, [client, initialData]);
-
-    // Fetch available users when component mounts or modal opens
-    useEffect(() => {
-        if (showUserModal && availableUsers.length === 0) {
-            fetchAvailableUsers();
-        }
-    }, [showUserModal]);
-    
     const handleChange = (field: keyof Omit<Project, 'id'>, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
         if(errors[field]){
@@ -123,6 +76,41 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         selectedClient,
         setSelectedClient
     } = useSearchClient<Omit<Project, "id">>(handleChange);
+
+    useEffect(() => {
+        if (!initialData) return;
+
+        setFormData({
+            client_id: initialData?.client.id,
+            type: initialData?.project.type,
+            state: initialData?.project.state,
+            scheduled_date: initialData?.project.scheduled_date ?? null,
+            start_date: initialData?.project.start_date ?? null,
+            completion_date: initialData?.project.completion_date ?? null,
+            note: initialData?.project.note ?? "",
+        });
+        
+        const dates = {
+            scheduled: initialData.project.scheduled_date,
+            start: initialData.project.start_date,
+            completion: initialData.project.completion_date
+        };
+        setSelectedClient(initialData?.client);
+        if (dates.scheduled)  setScheduledDate(new Date(dates.scheduled));
+        if (dates.start)      setStartDate(new Date(dates.start));
+        if (dates.completion) setCompletionDate(new Date(dates.completion));
+       
+        if (initialData.users?.length > 0) setSelectedUsers(initialData.users);
+        if (initialData.objects?.length > 0) setAssignedObjects(initialData.objects);
+    }, [initialData, selectedClient]);
+
+    // Fetch available users when component mounts or modal opens
+    useEffect(() => {
+        if (showUserModal && availableUsers.length === 0) {
+            fetchAvailableUsers();
+        }
+    }, [showUserModal]);
+
     
     const validate = () : boolean => {
         const newErrors: Record<string, string> = {};
@@ -182,7 +170,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         const convertDate2String2 = date ? date.toISOString().split('T')[0] : null;
         setFormData(prev => ({...prev, completion_date: convertDate2String2 }));
     };
-
 
     const handleToggleUser = async (userId: string) => {
         setSelectedUsers(prev => {
@@ -269,7 +256,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
         return true;
         
-    } 
+        } 
         catch(error: any){
             console.error("Chyba: ", error.message);
             setAssignedObjects([]);
@@ -284,7 +271,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
     };
 
-    const handleToggleObject = async (objectId: string) => {
+    const handleToggleObject = (objectId: string) => {
         setSelectedObjects(prev => {
             const isSelected = prev.some(o => o.object.id === objectId);
             
@@ -292,12 +279,12 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 return prev.filter(o => o.object.id !== objectId);
             } 
             else {
-                const user = selectedObjects.find(o => o.object.id === objectId);
-                if (!user) {
-                    console.error("Object not found in selectedObjects");
+                const object = assignedObjects.find(o => o.object.id === objectId);
+                if (!object) {
+                    console.error("Object not found in assignedObjects");
                     return prev;
                 }
-                return [...prev, user];
+                return [...prev, object];
             }
         });
     };
@@ -326,28 +313,30 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 
             </View>
             
-            {/* form */}
+            {/* Form */}
             <View className="flex-1 mb-24 justify-center px-10">
-            <ScrollView 
-              className="flex-1"
-              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16 }}
-              keyboardShouldPersistTaps="handled"
-            >
+                <ScrollView 
+                  className="flex-1"
+                  contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16 }}
+                  keyboardShouldPersistTaps="handled"
+                >
 
                 {/* Client field*/}
                 <View className="mb-3">
-                    <Body className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Body>
                     <View>
                         
-                        {client &&
-                            <Body
-                                className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-600 text-white">
-                                {selectedClient?.name}
-                            </Body>
+                        {selectedClient &&
+                            <View>
+                                <Body className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Body>
+                                <Body className="border-2 bg-gray-800 rounded-xl px-4 py-4 border-gray-500 text-white">
+                                    {selectedClient?.name}
+                                </Body>
+                            </View>
                         }
-                        {!client && (
+                        
+                        {!selectedClient && (
                             <FormInput
-                              label={selectedClient?.name}
+                              label={"Klient"}
                               placeholder="Začnite písať meno klienta..."
                               fieldName="client"
                               value={searchQuery}
@@ -356,16 +345,17 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                               setFocusedField={setFocusedField}
                               error={errors.client}
                               autoCapitalize="words"
+                              containerClassName=" "
                             />
                         )}
                         
-                        {loadingClients && !client && (
+                        {loadingClients && !selectedClient && (
                             <View className="absolute right-4 top-9">
                                 <Body className="text-gray-400">🔍</Body>
                             </View>
                         )}
 
-                        {clientSuggestions && !client && clientSuggestions.length > 0 && (
+                        {clientSuggestions && !selectedClient && clientSuggestions.length > 0 && (
                             <View className="border-2 border-gray-300 rounded-xl mt-1 bg-gray-300 max-h-60">
                                 <ScrollView className="border-b rounded-xl border-gray-300">
                                     {clientSuggestions.map((item) => (
@@ -587,24 +577,24 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 </View>
 
             </ScrollView>
-        </View>
+            </View>
 
-        {/* submit button */}
-        <View className="absolute bottom-4 left-0 right-0 items-center">
-            <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleSubmit}
-                disabled={loading}
-                className="bg-blue-600 rounded-xl py-4 items-center px-12">
-                <Body className="color-primary font-bold">
-                    {
-                    mode === "create" 
-                        ? (loading ? "Vytvaram..."  : "Vytvoriť projekt") 
-                        : (loading ? "Upravujem..." : "Upraviť projekt")
-                    }
-                </Body>
-            </TouchableOpacity>
-        </View>
+            {/* Submit button */}
+            <View className="absolute bottom-4 left-0 right-0 items-center">
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleSubmit}
+                    disabled={loading}
+                    className="bg-blue-600 rounded-xl py-4 items-center px-12">
+                    <Body className="color-primary font-bold">
+                        {
+                        mode === "create" 
+                            ? (loading ? "Vytvaram..."  : "Vytvoriť projekt") 
+                            : (loading ? "Upravujem..." : "Upraviť projekt")
+                        }
+                    </Body>
+                </TouchableOpacity>
+            </View>
         </KeyboardAvoidingView>
 
         {/* User Selection Modal */}     
@@ -615,6 +605,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
           onToggle={handleToggleUser}
         />
 
+        {/* Object Selection Modal */}   
         <ObjectPickerModal
             visible={showObjectModal}
             onClose={() => setShowObjectModal(false)}

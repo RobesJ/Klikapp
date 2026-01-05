@@ -4,7 +4,7 @@ import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/modals/filterModal';
 import { NotificationToast } from '@/components/notificationToast';
-import { Body, Heading1 } from '@/components/typography';
+import { Body, Heading1, Heading2 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';
 import { useProjectStore } from '@/store/projectStore';
 import { FONT_SIZES } from '@/utils/responsive';
@@ -12,12 +12,13 @@ import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
+import { FlatList, PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Projects() {
   const router = useRouter();
   const { user } = useAuth();
+  const dpi = PixelRatio.get();
   const navigation = useNavigation();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProjectID, setSelectedProjectID] = useState<string | null>(null);
@@ -261,9 +262,9 @@ export default function Projects() {
           pathname: "/addProjectScreen",
           params: { mode: "create" }
         })}}
-        className="absolute bottom-20 right-8 w-20 h-20 justify-center items-center border border-white z-10 rounded-full bg-blue-600"
+        className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
       >
-        <Heading1 className='text-white'> + </Heading1>
+        <Heading2 className='text-white'> + </Heading2>
       </TouchableOpacity>
 
       </AnimatedScreen>

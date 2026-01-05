@@ -113,14 +113,19 @@ export default function ProjectCard({ project, client, users, objects, onPress }
     
             
             {users && users.length > 0 && (
-                <View className="flex-row mt-2 pt-2 border-t border-dark-card-border_color items-center">
-                    <Caption className="text-gray-400 text-xs mr-4">
+                <View 
+                    className="flex-row  flex-wrap mt-2 pt-2 border-t border-dark-card-border_color items-center"
+                    style={{ flexShrink: 1 }}
+                >
+                    <Caption className="text-gray-400 text-xs mr-4 mb-2">
                         Priradení používatelia:
                     </Caption>
-                    <View className="flex-row flex-wrap gap-2">
+                    <View className="flex-row flex-wrap gap-2"
+                    >
                         {users.map((user) => (
                             <View 
                                 className=" border border-blue-400 rounded-full px-3 py-1"
+                                
                                 key={user.id}
                             >
                                 <Caption className="text-white text-xs font-medium ml-1">

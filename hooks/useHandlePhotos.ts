@@ -2,19 +2,45 @@ import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/notificationStore";
 import { Photo, ProjectWithRelations } from "@/types/projectSpecific";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 
 interface UseHandlePhotosProps {
     projectWithRelations: ProjectWithRelations;
-    photos?: Photo[];
-    selectedPhoto?: Photo;
+    //photos?: Photo[];
+    //selectedPhoto?: Photo;
 }
 
-export function useHandlePhotos({projectWithRelations, photos, selectedPhoto}: UseHandlePhotosProps) {
+export function useHandlePhotos({projectWithRelations }: UseHandlePhotosProps) {
+    const projectRef = useRef(projectWithRelations);
     const [uploadingPhotos, setUploadingPhotos] = useState(false);
-    const [photosLocal, setPhotosLocal ] = useState<Photo[] | null>(photos || null);
-    const [selectedPhotoLocal, setSelectedPhoto ] = useState<Photo | null>(selectedPhoto || null);
+    const [loadingPhotos, setLoadingPhotos] = useState(false);
+    const [photos, setPhotos ] = useState<Photo[]>([]);
+    const [selectedPhoto, setSelectedPhoto ] = useState<Photo | null>(null);
+
+    useEffect(() => {
+      projectRef.current = projectWithRelations;
+    }, [projectWithRelations]);
+
+    const fetchPhotos = useCallback(async () => {
+      setLoadingPhotos(true);
+      try {
+          const {data, error} = await supabase
+              .from("photos")
+              .select('*')
+              .eq("project_id", projectRef.current.project.id)
+              .order("uploaded_at", {ascending: false});
+          
+          if (error) throw error;
+          setPhotos(data || []);
+      }
+      catch (error: any) {
+          console.log("Error fetching photos:", error);
+      }
+      finally{
+          setLoadingPhotos(false);
+      }
+    }, []);
 
     const requestCameraPermission = async () => {
         const {status} = await ImagePicker.requestCameraPermissionsAsync();
@@ -28,7 +54,7 @@ export function useHandlePhotos({projectWithRelations, photos, selectedPhoto}: U
         return true;
     };
 
-    const takePhoto = async () => {
+    const takePhoto = useCallback(async () => {
         const hasPermission = await requestCameraPermission();
         if (!hasPermission) return;
 
@@ -50,14 +76,14 @@ export function useHandlePhotos({projectWithRelations, photos, selectedPhoto}: U
                 4000
             );
         }
-    };
+    }, []);
 
-    const uploadPhoto = async (uri: string) => {
+    const uploadPhoto = useCallback(async (uri: string) => {
         setUploadingPhotos(true);
         try {
           // Create unique filename
           const timestamp = Date.now();
-          const filename = `${projectWithRelations.project.id}/${timestamp}.jpg`;
+          const filename = `${projectRef.current.project.id}/${timestamp}.jpg`;
         
           const response = await fetch(uri);
           const blob = await response.blob();
@@ -84,7 +110,7 @@ export function useHandlePhotos({projectWithRelations, photos, selectedPhoto}: U
           const { data: photoData, error: dbError } = await supabase
             .from("photos")
             .insert({
-              project_id: projectWithRelations.project.id,
+              project_id: projectRef.current.project.id,
               file_name: `${timestamp}.jpg`,
               file_size: blob.size,
               file_type: blob.type.toString(),
@@ -96,23 +122,25 @@ export function useHandlePhotos({projectWithRelations, photos, selectedPhoto}: U
           if (dbError) throw dbError;
         
           // Update local state
-          //setPhotos([photoData, ...photos]);
+          setPhotos(prev => [photoData, ...prev]);
           useNotificationStore.getState().addNotification(
               'Fotografia bola pridaná',
               "success",
               3000
           );
-        } catch (error: any) {
+        } 
+        catch (error: any) {
           console.error('Error uploading photo:', error);
           useNotificationStore.getState().addNotification(
             'Nepodarilo sa nahrať fotografiu',
             "error",
             4000
         );
-        } finally {
+        } 
+        finally {
           setUploadingPhotos(false);
         }
-    };
+    }, []);
 
     const deletePhoto = async (photo: Photo) => {
       const parts = photo.storage_path.split("project-photos/");
@@ -144,9 +172,7 @@ export function useHandlePhotos({projectWithRelations, photos, selectedPhoto}: U
                 if (dbError) throw dbError;
 
                 // Update local state
-                if(photosLocal){
-                    setPhotosLocal(photosLocal.filter(p => p.id !== photo.id));
-                }
+                setPhotos(prev => prev.filter(p => p.id !== photo.id));
                 setSelectedPhoto(null);
                 
                 useNotificationStore.getState().addNotification(
@@ -154,7 +180,8 @@ export function useHandlePhotos({projectWithRelations, photos, selectedPhoto}: U
                   "success",
                   3000
                 );
-              } catch (error: any) {
+              } 
+              catch (error: any) {
                 console.error('Error deleting photo:', error);
                 useNotificationStore.getState().addNotification(
                   "Nepodarilo sa odstrániť fotografiu",
@@ -169,8 +196,17 @@ export function useHandlePhotos({projectWithRelations, photos, selectedPhoto}: U
     };
 
     return {
+        fetchPhotos,
         takePhoto,
         uploadPhoto,
-        deletePhoto
-    }
+        deletePhoto,
+        uploadingPhotos,
+        loadingPhotos,
+        photos,
+        selectedPhoto,
+        setUploadingPhotos,
+        setLoadingPhotos,
+        setPhotos,
+        setSelectedPhoto
+    };
 }
