@@ -1,3 +1,28 @@
+// Mock dependencies - MUST be before any imports
+// Mock expo-asset first to prevent native module loading issues
+jest.mock('expo-asset', () => ({
+  Asset: {
+    fromModule: jest.fn(() => ({
+      downloadAsync: jest.fn().mockResolvedValue(undefined),
+      localUri: 'file://mock-asset.png',
+    })),
+  },
+}));
+
+jest.mock('@/lib/supabase');
+jest.mock('@/store/notificationStore');
+jest.mock('@/services/pdfService');
+jest.mock('@/constants/icons', () => ({
+  getWatermarkBase64: jest.fn().mockResolvedValue('watermark-base64'),
+  getFooterImageBase64: jest.fn().mockResolvedValue('footer-base64'),
+}));
+jest.mock('react-native', () => ({
+  Alert: {
+    alert: jest.fn(),
+  },
+}));
+
+// Now import after mocks are set up
 import { getFooterImageBase64, getWatermarkBase64 } from '@/constants/icons';
 import { supabase } from '@/lib/supabase';
 import { generateRecord } from '@/services/pdfService';
@@ -8,17 +33,6 @@ import { ProjectWithRelations } from '@/types/projectSpecific';
 import { act, renderHook } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { useHandlePDFs } from '../useHandlePDFs';
-
-// Mock dependencies
-jest.mock('@/lib/supabase');
-jest.mock('@/store/notificationStore');
-jest.mock('@/services/pdfService');
-jest.mock('@/constants/icons');
-jest.mock('react-native', () => ({
-  Alert: {
-    alert: jest.fn(),
-  },
-}));
 
 // Mock fetch globally
 global.fetch = jest.fn();

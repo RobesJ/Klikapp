@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { User } from "@/types/generics";
-import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
+import { Chimney, ChimneyType, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from '@/types/projectSpecific';
 import { addDays, format, isBefore, parseISO } from 'date-fns';
 import { Alert } from 'react-native';
@@ -171,7 +171,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 placement,
                 appliance,
                 note,
-                chimney_types!chimneys_chimney_type_id_fkey (
+                chimney_type:chimney_types (
                   id,
                   type, 
                   labelling
@@ -259,7 +259,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 placement,
                 appliance,
                 note,
-                chimney_types!chimneys_chimney_type_id_fkey (
+                chimney_type:chimney_types (
                   id,
                   type, 
                   labelling
@@ -949,45 +949,53 @@ function transformProjects(data: any): ProjectWithRelations[]{
   const projectWithRelations: ProjectWithRelations[] = data
     .filter((projectItem: any) => projectItem && projectItem.id && projectItem.clients)
     .map((projectItem: any) => {
-    const users: User[] = projectItem.project_assignments
-      ?.map((pa: any) => pa.user_profiles)
-      .filter(Boolean) || [];
+      const users: User[] = projectItem.project_assignments
+        ?.map((pa: any) => pa.user_profiles)
+        .filter(Boolean) || [];
 
-    const objects: ObjectWithRelations[] = projectItem.project_objects
-      ?.map((po: any) => {
-        if (!po.objects) return null;
-        
-        const chimneys: Chimney[] = po.objects.chimneys
-          ?.map((c: any) => ({
-            id: c.id,
-            chimney_type_id: c.chimney_type_id,
-            chimney_type: c.chimney_types
-              ? {
-                  id: c.chimney_types.id,
-                  type: c.chimney_types.type,
-                  labelling: c.chimney_types.labelling
-                }
-              : undefined,
-            appliance: c.appliance,
-            placement: c.placement,
-            note: c.note
-          }))
-          .filter(Boolean) || [];
-        
-        return {
-          object: po.objects,
-          chimneys: chimneys
-        };
-      })
-      .filter(Boolean) || [];
-  
-    return {
-      project: projectItem,
-      client: projectItem.clients,
-      users: users,
-      objects: objects,
-    };
-  });
+      const objects: ObjectWithRelations[] = projectItem.project_objects
+        ?.map((po: any) => {
+          if (!po.objects) return null;
+
+          const chimneys: Chimney[] = po.objects.chimneys
+            ?.map((c: any) => {
+
+              const chimneyType: ChimneyType | undefined = c.chimney_type 
+                ? {
+                    id: c.chimney_type.id,
+                    type: c.chimney_type.type,
+                    labelling: c.chimney_type.labelling
+                } 
+                : undefined;
+                
+              return {
+                id: c.id,
+                chimney_type_id: c.chimney_type_id,
+                chimney_type: chimneyType,
+                appliance: c.appliance,
+                placement: c.placement,
+                note: c.note
+              }
+
+            })
+            .filter(Boolean) || [];
+          
+          
+          return {
+            object: po.objects,
+            chimneys: chimneys
+          };
+        })
+        .filter(Boolean) || [];
+      
+      return {
+        project: projectItem,
+        client: projectItem.clients,
+        users: users,
+        objects: objects,
+      };
+    });
+  //projectWithRelations.map(p => p.objects.map(o => o.chimneys.map(ch => console.log(ch))));
   return projectWithRelations;
 }
 
@@ -1027,7 +1035,7 @@ async function buildQuery (startDate: string, limit: number) {
                 placement,
                 appliance,
                 note,
-                chimney_types!chimneys_chimney_type_id_fkey (
+                chimney_type:chimney_types (
                   id,
                   type, 
                   labelling
@@ -1064,7 +1072,7 @@ async function buildFilteredQuery(filters: ProjectFilters, offset: number, limit
                 placement,
                 appliance,
                 note,
-                chimney_types!chimneys_chimney_type_id_fkey (
+                chimney_type:chimney_types (
                   id,
                   type, 
                   labelling

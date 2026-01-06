@@ -12,9 +12,10 @@ export default function AddProjectScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { addProject, updateProject, unlockProject } = useProjectStore();
-  const { project, mode } = useLocalSearchParams();
+  const { project, mode, preselectedClientID } = useLocalSearchParams();
 
   const parsedProject = project ? (JSON.parse(project as string) as ProjectWithRelations) : undefined;
+  const parsedClientId = preselectedClientID ? preselectedClientID as string : undefined;
   const { updateClientCounts } = useClientStore();
 
   // unlock project when leaving project form
@@ -64,6 +65,7 @@ export default function AddProjectScreen() {
           mode={(mode as "create" | "edit") || "create"}
           initialData={parsedProject}
           onSuccess={handleSuccess}
+          preselectedClientID={parsedClientId}
       />
     </SafeAreaView>
   );

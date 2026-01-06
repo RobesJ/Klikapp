@@ -26,7 +26,13 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
             const response = await fetch(
                 `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${API_KEY}&components=country:sk&language=sk`
             );
+
             const data = await response.json();
+
+            // Google Maps API can return errors in JSON even with 200 status
+            if (data.error_message) {
+                throw new Error(data.error_message);
+            }
 
             if (data.predictions) {
                 setAddressSuggestions(data.predictions);
@@ -97,7 +103,17 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
             const response = await fetch(
                 `https://maps.googleapis.com/maps/api/place/details/json?place_id=${suggestion.place_id}&key=${API_KEY}&language=sk`
             );
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
+            
+            // Google Maps API can return errors in JSON even with 200 status
+            if (data.error_message) {
+                throw new Error(data.error_message);
+            }
             
             if (data.result && data.result.address_components) {
                parseAddressComponents(data.result.address_components);

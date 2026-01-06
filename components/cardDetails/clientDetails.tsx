@@ -293,8 +293,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                         className="bg-dark-details-o_p_bg p-3 rounded-lg mb-2"
                                         onPress={() => handleNavigateAndRefresh("/addObjectScreen", {
                                             object: JSON.stringify(item),
-                                            mode: "edit", 
-                                            preselectedClientID: client.id
+                                            mode: "edit"
                                         })}
                                     >
                                         {!item.object.streetNumber 
@@ -342,7 +341,6 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                         onPress={() => handleNavigateAndRefresh("/addProjectScreen", {
                                             project: JSON.stringify(item),
                                             mode: "edit", 
-                                            preselectedClientID: client.id
                                         })}
                                     >
                                         <Body className="font-semibold text-dark-text_color mb-1">{item.project.type}</Body>

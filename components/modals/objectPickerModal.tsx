@@ -7,7 +7,7 @@ interface ObjectPickerModalProps {
     onClose: () => void;
     onToggleObject: (value: string) => void; 
     selectedObjectIds: string[];
-    assignedObjects?: ObjectWithRelations[]
+    objects: ObjectWithRelations[]
 }
 
 export default function ObjectPickerModal({
@@ -15,11 +15,11 @@ export default function ObjectPickerModal({
     onClose,
     onToggleObject,
     selectedObjectIds,
-    assignedObjects
+    objects
 }: ObjectPickerModalProps){
 
     const isObjectSelected = (objectId: string): boolean => {
-        return selectedObjectIds.some(id => id === objectId);
+        return selectedObjectIds.includes(objectId);
     };
 
     return (
@@ -54,19 +54,19 @@ export default function ObjectPickerModal({
                         </View>
                     ) : 
                     */}
-                    {assignedObjects ? (
+                    {!objects ? (
                         <View className="flex-1 items-center justify-center">
                             <Body className="text-gray-500">Žiadne objekty neboli nájdene</Body>
                         </View>
                     ) : (
                         <FlatList
-                            data={assignedObjects}
+                            data={objects}
                             keyExtractor={(item) => item.object.id}
                             renderItem={({ item }) => {
                                 const selected = isObjectSelected(item.object.id);
                                 return (
                                     <TouchableOpacity
-                                        onPress={() => onToggleObject(item.id)}
+                                        onPress={() => onToggleObject(item.object.id)}
                                         className={`px-6 py-4 border-b border-gray-100 ${selected ? 'bg-blue-50' : ''}`}
                                     >
                                         <View className="flex-row items-center justify-between">

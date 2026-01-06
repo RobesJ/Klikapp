@@ -629,7 +629,7 @@ export const generateInspectionRecord = async (
 ) => {
   try {
     const isLegalEntity = client.type === "Právnicka osoba";
-    
+
     const clientInfoRows = isLegalEntity
       ? `
           <p class="info-row"><span class="label">Názov právnickej osoby:</span> ${client.name}</p>

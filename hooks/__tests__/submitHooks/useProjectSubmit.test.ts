@@ -1,7 +1,6 @@
 import { useProjectSubmit } from "@/hooks/submitHooks/useProjectSubmit";
 import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/store/notificationStore';
-import { useProjectStore } from '@/store/projectStore';
 import { Project, User } from '@/types/generics';
 import { ObjectWithRelations } from '@/types/objectSpecific';
 import { ProjectWithRelations } from '@/types/projectSpecific';
@@ -10,12 +9,21 @@ import { act, renderHook } from '@testing-library/react-native';
 // Mock dependencies
 jest.mock('@/lib/supabase');
 jest.mock('@/store/notificationStore');
-jest.mock('@/store/projectStore');
+
+// Mock useProjectStore hook
+const mockAddProject = jest.fn();
+const mockUpdateProject = jest.fn();
+
+jest.mock('@/store/projectStore', () => ({
+  useProjectStore: jest.fn(() => ({
+    addProject: mockAddProject,
+    updateProject: mockUpdateProject,
+  })),
+}));
 
 describe('useProjectSubmit', () => {
   let mockQueryBuilder: any;
   let mockNotificationStore: any;
-  let mockProjectStore: any;
   let mockInitialData: ProjectWithRelations;
   let mockFormData: Omit<Project, 'id'>;
   let mockUsers: User[];
@@ -23,6 +31,8 @@ describe('useProjectSubmit', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAddProject.mockClear();
+    mockUpdateProject.mockClear();
 
     mockUsers = [{ id: 'user1', name: 'Test User' } as User];
     mockObjects = [
@@ -74,16 +84,9 @@ describe('useProjectSubmit', () => {
       addNotification: jest.fn(),
     };
 
-    mockProjectStore = {
-      addProject: jest.fn(),
-      updateProject: jest.fn(),
-    };
-
     (useNotificationStore.getState as jest.Mock) = jest.fn(
       () => mockNotificationStore
     );
-
-    (useProjectStore as any) = jest.fn(() => mockProjectStore);
   });
 
   it('should initialize with default state', () => {
@@ -138,7 +141,7 @@ describe('useProjectSubmit', () => {
 
       expect(supabase.from).toHaveBeenCalledWith('projects');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith(mockFormData);
-      expect(mockProjectStore.addProject).toHaveBeenCalled();
+      expect(mockAddProject).toHaveBeenCalled();
       expect(onSuccess).toHaveBeenCalled();
       expect(mockNotificationStore.addNotification).toHaveBeenCalledWith(
         'Projekt bol úspešne vytvorený',
@@ -221,7 +224,7 @@ describe('useProjectSubmit', () => {
 
       expect(supabase.from).toHaveBeenCalledWith('projects');
       expect(mockQueryBuilder.update).toHaveBeenCalled();
-      expect(mockProjectStore.updateProject).toHaveBeenCalled();
+      expect(mockUpdateProject).toHaveBeenCalled();
       expect(mockNotificationStore.addNotification).toHaveBeenCalledWith(
         'Projekt bol úspešne upravený',
         'success',
@@ -304,9 +307,7 @@ describe('useProjectSubmit', () => {
       });
 
       expect(mockQueryBuilder.update).toHaveBeenCalled();
-      expect(mockProjectStore.updateProject).toHaveBeenCalled();
-      // State change doesn't show success notification by default
-      expect(mockQueryBuilder.update).toHaveBeenCalled();
+      expect(mockUpdateProject).toHaveBeenCalled();
       expect(result.current.updatingState).toBe(false);
     });
 
@@ -373,7 +374,7 @@ describe('useProjectSubmit', () => {
         'success',
         3000
       );
-      expect(mockProjectStore.addProject).toHaveBeenCalled();
+      expect(mockAddProject).toHaveBeenCalled();
     });
 
     it('should not update state if initialData is missing', async () => {

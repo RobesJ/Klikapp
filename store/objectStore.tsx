@@ -207,6 +207,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   },
 
   clearFilters: () => {
+
     set({ 
       filters: initialFilters,
       filteredGroupedObjects: []

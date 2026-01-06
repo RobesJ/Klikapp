@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useProjectStore } from "@/store/projectStore";
 import { Project, User } from "@/types/generics";
-import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
+import { Chimney, ChimneyType, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -161,35 +161,42 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
     };
 
     const transformCompleteProject = (completeProject: any) : ProjectWithRelations => {
-    
         const assignedUsers: User[] = completeProject.project_assignments
             ?.map((pa: any) => pa.user_profiles)
             .filter(Boolean) || [];
 
         const assignedObjects: ObjectWithRelations[] = completeProject.project_objects
             ?.map((po: any) => {
-              if (!po.objects) return null;
-              
-              const chimneys: Chimney[] = po.objects.chimneys
-                ?.map((c: any) => ({
-                  id: c.id,
-                  chimney_type_id: c.chimney_types?.id || null,
-                  type: c.chimney_types?.type || null,
-                  labelling: c.chimney_types?.labelling || null,
-                  appliance: c.appliance,
-                  placement: c.placement,
-                  note: c.note
-                }))
-                .filter(Boolean) || [];
-              
-              return {
-                object: po.objects,
-                chimneys: chimneys,
-                client: completeProject.clients
-              };
+                if (!po.objects) return null;
+
+                const chimneys: Chimney[] = po.objects.chimneys
+                    ?.map((c: any) => {
+                        const chimneyType: ChimneyType | undefined = c.chimney_type
+                            ? {
+                                id: c.chimney_type.id,
+                                type: c.chimney_type.type,
+                                labelling: c.chimney_type.labelling,
+                            }
+                            : undefined;
+
+                        return {
+                            id: c.id,
+                            chimney_type_id: c.chimney_type_id,
+                            chimney_type: chimneyType,
+                            appliance: c.appliance,
+                            placement: c.placement,
+                            note: c.note,
+                        } as Chimney;
+                    })
+                    .filter(Boolean) || [];
+
+                return {
+                    object: po.objects,
+                    chimneys,
+                    client: completeProject.clients,
+                };
             })
             .filter(Boolean) || [];
-    
 
         return {
             project: {
@@ -200,11 +207,11 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
                 scheduled_date: completeProject.scheduled_date,
                 start_date: completeProject.start_date,
                 completion_date: completeProject.completion_date,
-                note: completeProject.note
+                note: completeProject.note,
             },
             client: completeProject.clients,
             users: assignedUsers,
-            objects: assignedObjects
+            objects: assignedObjects,
         };
     };
 
@@ -225,12 +232,17 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
                         city,
                         streetNumber,
                         country,
-                        chimneys(
+                        chimneys (
                             id,
-                            chimney_types (id, type, labelling),
+                            chimney_type_id,
                             placement,
                             appliance,
-                            note
+                            note,
+                            chimney_type:chimney_types (
+                              id,
+                              type, 
+                              labelling
+                            )
                         )
                     )
                 )

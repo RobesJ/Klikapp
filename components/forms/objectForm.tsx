@@ -374,7 +374,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                                             <View className="flex-row justify-between">
                                                 <View>
                                                     <Body className="font-semibold text-white">
-                                                        {chimney.chimney_type?.type || 'Unknown Type'}
+                                                        {chimney.chimney_type?.type}
                                                     </Body>
                                                     {chimney.chimney_type?.labelling && (
                                                         <BodySmall className="text-sm text-gray-400">

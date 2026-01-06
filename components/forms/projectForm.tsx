@@ -1,6 +1,7 @@
 import { useProjectSubmit } from "@/hooks/submitHooks/useProjectSubmit";
 import { useSearchClient } from "@/hooks/useSearchClient";
 import { supabase } from "@/lib/supabase";
+import { useClientStore } from "@/store/clientStore";
 import { useProjectStore } from "@/store/projectStore";
 import { Project, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
@@ -20,12 +21,13 @@ interface ProjectFormProps{
     mode: "create" | "edit";
     initialData?: ProjectWithRelations;
     onSuccess?: (project: ProjectWithRelations) => void;
+    preselectedClientID?: string;
 }
 
-export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFormProps) {
+export default function ProjectForm({ mode, initialData, onSuccess, preselectedClientID} : ProjectFormProps) {
 
     const [formData, setFormData] =  useState<Omit<Project, 'id'> & { id?: string }>({
-        client_id: initialData?.client.id ?? "",
+        client_id: initialData?.client.id ?? preselectedClientID ?? "",
         type: initialData?.project.type ?? "",
         state: initialData?.project.state ?? "",
         scheduled_date: initialData?.project.scheduled_date ?? null,
@@ -49,13 +51,14 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
     const [selectedUsers, setSelectedUsers] = useState<User[]>(initialData?.users ?? [] );
     const [showUserModal, setShowUserModal] = useState(false);
 
-    const [assignedObjects, setAssignedObjects] = useState<ObjectWithRelations[]>([]);
+    const [allClientsObjects, setAllClientsObjects] = useState<ObjectWithRelations[]>([]);
     const [loadingObjects, setLoadingObjects] = useState(false);
-    const [selectedObjects, setSelectedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
+    const [assignedObjects, setAssignedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
     const [showObjectModal, setShowObjectModal] = useState(false);
     let oldState: string = initialData ? initialData.project.state : '';
 
     const {loading, submitProject } = useProjectSubmit({mode, oldState, initialData, onSuccess}); 
+   
     const handleChange = (field: keyof Omit<Project, 'id'>, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
         if(errors[field]){
@@ -104,6 +107,19 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
         if (initialData.objects?.length > 0) setAssignedObjects(initialData.objects);
     }, [initialData, selectedClient]);
 
+    
+    const client = useClientStore(
+        s => s.clients.find(c => c.id === preselectedClientID)
+    );
+
+    useEffect(() => {
+        if( !client ) return;
+        if(client || !initialData){
+            setSelectedClient(client);
+            setFormData(prev => ({...prev, client_id: client.id}));
+        }
+    }, [initialData, client, selectedClient]);
+
     // Fetch available users when component mounts or modal opens
     useEffect(() => {
         if (showUserModal && availableUsers.length === 0) {
@@ -138,7 +154,7 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
             return;
         }
         try {
-            await submitProject(formData, selectedUsers, selectedObjects);
+            await submitProject(formData, selectedUsers, assignedObjects);
         }
         catch (error){}
     };
@@ -192,13 +208,13 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
         setSelectedUsers(prev => prev.filter(c => c.id !== userId));
     };
 
-    async function getAssignedObjects(): Promise<boolean> {
+    async function getAllClientsObjects(): Promise<boolean> {
         if(!formData.client_id) {
             setErrors(prev => ({
                 ...prev,
                 objects: "Najprv vyberte klienta pred priradením objektov"
             }))
-            setAssignedObjects([]);
+            setAllClientsObjects([]);
             return false;
         }
 
@@ -252,14 +268,14 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
                   client: selectedClient
               })
           });
-          setAssignedObjects(transformedData);
+          setAllClientsObjects(transformedData);
         }
         return true;
         
         } 
         catch(error: any){
             console.error("Chyba: ", error.message);
-            setAssignedObjects([]);
+            setAllClientsObjects([]);
             setErrors(prev => ({
                 ...prev,
                 objects: "Chyba pri načítaní objektov"
@@ -272,16 +288,16 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
     };
 
     const handleToggleObject = (objectId: string) => {
-        setSelectedObjects(prev => {
+        setAssignedObjects(prev => {
             const isSelected = prev.some(o => o.object.id === objectId);
             
             if (isSelected) {
                 return prev.filter(o => o.object.id !== objectId);
             } 
             else {
-                const object = assignedObjects.find(o => o.object.id === objectId);
+                const object = allClientsObjects.find(o => o.object.id === objectId);
                 if (!object) {
-                    console.error("Object not found in assignedObjects");
+                    console.error("Object not found in allClientsObjects");
                     return prev;
                 }
                 return [...prev, object];
@@ -290,7 +306,7 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
     };
 
     const handleRemoveObject = (objectId: string) => {
-        setSelectedObjects(prev => prev.filter(c => c.object.id !== objectId));
+        setAssignedObjects(prev => prev.filter(c => c.object.id !== objectId));
     };
 
     return (
@@ -525,7 +541,7 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
                     {/* Assign Object Button */}
                     <TouchableOpacity
                         onPress={async () => {
-                          const success = await getAssignedObjects();
+                          const success = await getAllClientsObjects();
                           if (success) {
                               setShowObjectModal(true);
                           }
@@ -537,7 +553,7 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
                         </TouchableOpacity>
                     </View>
                     
-                    {selectedObjects.length === 0 && (
+                    {assignedObjects.length === 0 && (
                          <View className="mb-3">
                             <Body className="text-red-400 ml-1">
                                 Nie je priradený žiadny objekt
@@ -546,9 +562,9 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
                     )}
 
                     {/* Selected Chimneys Display */}
-                    {selectedObjects.length > 0 && (
+                    {assignedObjects.length > 0 && (
                         <View className="mb-3">
-                            {selectedObjects.map((object) => (
+                            {assignedObjects.map((object) => (
                                 <View 
                                     key={object.object.id}
                                     className="flex-row items-center justify-between bg-slate-500 rounded-xl p-3 mb-2"
@@ -610,8 +626,8 @@ export default function ProjectForm({ mode, initialData, onSuccess} : ProjectFor
             visible={showObjectModal}
             onClose={() => setShowObjectModal(false)}
             onToggleObject={handleToggleObject}
-            selectedObjectIds={selectedObjects.map(o => o.object.id)}
-            assignedObjects={assignedObjects}
+            selectedObjectIds={assignedObjects.map(o => o.object.id)}
+            objects={allClientsObjects}
         />
     </View>
     )

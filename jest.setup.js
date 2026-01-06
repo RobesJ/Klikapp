@@ -39,6 +39,16 @@ jest.mock('@react-native-async-storage/async-storage', () =>
       },
     };
   });
+
+  // Mock expo-asset to prevent native module issues
+  jest.mock('expo-asset', () => ({
+    Asset: {
+      fromModule: jest.fn(() => ({
+        downloadAsync: jest.fn().mockResolvedValue(undefined),
+        localUri: 'file://mock-asset.png',
+      })),
+    },
+  }));
   
   // Mock expo-file-system if used
   jest.mock('expo-file-system', () => ({

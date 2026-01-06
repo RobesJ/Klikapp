@@ -1,17 +1,34 @@
+
 import { supabase } from '@/lib/supabase';
 import { Client, ClientField } from '@/types/generics';
 import { act, renderHook } from '@testing-library/react-native';
 import { useSearchClient } from '../useSearchClient';
 
-// Mock supabase
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(),
-  },
-}));
 
-// Mock window.setTimeout and clearTimeout
 jest.useFakeTimers();
+
+jest.mock('@/lib/supabase', () => {
+  const queryBuilder = {
+    select: jest.fn().mockReturnThis(),
+    or: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    limit: jest.fn(),
+  };
+
+  return {
+    supabase: {
+      from: jest.fn(() => queryBuilder),
+    },
+  };
+});
+
+const flushAsync = async () => {
+  await act(async () => {
+    jest.runAllTimers();
+    await Promise.resolve();
+  });
+};
+
 
 describe('useSearchClient', () => {
   let handleChange: jest.Mock;
@@ -19,7 +36,6 @@ describe('useSearchClient', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.clearAllTimers();
     handleChange = jest.fn();
 
     // Setup mock query builder chain
