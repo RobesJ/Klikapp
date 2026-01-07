@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "KlikApp",
-    "slug": "KlikApp",
+    "name": "Klikapp",
+    "slug": "Klikapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/chimney-sweep-holding-sweeper-logo-vector.jpg",
@@ -11,9 +11,9 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.robesj.KlikApp",
+      "bundleIdentifier": "com.robesj.Klikapp",
       "associatedDomains": [
-        "applinks.KlikApp.applinks"
+        "applinks.Klikapp.applinks"
       ]
     },
     "android": {
@@ -28,7 +28,7 @@
           "action": "VIEW",
           "data": [
             {
-              "scheme": "KlikApp"
+              "scheme": "Klikapp"
             }
           ],
           "category": [

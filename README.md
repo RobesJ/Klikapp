@@ -1,4 +1,4 @@
-# KLIKON CRM
+# KLIKAPP
 
 A comprehensive Customer Relationship Management (CRM) application designed for chimney sweep service providers. Built with React Native and Expo, this mobile-first application enables service professionals to manage clients, objects (chimneys), projects, and planning efficiently.
 
@@ -20,7 +20,7 @@ A comprehensive Customer Relationship Management (CRM) application designed for 
 
 ## Project Overview
 
-KLIKON CRM is a mobile application built with React Native and Expo that helps chimney sweep service providers manage their business operations. The app provides a complete solution for managing clients, tracking service objects (chimneys), organizing projects, and planning work schedules. It features authentication, real-time data synchronization with Supabase, PDF report generation, photo management, and Google Places integration for address autocomplete.
+KLIKAPP is a mobile application built with React Native and Expo that helps chimney sweep service providers manage their business operations. The app provides a complete solution for managing clients, tracking service objects (chimneys), organizing projects, and planning work schedules. It features authentication, real-time data synchronization with Supabase, PDF report generation, photo management, and Google Places integration for address autocomplete.
 
 ## Features
 
@@ -547,9 +547,7 @@ The following features and improvements are planned for future releases:
 
 ### PDF Features
 - **PDF Regeneration**: Add ability to regenerate PDFs with updated data without recreating from scratch
-- **PDF Templates**: Support for multiple PDF templates and customization options
-- **PDF Preview**: Enhanced PDF preview with zoom and navigation controls
-- **PDF History**: Track PDF generation history and versions
+
 
 ### Data Quality & Validation
 - **Client Duplication Check**: Implement duplicate client detection and prevention
@@ -560,13 +558,9 @@ The following features and improvements are planned for future releases:
 ### Additional Features
 - **Search Improvements**: Enhanced search functionality with filters and sorting options
 - **Notifications**: Push notifications for important events and reminders
-- **Analytics**: User analytics and usage tracking
-- **Accessibility**: Improve accessibility features for better usability
+- **Sending reports to clients**
+
 
 ## License
 
 This project is private and proprietary. All rights reserved.
-
----
-
-**Note**: This README is generated based on the current codebase structure. For the most up-to-date information, refer to the source code and project documentation.
