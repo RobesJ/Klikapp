@@ -117,6 +117,7 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
                 useNotificationStore.getState().addNotification(
                     `Bol vytvorený nový projekt typu: ${newType}`,
                     "success",
+                    "projectDetails",
                     3000
                 );
             }
@@ -126,6 +127,7 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
             useNotificationStore.getState().addNotification(
               "Nepodarilo sa upraviť stav projektu",
               "error",
+              "projectDetails",
               4000
             );
         } 
@@ -366,6 +368,7 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
                      ? 'Projekt bol úspešne vytvorený'
                      : 'Projekt bol úspešne upravený',
                 'success',
+                "projects",
                 3000
             );
         }
@@ -376,6 +379,7 @@ export function useProjectSubmit({ mode, oldState, initialData, onSuccess }: Use
                     ? "Nepodarilo sa vytvoriť projekt"
                     : "Nepodarilo sa upraviť projekt",
                 "error",
+                "projects",
                 4000
             );
         }

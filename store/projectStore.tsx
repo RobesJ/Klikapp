@@ -205,6 +205,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať aktívne projekty',
         'error',
+        "projects",
         4000
       );
     }
@@ -310,6 +311,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať plánované projekty',
         'error',
+        "projects",
         4000
       );
     }
@@ -536,6 +538,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
        useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať viac projektov',
         'error',
+        "projects",
         4000
       );
     }
@@ -689,6 +692,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     useNotificationStore.getState().addNotification(
       'Projekt bol úspešne pridaný',
       'success',
+      "projects",
       3000
     );
   },
@@ -703,6 +707,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       useNotificationStore.getState().addNotification(
         'Projekt bol úspešne aktualizovaný',
         'success',
+        "projects",
         3000
       );
     }
@@ -749,6 +754,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               useNotificationStore.getState().addNotification(
                 'Projekt bol úspešne odstránený',
                 'success',
+                "projects",
                 3000
               );
             }
@@ -759,6 +765,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               useNotificationStore.getState().addNotification(
                 'Projekt sa nepodarilo odstrániť',
                 "error",
+                "projects",
                 3000
               );
             }
@@ -780,11 +787,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       if (error) throw error;
 
       if (!data?.[0].locked){
-        useNotificationStore.getState().addNotification(
-          `Projekt upravuje používateľ ${data?.[0]?.locked_by_name}`,
-          "warning",
-          4000
-        );
+         //useNotificationStore.getState().addNotification(
+         //  `Projekt upravuje používateľ ${data?.[0]?.locked_by_name}`,
+         //  "warning",
+         //  4000
+         //);
 
         return {
           success: false,

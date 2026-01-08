@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { PDF_Viewer } from "../modals/pdfViewer";
+import { NotificationToast } from "../notificationToast";
 import { Body, BodyLarge, Caption, Heading3 } from "../typography";
 
 interface ObjectCardDetailsProps {
@@ -29,7 +30,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
   const [showPDFReports, setShowPDFReports] = useState(false);
   // const [uploadingPDF, setUploadingPDF] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
-  const [lockedBy, setLockedBy] = useState<string | null>(null);
+  const [lockedByName, setLockedByName] = useState<string | null>(null);
   const {deleteObject, lockObject } = useObjectStore();
   const {updateClientCounts} = useClientStore();
 
@@ -73,7 +74,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
       }
       else{
         setCanEdit(false);
-        setLockedBy(result.lockedByName);
+        setLockedByName(result.lockedByName);
         console.log("Object lock not aquired");
       }
     })();
@@ -136,6 +137,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
               useNotificationStore.getInitialState().addNotification(
                 "PDF záznam bol odstránený",
                 "success",
+                "objectDetails",
                 3000
               )
             } catch (error: any) {
@@ -143,6 +145,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
               useNotificationStore.getInitialState().addNotification(
                 "Nepodarilo sa odstrániť PDF záznam",
                 "error",
+                "objectDetails",
                 4000
               )
             }
@@ -189,6 +192,10 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
               
         <ScrollView className="max-h-screen-safe-offset-12 p-4">
           <View className="flex-1">
+            {!canEdit && <Body style={{color: "#F59E0B"}}>`Tento objekt upravuje používateľ ${lockedByName}`</Body>}
+            <NotificationToast
+              screen="objectDetails"
+            />
             <View className="flex-2 mb-3">
               <Body className="text-gray-400 mb-1">KLIENT</Body>
               <BodyLarge className="font-semibold text-lg text-white">{objectWithRelations.client.name}</BodyLarge>

@@ -15,6 +15,7 @@ import { FormInput } from "../formInput";
 import ObjectPickerModal from "../modals/objectPickerModal";
 import UserPickerModal from "../modals/userPickerModal";
 import ModernDatePicker from "../modernDatePicker";
+import { NotificationToast } from "../notificationToast";
 import { Body, Heading1 } from "../typography";
 
 interface ProjectFormProps{
@@ -336,7 +337,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                   contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16 }}
                   keyboardShouldPersistTaps="handled"
                 >
-
+                <NotificationToast screen="projectForm"/>
                 {/* Client field*/}
                 <View className="mb-3">
                     <View>

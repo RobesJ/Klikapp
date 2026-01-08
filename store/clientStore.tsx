@@ -115,6 +115,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať klientov',
         'error',
+        "clients",
         4000
       );
     }
@@ -131,11 +132,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       if (error) throw error;
 
       if (!data?.[0].locked){
-        useNotificationStore.getState().addNotification(
-          `Klienta upravuje používateľ ${data?.[0]?.locked_by_name}`,
-          "warning",
-          4000
-        );
         return {
           success: false,
           lockedByName: data?.[0]?.locked_by_name ?? null
@@ -260,6 +256,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         useNotificationStore.getState().addNotification(
           'Nepodarilo sa vyhľadať klientov',
           'error',
+          "clients",
           4000
         );
       }
@@ -310,6 +307,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
        useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať viac klientov',
         'error',
+        "clients",
         4000
       );
     }
@@ -324,6 +322,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     useNotificationStore.getState().addNotification(
       'Klient bol úspešne pridaný',
       'success',
+      "clients",
       3000
     );
   },
@@ -338,6 +337,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     useNotificationStore.getState().addNotification(
       'Klient bol úspešne aktualizovaný',
       'success',
+      "clients",
       3000
     );
   },
@@ -393,6 +393,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
                 useNotificationStore.getState().addNotification(
                   'Klient bol úspešne odstránený',
                   'success',
+                  "clients",
                   3000
                 );
               }
@@ -408,6 +409,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
               useNotificationStore.getState().addNotification(
                 'Nepodarilo sa odstrániť klienta',
                 'error',
+                "clientDetails",
                 4000
               );
             }

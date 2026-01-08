@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
+import { NotificationToast } from "../notificationToast";
 import { Body, Heading1 } from "../typography";
 
 interface ClientFormProps{
@@ -137,20 +138,16 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         }
         catch (error: any){
             console.error("Error saving client: ", error);
-            if(mode === "create"){
-                useNotificationStore.getState().addNotification(
-                    'Nastala chyba pri vytváraní klienta',
-                    'error',
-                    3000
-                );
-            }
-            else{
-                useNotificationStore.getState().addNotification(
-                    'Nastala chyba pri úprave klienta',
-                    'error',
-                    3000
-                );
-            }
+            let message: string = mode === "create" 
+             ? "Nastala chyba pri vytváraní klienta"
+             : "Nastala chyba pri úprave klienta";
+
+            useNotificationStore.getState().addNotification(
+                message,
+                'error',
+                "clientForm",
+                3000
+            );
         }
         finally{
             setLoading(false);
@@ -187,8 +184,10 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                     <ScrollView 
                       className="flex-1"
                       contentContainerStyle={{paddingHorizontal: 16, paddingTop: 16}}
-                    >
-
+                    >   
+                        <NotificationToast
+                          screen="clientForm"
+                        />
                         {/* Name field */}
                         <FormInput
                             label="Meno"

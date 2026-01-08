@@ -75,11 +75,9 @@ export default function ProjectDetails({
     }
 
     const router = useRouter();
-    const { users, objects, client, project } = projectWithRelations;
-    // const [localState, setLocalState] = useState(projectWithRelations.project.state);
+    const { users } = projectWithRelations;
    
     const [showUserModal, setShowUserModal] = useState(false);
-    // const [updatingState, setUpdatingState] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
     const [lockedByName, setLockedByName] = useState<string | null>(null);
 
@@ -135,6 +133,7 @@ export default function ProjectDetails({
                     useNotificationStore.getState().addNotification(
                         "Nepodarilo sa obnoviť zámok projektu",
                         "warning",
+                        "projectDetails",
                         3000
                     );
                 }
@@ -158,6 +157,7 @@ export default function ProjectDetails({
             useNotificationStore.getState().addNotification(
                 "Tento používateľ je už priradený",
                 "error",
+                "projectDetails",
                 4000
             );
             return;
@@ -191,6 +191,7 @@ export default function ProjectDetails({
           useNotificationStore.getState().addNotification(
               `${user.name} bol priradený k projektu`,
               "success",
+              "projectDetails",
               3000
           );
       } 
@@ -199,6 +200,7 @@ export default function ProjectDetails({
           useNotificationStore.getState().addNotification(
               "Nepodarilo sa priradiť používateľa",
               "error",
+              "projectDetails",
               4000
           );
       }
@@ -234,6 +236,7 @@ export default function ProjectDetails({
             useNotificationStore.getState().addNotification(
                 "Nepodarilo sa odstrániť používateľa z projektu",
                 "error",
+                "projectDetails",
                 4000
             );
         }
@@ -299,7 +302,10 @@ export default function ProjectDetails({
             {/* Project data*/}
             <ScrollView className="max-h-screen-safe-offset-12 p-4">
               <ScrollView className="flex-1">
-                <NotificationToast/>
+                {!canEdit && <Body style={{color: "#F59E0B"}}>`Tento projekt upravuje používateľ ${lockedByName}`</Body>}
+                <NotificationToast
+                  screen="projectDetails"
+                />
                 <View className='flex-row justify-between'>
                   {/* Client Info */}
                   <View className="flex-2 mb-3">

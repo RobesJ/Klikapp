@@ -171,6 +171,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
       useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať objekty',
         'error',
+        "objects",
         4000
       );
     }
@@ -292,6 +293,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
       useNotificationStore.getState().addNotification(
         'Nepodarilo sa vyhľadať viac objektov',
         'error',
+        "objects",
         4000
       );
     }
@@ -376,6 +378,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
       useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať viac objektov',
         'error',
+        "objects",
         4000
       );
     }
@@ -400,6 +403,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     useNotificationStore.getState().addNotification(
       'Objekt bol úspešne pridaný',
       'success',
+      "objects",
       3000
     );
   },
@@ -429,6 +433,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
     useNotificationStore.getState().addNotification(
       'Objekt bol úspešne aktualizovaný',
       'success',
+      "objects",
       3000
     );
   },
@@ -475,6 +480,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
                 useNotificationStore.getState().addNotification(
                   'Objekt bol úspešne odstránený',
                   'success',
+                  "objectDetails",
                   3000
                 );
               }
@@ -489,6 +495,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
               useNotificationStore.getState().addNotification(
                 'Nepodarilo sa odstrániť objekt',
                 'error',
+                "objectDetails",
                 4000
               );
             }
@@ -509,11 +516,6 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
       if (error) throw error;
 
       if (!data?.[0].locked){
-        useNotificationStore.getState().addNotification(
-          `Objekt upravuje používateľ ${data?.[0]?.locked_by_name}`,
-          "warning",
-          4000
-        );
 
         return {
           success: false,

@@ -29,7 +29,19 @@ export default function RootLayout() {
             />
 
             <Stack.Screen
-              name="(auth)"
+              name="(auth)/login"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="(auth)/register"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="(auth)/reset-pwd"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="(auth)/forgot-pwd"
               options={{ headerShown: false }}
             />
 

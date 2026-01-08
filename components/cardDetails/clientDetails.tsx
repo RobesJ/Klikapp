@@ -26,7 +26,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [canEdit, setCanEdit] = useState(false);
-    const [lockedBy, setLockedBy] = useState<string | null>(null);
+    const [lockedByName, setLockedByName] = useState<string | null>(null);
     const { deleteClient, lockClient }= useClientStore();
 
     useEffect(() => {
@@ -158,7 +158,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
             }
             else{
                 setCanEdit(false);
-                setLockedBy(result.lockedByName);
+                setLockedByName(result.lockedByName);
                 console.log("Client lock not aquired");
             }
         })();
@@ -233,9 +233,10 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                 <ScrollView className="max-h-screen-safe-offset-12 p-4">
 
                     <ScrollView className="flex-1">
-                        {!canEdit && (
-                            <NotificationToast/>
-                        )}
+                        {!canEdit && <Body style={{color: "#F59E0B"}}>`Tohto klienta upravuje používateľ ${lockedByName}`</Body>}
+                        <NotificationToast
+                          screen="clientDetails"
+                        />
                         <View className="mb-3">
                             {client.email && (
                                 <View className="flex-row items-center mb-2">

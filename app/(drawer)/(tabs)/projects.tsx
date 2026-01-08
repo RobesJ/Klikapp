@@ -105,9 +105,6 @@ export default function Projects() {
     },
   ];
 
-  //const filteredProjects = useMemo(() => {
-    //return getFilteredProjects(filters);
-  //}, [filters, getFilteredProjects, projects.size]);
   const filteredProjects = getFilteredProjects(filters);
     
   const handleRefresh = () => {
@@ -227,7 +224,9 @@ export default function Projects() {
             </View>
           </View>
         )}
-        <NotificationToast/>
+        <NotificationToast
+          screen="projects"
+        />
       </View>
         
       <FlatList

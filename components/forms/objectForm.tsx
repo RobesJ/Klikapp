@@ -11,6 +11,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } fr
 import { FormInput } from "../formInput";
 import { ChimneyTypeCreationModal } from "../modals/chimneyTypeCreationModal";
 import { ChimneyTypeSelectionModal } from "../modals/chimneyTypeSelectionModal";
+import { NotificationToast } from "../notificationToast";
 import { Body, BodySmall, Caption, Heading1 } from "../typography";
 import ChimneyForm from "./chimneyForm";
 
@@ -236,7 +237,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
                     {/* Client Field*/}
                     <View className="mb-3">
                         <View>
-
+                            <NotificationToast screen="objectForm"/>
                             {client &&
                                 <View>
                                     <Body className="mb-1 ml-1 font-medium text-dark-text_color">Klient</Body>

@@ -153,7 +153,7 @@ export default function Objects() {
             onChangeText={handleSearchText}
           />
         </View>
-        <NotificationToast/>
+        <NotificationToast screen='objects'/>
       </View>
 
       <FlashList

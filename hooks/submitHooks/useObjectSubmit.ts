@@ -135,6 +135,7 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
                      ? 'Objekt bol úspešne vytvorený'
                      : 'Objekt bol úspešne upravený',
                 'success',
+                "objects",
                 3000
             );
         }
@@ -146,6 +147,7 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
                       ? 'Nepodarilo sa vytvoriť objekt'
                       : 'Nepodarilo sa upraviť objekt',
                  'error',
+                 "objects",
                  4000
              );
         }

@@ -48,12 +48,18 @@ const ToastItem: React.FC<ToastItemProps> = ({message, type}) => {
     )
 }
 
-export const NotificationToast = () => {
+export const NotificationToast = ({screen} : {screen: string}) => {
     const { notifications } = useNotificationStore();
     
+    const screenNotifications = notifications.filter(
+        (n) => n.screen ===screen
+    );
+
+    if(screenNotifications.length === 0) return null;
+
     return (
         <View pointerEvents="box-none">
-            {notifications.map((notification) => (
+            {screenNotifications.map((notification) => (
               <ToastItem
                 key={notification.id}
                 id={notification.id}

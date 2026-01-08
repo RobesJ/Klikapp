@@ -303,7 +303,6 @@ export default function Planning() {
     try{
       const dateToAssign = selectedDateRef.current;
       assignProjectToDate(projectId, dateToAssign);
-      //console.log("setting current assignment with projectID", projectId);
       currentAssingmentsRef.current = {
         ...currentAssingmentsRef.current,
         [projectId]: dateToAssign

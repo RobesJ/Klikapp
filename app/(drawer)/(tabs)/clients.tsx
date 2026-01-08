@@ -120,7 +120,9 @@ export default function Clients() {
               onChangeText={handleSearch}
             />
           </View>
-          <NotificationToast/>
+          <NotificationToast
+            screen="clients"
+          />
         </View>
 
         {/* list of clients */}
