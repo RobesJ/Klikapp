@@ -37,6 +37,7 @@ export default function ProjectDetails({
     
     const { user } = useAuth();
     const projectWithRelations = useProjectStore(state => state.projects.get(projectWithRelationsID));
+    const [canEdit, setCanEdit] = useState(false);
     const { handleStateChange: handleStateChangeFromHook } = useProjectSubmit({
       mode: "edit",
       oldState: projectWithRelations?.project.state,
@@ -67,6 +68,7 @@ export default function ProjectDetails({
       selectedPhoto,
       fetchPhotos,
       takePhoto,
+      pickFromGallery,
       deletePhoto
     } = useHandlePhotos({ 
       projectWithRelations: projectWithRelations!
@@ -80,7 +82,6 @@ export default function ProjectDetails({
     const { users } = projectWithRelations;
    
     const [showUserModal, setShowUserModal] = useState(false);
-    const [canEdit, setCanEdit] = useState(false);
     const [lockedByName, setLockedByName] = useState<string | null>(null);
 
     const [showGallery, setShowGallery] = useState(false);
@@ -93,7 +94,6 @@ export default function ProjectDetails({
     const projectId = projectWithRelations.project.id;
     const PDFsRef = useRef(PDFs);
 
-    // Keep PDFsRef in sync with PDFs state
     useEffect(() => {
         PDFsRef.current = PDFs;
     }, [PDFs]);
@@ -301,9 +301,8 @@ export default function ProjectDetails({
         try {
             const newPDF = await regeneratePDFUtil(pdf);
             
-            // Update PDFs list: remove old PDF and add the regenerated one
+            // Update PDFs list
             setPDFs(prev => {
-                // Remove the old PDF (by id) and add the new regenerated one at the beginning
                 const filtered = prev.filter(p => p.id !== pdf.id);
                 return [newPDF, ...filtered];
             });
@@ -355,7 +354,7 @@ export default function ProjectDetails({
               {/* Project data*/}
               <ScrollView className="max-h-screen-safe-offset-12 p-4">
                 <ScrollView className="flex-1">
-                  {!canEdit && <Body style={{color: "#F59E0B"}}>`Tento projekt upravuje používateľ ${lockedByName}`</Body>}
+                  {!canEdit && <Body style={{color: "#F59E0B"}}>Tento projekt upravuje používateľ {lockedByName}</Body>}
                   <NotificationToast
                     screen="projectDetails"
                   />
@@ -429,7 +428,7 @@ export default function ProjectDetails({
                     <Body className="text-gray-400 mt-2">PRIRADENǏ POUŽÍVATELIA</Body>
                       <TouchableOpacity
                         onPress={() => setShowUserModal(true)}
-                        className="bg-blue-600  rounded-full w-8 h-8 items-center justify-center"
+                        className="bg-gray-500 w-8 h-8 rounded-full items-center justify-center"
                       >
                         <BodyLarge className="text-white font-bold text-lg">+</BodyLarge>
                       </TouchableOpacity>
@@ -482,22 +481,35 @@ export default function ProjectDetails({
                   {/* Photos Section */}
                   <View className="mb-3">
                       <View className="flex-row items-center justify-between mb-2">
-                        <Body className="text-gray-400 mb-2"> FOTOGRAFIE ({photos.length})</Body>
-
-                        <TouchableOpacity
-                            onPress={takePhoto}
-                            disabled={uploadingPhotos}
-                            className="bg-blue-600 rounded-full px-4 py-2 flex-row items-center"
-                        >
-                            {uploadingPhotos ? (
-                              <ActivityIndicator size="small" color="white" />
-                            ) : (
-                              <>
-                                <Feather name="camera" size={16} color="white" />
-                                <Body className="text-white font-semibold ml-2">Pridať</Body>
-                              </>
-                            )}
-                            </TouchableOpacity>
+                          <Body className="text-gray-400 mb-2"> FOTOGRAFIE ({photos.length})</Body>
+                          <View className="flex-row items-center justify-between gap-2">
+                              <TouchableOpacity
+                                  onPress={pickFromGallery}
+                                  disabled={uploadingPhotos}
+                                  className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg"
+                              >
+                                {uploadingPhotos ? (
+                                    <ActivityIndicator size="small" color="white" />
+                                ) : (
+                                  <>
+                                    <Body className="text-white font-semibold">+</Body>
+                                    <Body className="text-white font-semibold">Pridať</Body>
+                                  </>
+                                )}
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                  onPress={takePhoto}
+                                  disabled={uploadingPhotos}
+                                  className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg"
+                              >
+                                {uploadingPhotos ? (
+                                    <ActivityIndicator size="small" color="white" />
+                                ) : (
+                                    <Feather name="camera" size={16} color="white" />
+                                )}
+                              </TouchableOpacity>
+                              
+                          </View>
                       </View>
                           
                       {loadingPhotos && (
@@ -544,13 +556,13 @@ export default function ProjectDetails({
                         <TouchableOpacity
                             onPress={handlePressGeneratePDF}
                             disabled={generatingPDFs}
-                            className="bg-blue-600 rounded-full px-4 py-2 flex-row items-center"
+                            className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg"
                         >
                             {uploadingPDFs ? (
                               <ActivityIndicator size="small" color="white" />
                             ) : (
                               <View className='flex-row'>
-                                <MaterialIcons name="picture-as-pdf" size={16} color={"#FFFFFF"}/>
+                                <MaterialIcons name="picture-as-pdf" size={16} color="white"/>
                                 <Body className="text-white font-semibold ml-2">{generatingPDFs? 'Generujem...' : 'Generovať'}</Body>
                               </View>
                             )}

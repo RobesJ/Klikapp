@@ -202,6 +202,27 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
         router.push({ pathname, params });
     };
 
+    const handleEditClient = () => {
+        onClose();
+        router.push({
+        pathname: "/addClientScreen",
+        params: { 
+            client: JSON.stringify(client),
+            mode: "edit" 
+            }
+        });
+    };
+
+    const handleDeleteClient = () => {
+        try{
+            deleteClient(client.id);
+            onClose();
+          }
+          catch (error){
+            console.error("Delete failed:", error);
+          }
+    };
+    
     return (
         <Modal
           visible={visible}
@@ -357,15 +378,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                 <View className="flex-row justify-between px-4 py-6 border-t border-gray-400">
                     {/* Delete selected client */}
                     <TouchableOpacity
-                      onPress={() => {
-                          try{
-                            deleteClient(client.id);
-                            onClose();
-                          }
-                          catch (error){
-                            console.error("Delete failed:", error);
-                          }
-                      }}
+                      onPress={handleDeleteClient}
                       activeOpacity={0.8}
                       className="flex-row gap-1 bg-red-700 rounded-full items-center justify-center pl-3 py-2 pr-4"
                       disabled={!canEdit}
@@ -376,16 +389,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
 
                     {/* Edit selected client */}     
                     <TouchableOpacity
-                        onPress={() => {
-                          onClose();
-                          router.push({
-                          pathname: "/addClientScreen",
-                          params: { 
-                            client: JSON.stringify(client),
-                            mode: "edit" 
-                            }
-                          });
-                        }}
+                        onPress={handleEditClient}
                         activeOpacity={0.8}
                         className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
                         disabled={!canEdit}
