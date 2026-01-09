@@ -241,7 +241,10 @@ export const generateCleaningWithPaymentRecord = async (
 ) => {
   try {
     const isLegalEntity = client.type === "Právnicka osoba";
-    
+    const sumsEur: string = sums[0];
+    const sumsWords: string = sums[1];
+    console.log("sumseur: ", sumsEur);
+    console.log("sumswords: ",sumsWords);
     const clientInfoRows = isLegalEntity
       ? `
           <p class="info-row"><span class="label">Názov právnickej osoby:</span> ${client.name}</p>
@@ -556,8 +559,7 @@ export const generateCleaningWithPaymentRecord = async (
 
             <div class="payment-details">
               <p class="payment-row">
-                <span class="label">Pokladničný doklad číslo:</span> 
-                <span class="dotted-line">_______________</span>
+                <span class="label">Pokladničný doklad číslo:_______________</span> 
               </p>
               <p class="payment-row">
                 <span class="label">zo dňa:</span> 
@@ -577,8 +579,8 @@ export const generateCleaningWithPaymentRecord = async (
                 <tbody>
                   <tr>
                     <td>${client.name}</td>
-                    <td>${sums[0] || ''}</td>
-                    <td>${sums[1] || ''}</td>
+                    <td>${sumsEur}</td>
+                    <td>${sumsWords}</td>
                   </tr>
                 </tbody>
               </table>

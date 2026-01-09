@@ -11,9 +11,10 @@ interface PDFViewerProps {
   onClose: () => void;
   selectedPDF: PDF;
   onDelete: (pdf: PDF) => void;
+  regeneratePDF: (pdf: PDF) => void;
 }
 
-export const PDF_Viewer = ({ uri, visible, onClose, selectedPDF, onDelete }: PDFViewerProps) => {
+export const PDF_Viewer = ({ uri, visible, onClose, selectedPDF, onDelete, regeneratePDF }: PDFViewerProps) => {
   const [shouldRenderWebView, setShouldRenderVebView] = useState(false);
   const pdfUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(uri)}`;
   
@@ -42,7 +43,7 @@ export const PDF_Viewer = ({ uri, visible, onClose, selectedPDF, onDelete }: PDF
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
                   <Heading3 className="text-xl font-bold text-white">
-                    {selectedPDF.report_type === "cleaning" ? "Čistenie" : "Revízna správa"}
+                    {selectedPDF.report_type === "cleaning" ? "Čistenie" : (selectedPDF.report_type === "cleaningWithPaymentReceipt" ? "Čistenie s PPD": "Revízna správa")}
                   </Heading3>
                   <BodySmall className="text-gray-400 text-sm">
                     {new Date(selectedPDF.generated_at).toLocaleDateString('sk-SK')}
@@ -50,8 +51,7 @@ export const PDF_Viewer = ({ uri, visible, onClose, selectedPDF, onDelete }: PDF
                 </View>
                 <TouchableOpacity
                   onPress={() => onClose()}
-                  className="w-10 h-10 rounded-full items-center justify-center"
-                  style={{ backgroundColor: '#334155' }}
+                  className="items-center justify-center"
                 >
                   <EvilIcons name="close" size={28} color="white" />
                 </TouchableOpacity>
@@ -73,7 +73,16 @@ export const PDF_Viewer = ({ uri, visible, onClose, selectedPDF, onDelete }: PDF
             {/* Bottom Actions */}
             <View className="absolute bottom-0 left-0 right-0 p-6 bg-dark-bg border-t border-gray-700">
                 <View className="flex-row justify-around">
-
+                  {/* Regenerate button */}
+                  <TouchableOpacity
+                    onPress={() => regeneratePDF(selectedPDF)}
+                    className="bg-green-600 rounded-xl px-6 py-3 flex-row items-center flex-1 ml-2"
+                  >
+                    <MaterialIcons name="circle" size={20} color="white" />
+                    <Body className="text-white font-semibold ml-2">Obnoviť PDF</Body>
+                  </TouchableOpacity>
+            
+                  {/* Delete button */}
                   <TouchableOpacity
                     onPress={() => onDelete(selectedPDF)}
                     className="bg-red-600 rounded-xl px-6 py-3 flex-row items-center flex-1 ml-2"

@@ -21,7 +21,6 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
     const [loadingPDFs, setLoadingPDFs] = useState(false);
     const [generatingPDFs, setGeneratingPDFs] = useState(false);
     const [selectedPDF, setSelectedPDF] = useState<PDF | null>();
-    const [chimneySums, setChimneySums] = useState<Record<string, string[]>>({});
     const [PDFs, setPDFs] = useState<PDF[]>([]);
 
     useEffect(() => {
@@ -88,29 +87,29 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
 
     const handleGeneratePDF = useCallback(async (
         type: "cleaning" | "inspection" | "cleaningWithPaymentReceipt",
+        chimneySums?: Record<string, string[]>,
         receiptOnlyForChimneyId?: string
     ) => {
         try {
-          setGeneratingPDFs(true);
+            setGeneratingPDFs(true);
         
-          const watermarkBase64 = await getWatermarkBase64();
-          const footerBase64 = await getFooterImageBase64();
+            const watermarkBase64 = await getWatermarkBase64();
+            const footerBase64 = await getFooterImageBase64();
         
-          /* ----------------------------------------------------
+            /* ----------------------------------------------------
              RECEIPT LOGIC
              ---------------------------------------------------- */
-            if (type === "cleaningWithPaymentReceipt") {
-              // ALL chimneys → receipt for all
-              if (!receiptOnlyForChimneyId) {
-                console.log("inside of generate amount for all condition");
-                for (const object of projectRef.current.objects) {
-                  for (const chimney of object.chimneys) {
-                    const sums = chimneySums[chimney.id] || ["", ""];
-                    // console.log(sums);
-                    generateFile(type, object, chimney, watermarkBase64, footerBase64, sums);
-                  }
+            if (type === "cleaningWithPaymentReceipt" && chimneySums) {
+                // ALL chimneys → receipt for all
+                if (!receiptOnlyForChimneyId) {
+                    console.log("inside of generate amount for all condition");
+                    for (const object of projectRef.current.objects) {
+                        for (const chimney of object.chimneys) {
+                            const sums = chimneySums[chimney.id] || ["", ""];
+                            generateFile(type, object, chimney, watermarkBase64, footerBase64, sums);
+                        }
+                    }
                 }
-              }
         
               // ONE chimney → receipt only for selected
               else {
@@ -140,6 +139,7 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
           useNotificationStore.getState().addNotification(
             "PDF dokumenty boli vygenerované",
             "success",
+            "projectDetails",
             3000
           );
         } 
@@ -148,23 +148,27 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
             useNotificationStore.getState().addNotification(
                 "Nepodarilo sa vygenerovať PDF",
                 "error",
+                "projectDetails",
                 3000
             );
         } 
         finally {
             setGeneratingPDFs(false);
-            setChimneySums({});
+            //setChimneySums({});
         }
-    },[chimneySums]);
+    },[]);
 
     const uploadPDF = async (uri: string | null, projectId: string, report_type: string, objectId: string, chimney: Chimney, sums: string[] | null) => {
         if (uri === null) return;
 
         setUploadingPDFs(true);
         try {
+            // Include timestamp and random component to make filename unique for each generation
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 9); // 7 random characters
             const filename = report_type === "cleaning" ||  report_type === "cleaningWithPaymentReceipt"
-                ? `cleaning_${chimney.id}_${projectId}.pdf`
-                : `inspection_${chimney.id}_${projectId}.pdf`;
+                ? `cleaning_${chimney.id}_${projectId}_${timestamp}_${random}.pdf`
+                : `inspection_${chimney.id}_${projectId}_${timestamp}_${random}.pdf`;
             
 
             const response = await fetch(uri);
@@ -199,7 +203,7 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
                 file_size: blob.size,
                 file_type: blob.type.toString(),
                 storage_path: urlData.publicUrl,
-                ...(sums && { amount: sums[0], amountByWords: sums[1] })
+                ...(sums && { amount: Number(sums[0]), amountByWords: sums[1] })
             };  
            
             const { data: pdfData, error: dbError } = await supabase
@@ -215,6 +219,7 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
             useNotificationStore.getState().addNotification(
                 "PDF záznam bol pridaný",
                 "success",
+                "projectDetails",
                 3000
             );
         } 
@@ -223,6 +228,7 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
             useNotificationStore.getState().addNotification(
                 "Nepodarilo sa nahrať PDF",
                 "error",
+                "projectDetails",
                 4000
             );
         } 
@@ -266,6 +272,7 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
                             useNotificationStore.getState().addNotification(
                               "PDF záznam bol odstránený",
                               "success",
+                              "projectDetails",
                               3000
                             );
                         } 
@@ -274,6 +281,7 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
                             useNotificationStore.getState().addNotification(
                                 "Nepodarilo sa odstrániť PDF záznam",
                                 "error",
+                                "projectDetails",
                                 4000
                             );
                         }
@@ -288,14 +296,12 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
         loadingPDFs,
         generatingPDFs,
         selectedPDF,
-        chimneySums,
         PDFs,
 
         setUploadingPDFs,
         setLoadingPDFs,
         setGeneratingPDFs,
         setSelectedPDF,
-        setChimneySums,
         setPDFs,
 
         handleGeneratePDF,

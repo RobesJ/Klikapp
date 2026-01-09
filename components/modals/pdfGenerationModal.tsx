@@ -1,6 +1,6 @@
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
 import { Body, BodyLarge, BodySmall } from "../typography";
@@ -9,65 +9,70 @@ interface pdfGenerationModalProps {
     visible: boolean;
     onCloseSimple: () => void;
     projectWithRelations: ProjectWithRelations;
-    handlePdfGeneration: (type: "cleaning" | "cleaningWithPaymentReceipt", chimneyId?: string) => void;
+    handlePdfGeneration: (
+        type: "cleaning" | "cleaningWithPaymentReceipt", 
+        chimneyId?: string
+    ) => void;
+    chimneySums: Record<string, string[]>;
+    setChimneySums: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
 }
 
 export default function PdfGenerationModal({ 
-    visible,
-    onCloseSimple,
-    projectWithRelations,
-    handlePdfGeneration
-  }: pdfGenerationModalProps ) {
+      visible,
+      onCloseSimple,
+      projectWithRelations,
+      handlePdfGeneration,
+      chimneySums,
+      setChimneySums
+}: pdfGenerationModalProps ) {
 
     const [isGenerating, setIsGenerating] = useState(false);
-    const [chimneySums, setChimneySums] = useState<Record<string, string[]>>({});
     const [focusedField, setFocusedField] = useState<string | null>(null);
-
-    type PdfFlowStep =
-    | "choice"         
-    | "selectOne"       
-    | "inputAll"        
-    | "inputOne";       
-
-    const [pdfStep, setPdfStep] = useState<PdfFlowStep>("choice");
+    const [pdfStep, setPdfStep] = useState<"choice" | "selectOne" | "inputAll" | "inputOne">("choice");  
     const [selectedChimneyId, setSelectedChimneyId] = useState<string | null>(null);
-    
+
+    const chimneySumsRef = useRef(chimneySums);
+        useEffect(() => {
+      chimneySumsRef.current = chimneySums
+    }, [chimneySums]);
+
 
     const chimneyCount = useMemo(() =>{
-        return projectWithRelations.objects.reduce((sum, o) => sum + o.chimneys.length, 0);
-      },[projectWithRelations.objects]);
+          return projectWithRelations.objects.reduce((sum, o) => sum + o.chimneys.length, 0);
+    },[projectWithRelations.objects]);
     
     const handleChimneySumChange = (chimneyId: string, index: number, value: string) => {
         setChimneySums((prev) => {
-          const currentArray = prev[chimneyId] || ['', ''];
-          const updatedArray = [...currentArray];
-          updatedArray[index] = value;
-          return {
-            ...prev,
-            [chimneyId]: updatedArray,
-          };
+            const currentArray = prev[chimneyId] || ['', ''];
+            const updatedArray = [...currentArray];
+            updatedArray[index] = value;
+            return {
+                ...prev,
+                [chimneyId]: updatedArray,
+            };
         });
+    };
+
+    const handleClose = () => {
+        setPdfStep("choice");
+        setSelectedChimneyId(null);
+        setFocusedField(null);
+        onCloseSimple();
     };
 
     return(
         <Modal
             visible={visible}
-              transparent
-              animationType="slide"
-              onRequestClose={onCloseSimple}
-            >
-              <View className="flex-1 bg-black/50 justify-center items-center">
+            transparent
+            animationType="slide"
+            onRequestClose={handleClose}
+        >
+            <View className="flex-1 bg-black/50 justify-center items-center">
                 <View className="w-11/12 max-h-[90%] bg-dark-bg border border-gray-600 rounded-2xl overflow-hidden">
 
                   {/* Header */}
                   <View className="flex-row justify-end p-4 border-b border-gray-700">
-                    <TouchableOpacity onPress={() => {
-                      setPdfStep("choice");
-                      setSelectedChimneyId(null);
-                      setChimneySums({});
-                      setFocusedField(null);
-                      onCloseSimple();
-                    }}>
+                    <TouchableOpacity onPress={handleClose}>
                       <EvilIcons name="close" size={28} color="white" />
                     </TouchableOpacity>
                   </View>
@@ -87,10 +92,7 @@ export default function PdfGenerationModal({
                           className="bg-gray-700 rounded-xl p-4 mb-4"
                           onPress={() => {
                             handlePdfGeneration("cleaning");
-                            setPdfStep("choice");
-                            setSelectedChimneyId(null);
-                            setChimneySums({});
-                            setFocusedField(null);
+                            handleClose();
                           }}
                         >
                           <Body className="text-white text-center">
@@ -140,7 +142,7 @@ export default function PdfGenerationModal({
                               }}
                             >
                               <Body className="text-white font-semibold">
-                              {(ch as any).type} – {(ch as any).labelling}
+                                {ch.chimney_type?.type} – {ch.chimney_type?.labelling}
                               </Body>
                               <BodySmall className="text-gray-400 text-sm">
                                 {o.object.address}
@@ -180,10 +182,7 @@ export default function PdfGenerationModal({
                           disabled={isGenerating}
                           onPress={() => {
                             handlePdfGeneration("cleaningWithPaymentReceipt", selectedChimneyId)
-                            setPdfStep("choice");
-                            setSelectedChimneyId(null);
-                            setChimneySums({});
-                            setFocusedField(null);
+                           handleClose();
                           }}
                         >
                           <Body className="text-white text-center font-semibold">
@@ -203,7 +202,7 @@ export default function PdfGenerationModal({
                               className="bg-dark-details-o_p_bg rounded-xl p-4 mb-4"
                             >
                               <Body className="text-white font-semibold">
-                              {(ch as any).type} – {(ch as any).labelling}
+                              {ch.chimney_type?.type} – {ch.chimney_type?.labelling}
                               </Body>
                               <BodySmall className="text-gray-400 text-sm mb-2">
                                 {o.object.address}
@@ -240,10 +239,7 @@ export default function PdfGenerationModal({
                           disabled={isGenerating}
                           onPress={() => {
                             handlePdfGeneration("cleaningWithPaymentReceipt");
-                            setPdfStep("choice");
-                            setSelectedChimneyId(null);
-                            setChimneySums({});
-                            setFocusedField(null);
+                            handleClose();
                           }}
                         >
                           <Body className="text-white text-center font-semibold">
@@ -255,5 +251,5 @@ export default function PdfGenerationModal({
                   </View>
                 </View>
               </View>
-            </Modal>
+      </Modal>
 )}
