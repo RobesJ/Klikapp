@@ -96,6 +96,7 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
     const selectAddress = async (suggestion: any) => {
         const fullAddress = suggestion.description;
         handleChange("address" as keyof T, fullAddress);
+        //handleChange("place_id"  as keyof T, suggestion.place_id);
         setAddressSearch(fullAddress);
         setShowAddressSuggestions(false);
         
@@ -115,8 +116,11 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
                 throw new Error(data.error_message);
             }
             
-            if (data.result && data.result.address_components) {
-               parseAddressComponents(data.result.address_components);
+            if (data.result) {
+                handleChange("place_id"  as keyof T, data.result.place_id);
+                if (data.result.address_components){
+                    parseAddressComponents(data.result.address_components);
+                }
             }
         } catch (error) {
             console.error('Error fetching place details:', error);

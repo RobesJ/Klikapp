@@ -2,10 +2,12 @@ import { useGoogleSearchAddress } from "@/hooks/useGoogleAddressSearch";
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/notificationStore";
 import { Client } from "@/types/generics";
+import { validateAndNormalizePhone } from "@/utils/phoneInputValidation";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { AsYouType } from "libphonenumber-js";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
 import { NotificationToast } from "../notificationToast";
 import { Body, Heading1 } from "../typography";
@@ -21,11 +23,13 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
     const [formData, setFormData] = useState<Omit<Client, "id"> & {id?: string}>({
         name: initialData?.name || '',
         email: initialData?.email || '',
+        unformatted_email: initialData?.unformatted_email || '',
         phone: initialData?.phone || '',
         address: initialData?.address || '',
         city: initialData?.city || '',
         streetNumber: initialData?.streetNumber || '',
         country: initialData?.country || '',
+        place_id: initialData?.place_id || '',
         type: initialData?.type || "",
         note: initialData?.note || '',
     });
@@ -35,26 +39,6 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [selectedType, setSelectedType] = useState('');
     const [focusedField, setFocusedField] = useState<string | null>(null);
-    
-    useEffect(() => {
-        if (initialData){
-            setFormData({
-                name: initialData.name || "",
-                email: initialData?.email || '',
-                phone: initialData?.phone || '',
-                address: initialData?.address || '',
-                city: initialData?.city || '',
-                streetNumber: initialData?.streetNumber || '',
-                country: initialData?.country || '',
-                type: initialData?.type || "",
-                note: initialData?.note || '',
-            });
-            
-            if(initialData.type != null){
-                setSelectedType(initialData.type);
-            }
-        }
-    }, [initialData]);
     
     const handleChange = (field: keyof Omit<Client,"id">, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
@@ -67,6 +51,12 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         }
     };
 
+    const handlePhoneChange = (value: string) => {
+        const formatter = new AsYouType("SK");
+        const formatted = formatter.input(value);
+        handleChange("phone", formatted);
+    };
+
     const {
         addressSearch,
         addressSuggestions,
@@ -76,16 +66,55 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         selectAddress
     } = useGoogleSearchAddress<Omit<Client,"id">>(handleChange);
 
+    useEffect(() => {
+        if (initialData){
+            setFormData({
+                name: initialData.name || "",
+                email: initialData?.email || '',
+                unformatted_email: initialData?.unformatted_email || '',
+                phone: initialData?.phone || '',
+                address: initialData?.address || '',
+                city: initialData?.city || '',
+                streetNumber: initialData?.streetNumber || '',
+                country: initialData?.country || '',
+                place_id: initialData?.place_id || '',
+                type: initialData?.type || "",
+                note: initialData?.note || '',
+            });
+            
+            if(initialData.type != null){
+                setSelectedType(initialData.type);
+            }
+        }
+    }, [initialData]);
+
     const validate = () : boolean => {
         const newErrors : Record<string, string> = {};
+        const updates: Partial<typeof formData> = {};
 
         if(!formData.name.trim()){
             newErrors.name = "Meno je povinná položka!";
         }
+        else {
+            const normalizedName = formData.name
+                .trim()
+                .replace(/\s+/g, ' ')                           // Normalize spaces: "   " → " "            
+                .replace(/\s*,\s*/g, ', ')                      // Normalize commas: "ABC,s.r.o." → "ABC, s.r.o."
+                .replace(/\bs\.?\s*r\.?\s*o\.?\b/gi, 's.r.o.')  // Normalize s.r.o variations: "sro" → "s.r.o."
+                .replace(/\ba\.?\s*s\.?\b/gi, 'a.s.');          // Normalize a.s. variations: "as" → "a.s."
+            if (normalizedName !== formData.name){
+                updates.name = normalizedName;
+            }
+        }
 
-        if(formData.email){
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        if(formData.email && formData.email.trim() !== ''){
+            const normalizedEmail = formData.email.trim().toLowerCase();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
                 newErrors.email = 'Neplatný formát emailu!';
+            }
+            else if (normalizedEmail !== formData.email){
+                updates.email = normalizedEmail;
+                updates.unformatted_email = formData.email.trim();
             }
         }
 
@@ -93,16 +122,54 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
             newErrors.address = "Adresa je povinná položka!";
         }
 
-        if(!formData.phone?.trim()){
+        if(!formData.phone || formData.phone.trim() === ' '){
             newErrors.phone = "Telefonné číslo je povinná položka!";
+        }
+        else {
+            const phoneValidation = validateAndNormalizePhone(formData.phone);
+            if (!phoneValidation.valid && phoneValidation.error ){
+                newErrors.phone = phoneValidation.error;
+            }
+            else if (phoneValidation.valid && phoneValidation.normalized){
+                updates.phone = phoneValidation.normalized;
+            }
         }
 
         if(!formData.type){
             newErrors.type = "Typ klienta je povinná položka!";
         }
+
+        if (Object.keys(updates).length === 0) {
+           setFormData(prev => ({ ...prev, updates }));
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }
+    };
+
+    async function checkDuplicateWithFuzzy(name: string, phone: string | null, email: string | null, place_id: string | null) {
+        const { data, error } = await supabase.rpc('find_similar_clients', {
+            p_name: name,
+            p_phone: phone,
+            p_place_id: place_id,
+            p_email: email,
+            similarity_threshold: 0.4
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            const matches: Record<string, string> = {};
+            data.forEach((match: any) => {
+                matches[match.match_type] = match.name;   
+            });
+            return {
+              isDuplicate: true,
+              matches
+            };
+        }
+        return { isDuplicate: false, matches: {}};
+    };
 
     const handleSubmit = async () => {
         
@@ -113,12 +180,91 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         setLoading(true);
         try{
             if (mode === "create"){
+                const result = await checkDuplicateWithFuzzy(formData.name, formData.phone, formData.email, formData.place_id);
+                console.log(result);
+                if (result.isDuplicate){
+                    if(result.matches["exact_email"] ||result.matches["exact_phone"]){
+                        const duplicateNames: string[] = [];
+                        if (result.matches["exact_email"]){
+                            duplicateNames.push(`${result.matches["exact_email"]} (rovnaký email)`);
+                        }
+                        if (result.matches["exact_phone"]){
+                            duplicateNames.push(`${result.matches["exact_phone"]} (rovnaké číslo)`);
+                        }
+                        const duplicateInfo = duplicateNames.join('\n'); 
+
+                        Alert.alert(
+                            "Klient existuje",
+                            `V databaze existuje klient s rovnakym cislom alebo emailom:\n${duplicateInfo}`,
+                            [
+                                { 
+                                    text: 'Zrusit', 
+                                    style: "cancel",
+                                    onPress:  () => {
+                                        setLoading(false);
+                                  }
+                                }
+                            ]
+                        );
+                        return;
+                    }
+
+                    if (result.matches["name_similarity"] || result.matches["exact_address"] ){
+                        const duplicateNames: string[] = [];
+                        duplicateNames.push(`${result.matches["name_similarity"]}`);
+                        duplicateNames.push(`${result.matches["exact_address"]}`);
+                        const duplicateInfo = duplicateNames.join('\n'); 
+                       
+                        Alert.alert(
+                            "Nájdená duplicita v mene alebo adrese",
+                            `Podobný klienti: ${duplicateInfo}\n\nChcete pokračovať?`,
+                            [
+                                { 
+                                    text: 'Nie', 
+                                    style: "cancel",
+                                    onPress:  () => {
+                                        setLoading(false);
+                                  }
+                                },
+                                {
+                                    text: 'Áno',
+                                    style: 'default',
+                                    onPress: async () => {
+                                        try {
+                                            const {data, error} = await supabase
+                                            .from('clients')
+                                            .insert([formData])
+                                            .select()
+                                            .single();
+
+                                            if (error) throw error;
+                                            onSuccess?.(data);
+                                        }
+                                        catch (error: any){
+                                            console.error("Error creating client: ", error);
+                                            useNotificationStore.getState().addNotification(
+                                                "Nastala chyba pri vytváraní klienta",
+                                                'error',
+                                                "clientForm",
+                                                3000
+                                            );
+                                        }
+                                        finally {
+                                            setLoading(false);
+                                        }
+                                    }
+                                }
+                            ]
+                        );
+                        return;
+                    }
+                }
                 const {data, error} = await supabase
-                .from('clients')
-                .insert([formData])
-                .select()
-                .single();
-                
+                    .from('clients')
+                    .insert([formData])
+                    .select()
+                    .single();
+                    
                 if (error) throw error;
                 onSuccess?.(data);
             }
@@ -219,8 +365,8 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                         <FormInput
                             label="Telefónne číslo"
                             value={formData.phone || ''}
-                            onChange={(value) => handleChange("phone", value)}
-                            placeholder="0901 234 567  |  +421 901 234 567"
+                            onChange={handlePhoneChange}
+                            placeholder="+XXX 901 234 567"
                             error={errors.phone}
                             fieldName="phone"
                             focusedField={focusedField}
@@ -236,7 +382,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                                 value={addressSearch || formData.address || ''}
                                 onChange={searchGoogleAddress}
                                 placeholder="Začnite písať adresu..."
-                                error={errors.phone}
+                                error={errors.address}
                                 fieldName="address"
                                 focusedField={focusedField}
                                 setFocusedField={setFocusedField}            
@@ -272,8 +418,8 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                             <View className="flex-row">
                                 <TouchableOpacity
                                     onPress={() => handleSelectedType("Fyzická osoba")}
-                                    className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-300" : "border-gray-700 bg-gray-800"} rounded-xl p-4 mr-2 items-center`}
-                                    style={{width: "50%"}}
+                                    className={`border-2 ${selectedType === "Fyzická osoba" ? "border-gray-300" : "border-gray-500 bg-gray-800"} rounded-xl p-4 mr-2 items-center`}
+                                    style={{width: "49%"}}
                                 >
                                     <Body
                                       style={{ color: selectedType === "Fyzická osoba" ? '#FFFFFF' : '#ABABAB' }}
@@ -283,9 +429,9 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                                     </Body>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-300 " : "border-gray-700 bg-gray-800"} rounded-xl p-4 items-center`}
+                                    className={`border-2 ${selectedType === "Právnická osoba" ? "border-gray-300 " : "border-gray-500 bg-gray-800"} rounded-xl p-4 items-center`}
                                     onPress={() => handleSelectedType("Právnická osoba")}
-                                    style={{width: "50%"}}
+                                    style={{width: "49%"}}
                                 >
                                     <Body
                                       style={{ color: selectedType === "Právnická osoba" ? '#FFFFFF' : '#ABABAB' }}

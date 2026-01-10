@@ -23,11 +23,13 @@ export interface Client {
   id: string;
   name: string;
   email: string | null;
-  phone: string | null;
-  address: string | null;
+  unformatted_email: string | null;
+  phone: string;
+  address: string;
   streetNumber: string | null;
   city: string | null;
   country:  string | null;
+  place_id: string | null;
   type: string | null;
   note: string | null;
   projectsCount?: number;
