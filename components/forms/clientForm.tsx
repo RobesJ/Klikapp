@@ -159,16 +159,29 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         if (error) throw error;
 
         if (data && data.length > 0) {
-            const matches: Record<string, string> = {};
+            const duplicateInfoWarn: string [] = [];
+            const duplicateInfoQuit: string [] = [];
             data.forEach((match: any) => {
-                matches[match.match_type] = match.name;   
+                if(match.match_type === "exact_email"){
+                    duplicateInfoQuit.push(`${match.name} (rovnaký email)`);
+                }
+                else if(match.match_type === "exact_phone"){
+                    duplicateInfoQuit.push(`${match.name} (rovnaké číslo)`);
+                }
+                else if(match.match_type === "exact_address"){
+                    duplicateInfoWarn.push(`${match.name} (rovnaká adresa)`);
+                }
+                else if(match.match_type === "name_similarity"){
+                    duplicateInfoWarn.push(`${match.name} (podobné meno)`);
+                }
             });
             return {
               isDuplicate: true,
-              matches
+              duplicateInfoQuit,
+              duplicateInfoWarn
             };
         }
-        return { isDuplicate: false, matches: {}};
+        return { isDuplicate: false, duplicateInfoQuit: [], duplicateInfoWarn: []};
     };
 
     const handleSubmit = async () => {
@@ -181,21 +194,12 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         try{
             if (mode === "create"){
                 const result = await checkDuplicateWithFuzzy(formData.name, formData.phone, formData.email, formData.place_id);
-                console.log(result);
                 if (result.isDuplicate){
-                    if(result.matches["exact_email"] ||result.matches["exact_phone"]){
-                        const duplicateNames: string[] = [];
-                        if (result.matches["exact_email"]){
-                            duplicateNames.push(`${result.matches["exact_email"]} (rovnaký email)`);
-                        }
-                        if (result.matches["exact_phone"]){
-                            duplicateNames.push(`${result.matches["exact_phone"]} (rovnaké číslo)`);
-                        }
-                        const duplicateInfo = duplicateNames.join('\n'); 
-
+                    if(result.duplicateInfoQuit.length > 0){
+                        const duplicateInfo = result.duplicateInfoQuit.join('\n'); 
                         Alert.alert(
                             "Klient existuje",
-                            `V databaze existuje klient s rovnakym cislom alebo emailom:\n${duplicateInfo}`,
+                            `V databáze existuje klient s rovnakým číslom alebo emailom:\n${duplicateInfo}`,
                             [
                                 { 
                                     text: 'Zrusit', 
@@ -209,15 +213,11 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                         return;
                     }
 
-                    if (result.matches["name_similarity"] || result.matches["exact_address"] ){
-                        const duplicateNames: string[] = [];
-                        duplicateNames.push(`${result.matches["name_similarity"]}`);
-                        duplicateNames.push(`${result.matches["exact_address"]}`);
-                        const duplicateInfo = duplicateNames.join('\n'); 
-                       
+                    else if (result.duplicateInfoWarn.length > 0){
+                        const duplicateInfo = result.duplicateInfoWarn.join('\n'); 
                         Alert.alert(
                             "Nájdená duplicita v mene alebo adrese",
-                            `Podobný klienti: ${duplicateInfo}\n\nChcete pokračovať?`,
+                            `Podobní klienti: ${duplicateInfo}\n\nChcete pokračovať?`,
                             [
                                 { 
                                     text: 'Nie', 

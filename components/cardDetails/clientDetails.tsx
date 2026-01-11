@@ -259,10 +259,10 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                           screen="clientDetails"
                         />
                         <View className="mb-3">
-                            {client.email && (
+                            {client.unformatted_email && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="email" size={20} color={"white"}/>
-                                    <Body className="text-dark-text_color ml-2">{client.email}</Body>
+                                    <Body className="text-dark-text_color ml-2">{client.unformatted_email}</Body>
                                 </View>
                             )}
 
