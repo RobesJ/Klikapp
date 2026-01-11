@@ -1,17 +1,11 @@
 import { FormInput } from '@/components/formInput';
+import { NotificationToast } from '@/components/notificationToast';
 import { Body, Heading1 } from '@/components/typography';
 import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 
 export default function Register() {
     const router = useRouter();
@@ -40,26 +34,58 @@ export default function Register() {
 
     const validate = (): boolean => {
         const newErrors: Record<string, string> = {};
+        const updates: Partial<typeof formData> = {};
 
         if(!formData.name.trim()){
-            newErrors.name = "Meno je povinné!"
+            newErrors.name = "Meno je povinné pole"
+        }
+        else{
+            const normalizedName= formData.name.trim().replace(/\s+/g, ' ');
+            if (normalizedName !== formData.name){
+                updates.name = normalizedName;
+            }
         }
         
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email je povinný!';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = 'Neplatný formát emailu!';
+        if(formData.email && formData.email.trim() !== ''){
+            const normalizedEmail = formData.email.trim().toLowerCase();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+                newErrors.email = 'Neplatný formát emailu';
+            }
+            else if (normalizedEmail !== formData.email){
+                updates.email = normalizedEmail;
+            }
         }
 
         if(!formData.password){
-            newErrors.password = "Heslo je povinné pole!";
+            newErrors.password = "Heslo je povinné pole";
         }
-        else if(formData.password.length < 8){
-            newErrors.password = "Heslo musí obsahovať aspoň 8 znakov!";
-        }
+
+        else{
+            const passwordErrors: string [] = [];
+            if(formData.password.length < 8){
+                passwordErrors.push("- Heslo musí obsahovať aspoň 8 znakov");
+            }
+            if(formData.password.length > 126){
+                passwordErrors.push("- Heslo musí obsahovať menej ako 126 znakov");
+            }
+            const hasLetter = /[a-zA-Z]/.test(formData.password);
+            const hasNumber = /[0-9]/.test(formData.password);
+
+            if (!hasLetter || !hasNumber) {
+                passwordErrors.push('- Heslo musí obsahovať písmená aj číslice');
+              
+            }
+            if (passwordErrors.length > 0){
+                newErrors.password = passwordErrors.join('\n');
+            }
+        }   
 
         if(formData.password != formData.confirmPassword){
             newErrors.confirmPassword = "Heslá sa nezhodujú!";
+        }
+
+        if (Object.keys(updates).length > 0) {
+            setFormData(prev => ({ ...prev, updates }));
         }
 
         setErrors(newErrors);
@@ -67,9 +93,7 @@ export default function Register() {
     };
 
     async function signUpNewUser() { 
-
         if (!validate()) {
-            //Alert.alert("Chyba:", "Prosim opravta chyby vo formulari")
             return;
         }
 
@@ -90,13 +114,19 @@ export default function Register() {
             useNotificationStore.getState().addNotification(
                 "Účet bol vytvorený. Skontrolujte svoj email pre overenie",
                 "success",
+                "login",
                 10000
             );
             router.replace("/(auth)/login");
 
         } catch(error: any){
             console.error("Error signing up: ", error);
-            Alert.alert("Chyba ", error.message || "Nepodarilo sa vytvoriť účet")
+            useNotificationStore.getState().addNotification(
+                `Nepodarilo sa vytvoriť účet: ${error.message}`,
+                "error",
+                "register",
+                10000
+            );
         } finally{
             setLoading(false);
         }
@@ -121,6 +151,7 @@ export default function Register() {
                 <Body className='text-base text-dark-text_color'>
                     Zadajte vaše údaje pre registráciu
                 </Body>
+                <NotificationToast screen="register"/>
             </View>
 
             {/*form*/}

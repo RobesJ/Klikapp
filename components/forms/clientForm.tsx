@@ -139,7 +139,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
             newErrors.type = "Typ klienta je povinná položka!";
         }
 
-        if (Object.keys(updates).length === 0) {
+        if (Object.keys(updates).length > 0) {
            setFormData(prev => ({ ...prev, updates }));
         }
 

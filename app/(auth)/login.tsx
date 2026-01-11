@@ -1,8 +1,10 @@
 import { FormInput } from "@/components/formInput";
+import { NotificationToast } from "@/components/notificationToast";
 import { supabase } from '@/lib/supabase';
+import { useNotificationStore } from "@/store/notificationStore";
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, BodyLarge, BodySmall, Caption, Heading1 } from "../../components/typography";
 
@@ -25,23 +27,24 @@ export default function Login() {
                 return newErrors;
             })
         }
-    }
+    };
     
     const validate = () : boolean => {
         const newErrors: Record<string, string> = {};
 
-        if (!formData.email){
-            newErrors.email = "Email je povinný!";
+        if (!formData.email || formData.email.trim() === ''){
+            newErrors.email = "Email je povinné pole";
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Neplatný formát emailu';
         }
+        else {
+            setFormData(prev => ({...prev, email: formData.email.trim().toLowerCase()}));
+        }
 
-        if (!formData.password){
-            newErrors.password = "Heslo je povinné!";
+        if (!formData.password || formData.email.trim() === ''){
+            newErrors.password = "Heslo je povinné pole";
         }
-        else if (formData.password.length < 8 ){
-            newErrors.password = "Heslo musí obsahovať aspoň 8 znakov!";
-        }
+       
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     }
@@ -64,11 +67,19 @@ export default function Login() {
         } 
         catch(error: any){
             console.log("Error signing in: ", error);
-            Alert.alert("Chyba pri prihlasovaní: ",
-                error.message === "Invalid login credentials"
-                ? "Nesprávny email alebo heslo!"
-                : error.message || "Nepodarilo sa príhlasiť"
-            )
+            let message: string;
+            if(error.message === "Invalid login credentials"){
+               message = "Nesprávny email alebo heslo!";
+            }
+            else {
+                message = "Nepodarilo sa príhlasiť";
+            }
+            useNotificationStore.getState().addNotification(
+                message,
+                "error",
+                "login",
+                10000
+            );
         }
         finally{
             setLoading(false);
@@ -96,6 +107,7 @@ export default function Login() {
                         <BodyLarge className='text-dark-text_color'>
                             Prihláste sa do vášho účtu
                         </BodyLarge>
+                        <NotificationToast screen="login"/>
                     </View>
 
                     {/* form */}
@@ -127,7 +139,7 @@ export default function Login() {
                         />
                         <View className='flex-row mt-2 ml-3'>
                             <TouchableOpacity
-                                onPress={() => router.push("/(auth)/forgot-pwd")} // TODO create password renewing page
+                                onPress={() => router.push("/(auth)/forgot-pwd")}
                                 disabled={loading}
                                 activeOpacity={1}
                             >
@@ -142,8 +154,8 @@ export default function Login() {
                         onPress={SignIn}
                         disabled={loading}
                         activeOpacity={0.8}
-                        className={Platform.OS ==="android" ? 'bg-blue-600 rounded-2xl py-5 items-center justify-center px-20 shadow-lg mb-6' : 'bg-blue-600 text-sm rounded-2xl py-5 items-center justify-center px-10 shadow-lg mb-6' }
-                        //className={`${loading ? 'bg-blue-400' : 'bg-blue-600'} rounded-2xl py-5 items-center justify-center px-20 shadow-lg mb-6`}
+                       // className={Platform.OS ==="android" ? 'bg-blue-600 rounded-2xl py-5 items-center justify-center px-20 shadow-lg mb-6' : 'bg-blue-600 rounded-2xl py-5 items-center justify-center px-10 shadow-lg mb-6' }
+                        className={`${loading ? 'bg-blue-400' : 'bg-blue-600'} rounded-2xl py-5 items-center justify-center px-20 shadow-lg mb-6`}
                     >
                         {loading ? 
                         (

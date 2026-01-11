@@ -29,7 +29,7 @@ export default function AddProjectScreen() {
 
   // lock renewal in intervals
   useEffect(() => {
-    if(!user) return;
+    if(!user || mode === "create") return;
     
     const interval = setInterval(() => {
         supabase
@@ -40,7 +40,7 @@ export default function AddProjectScreen() {
       }, 120_000);
 
     return () => clearInterval(interval);
-  }, [parsedProject?.project.id, user?.id]);
+  }, [parsedProject?.project.id, user?.id, mode]);
 
   // if success adding / updating project in store
   const handleSuccess = (projectData: ProjectWithRelations) => {
