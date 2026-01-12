@@ -4,8 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from "@/store/notificationStore";
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView, Platform, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Body, BodyLarge, BodySmall, Caption, Heading1 } from "../../components/typography";
 
 export default function Login() {
@@ -63,7 +63,7 @@ export default function Login() {
 
             if (error) throw error;
 
-            router.replace("/(drawer)/(tabs)/home");
+            router.replace("/(app)/(drawer)/(tabs)/home");
         } 
         catch(error: any){
             console.log("Error signing in: ", error);
@@ -93,11 +93,7 @@ export default function Login() {
             behavior={Platform.OS === "android" ? "padding" : "height"}
             className='flex-1'
         >
-            <ScrollView
-                className='flex-1'
-                contentContainerClassName='flex-grow'
-                keyboardShouldPersistTaps='handled'
-            >
+            
                 <View className="flex-1 items-center justify-center">
                     {/* header */}
                     <View className='flex-2 items-center justify-center mb-6'>
@@ -141,7 +137,7 @@ export default function Login() {
                             <TouchableOpacity
                                 onPress={() => router.push("/(auth)/forgot-pwd")}
                                 disabled={loading}
-                                activeOpacity={1}
+                                activeOpacity={0.2}
                             >
                                 <Caption className='font-medium text-dark-text_color'>
                                     Zabudli ste heslo?
@@ -189,7 +185,7 @@ export default function Login() {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </ScrollView>
+            
         </KeyboardAvoidingView>
         </SafeAreaView>
     );

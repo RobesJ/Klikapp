@@ -1,3 +1,4 @@
+import { useAuth } from '@/context/authContext';
 import { supabase } from '@/lib/supabase';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
@@ -7,17 +8,20 @@ import { Body, BodyLarge, BodySmall, Caption } from './typography';
 
 export default function CustomDrawerContent(props: any) {
   const router = useRouter();
+  const { user, signOut } = useAuth();
+  
+  if (!user) {
+    return null;
+  };
 
   const handleLogout = async () => {
-    // TODO: Implement logout logic
     console.log("Logout");
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    router.replace('/login');
+    router.replace('/(auth)/login');
   };
 
   const handleSettings = () => {
-    // TODO: Navigate to settings
     props.navigation.closeDrawer()
     router.push('/settings');
   };
@@ -36,10 +40,10 @@ export default function CustomDrawerContent(props: any) {
 
       <View className="px-6 py-8 border-b border-gray-700">
         <BodyLarge className="text-lg font-semibold text-dark-text_color">
-          User Name
+            {user.user_metadata.name}
         </BodyLarge>
         <BodySmall className="text-sm text-gray-400 mt-1">
-          user@example.com
+            {user.email}
         </BodySmall>
       </View>
 

@@ -37,16 +37,16 @@ export default function AuthLayout() {
 
 
     if (!loading && user) {
-       return <Redirect href="/(drawer)/(tabs)/home"/>
+       return <Redirect href="/(app)/(drawer)/(tabs)/home"/>
     }
 
     return (
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { 
-            backgroundColor: '#FFFFFF'
-          },
+          //contentStyle: { 
+          //  backgroundColor: '#FFFFFF'
+          //},
           animation: 'slide_from_right',
         }}
       >

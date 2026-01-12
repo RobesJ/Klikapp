@@ -1,4 +1,3 @@
-import { AnimatedScreen } from "@/components/animatedScreen";
 import ClientDetails from "@/components/cardDetails/clientDetails";
 import ClientCard from "@/components/cards/clientCard";
 import { NotificationToast } from "@/components/notificationToast";
@@ -91,7 +90,6 @@ export default function Clients() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-      <AnimatedScreen tabIndex={1}>
         {/* header */}
         <View className="flex-2 mt-4 px-6 mb-8">
           <View className="flex-row justify-between items-center">
@@ -171,7 +169,6 @@ export default function Clients() {
             onCloseWithUnlocking={handleOnCloseWithUnlocking}
           />
         )}
-      </AnimatedScreen>
     </SafeAreaView>
   );
 }

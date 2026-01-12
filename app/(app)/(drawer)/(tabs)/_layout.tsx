@@ -2,7 +2,7 @@ import { Body } from "@/components/typography"
 import { useAuth } from "@/context/authContext"
 import { Redirect, Tabs } from "expo-router"
 import { ActivityIndicator, Image, View } from "react-native"
-import { icons } from "../../../constants/icons"
+import { icons } from "../../../../constants/icons"
 
 const TabIcon = ({focused, icon, title} : any) => {
     if (focused){
@@ -38,7 +38,7 @@ const _Layout = () => {
             <ActivityIndicator size="large" />
         </View>
     }
-
+ 
     if(!user) {
         return <Redirect href ="/(auth)/login" />
     }
@@ -69,6 +69,7 @@ const _Layout = () => {
                 name="home"
                 options={{
                     title: "Domov",
+                    animation: 'none',
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -84,7 +85,7 @@ const _Layout = () => {
                 name="clients"
                 options={{
                     title: "Klienti",
-                    // lazy: true,
+                    animation: 'none',
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -99,7 +100,7 @@ const _Layout = () => {
                 name="objects"
                 options={{
                     title: "Objekty",
-                    // lazy: true,
+                    animation: 'none',
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -114,7 +115,7 @@ const _Layout = () => {
                 name="projects"
                 options={{
                     title: "Projekty",
-                    // lazy: true,
+                    animation: 'none',
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 
@@ -130,7 +131,7 @@ const _Layout = () => {
                 name="planning"
                 options={{
                     title: "Planovanie",
-                    // lazy: true,
+                    animation: 'none',
                     headerShown: false,
                     tabBarIcon: ({focused}) => (
                         <TabIcon 

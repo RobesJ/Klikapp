@@ -8,23 +8,16 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, BackHandler, Dimensions, TouchableOpacity, View } from 'react-native';
-import Animated, {
-    Easing,
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring,
-    withTiming
+import {
+    useSharedValue
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Settings() {
     const router = useRouter();
     const isExiting = useRef(false);
     const { user, signOut } = useAuth();
-  
+    const { width: SCREEN_WIDTH } = Dimensions.get('window');
     const opacity = useSharedValue(0);
     const translateX = useSharedValue(SCREEN_WIDTH);
     const scale = useSharedValue(0.95);
@@ -39,28 +32,9 @@ export default function Settings() {
         "password": '',
         "confirmPassword": '',
     });
-
-    if (!user) return null;
-
     // Entry animation
     useFocusEffect(useCallback(() => {
         isExiting.current = false;
-
-        // Reset values
-        translateX.value = SCREEN_WIDTH;
-        opacity.value = 0;
-        scale.value = 0.95;
-
-        // Animate in
-        translateX.value = withSpring(0, {
-            damping: 150,
-            stiffness: 90,
-        });
-
-        opacity.value = withTiming(1, {
-            duration: 30,
-            easing: Easing.out(Easing.ease),
-        });
       
         // Handle Android back button
         const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -72,38 +46,18 @@ export default function Settings() {
         return () => {
             backHandler.remove();
         };
+    
     }, []));
+    if (!user) {
+        return null;
+    }
 
     const handleBack = () => {
         if (isExiting.current) return;
         isExiting.current = true;
 
-        // Animate out
-        translateX.value = withTiming(SCREEN_WIDTH, {
-            duration: 30,
-            easing: Easing.in(Easing.ease),
-        });
-        opacity.value = withTiming(0, {
-            duration: 30,
-            easing: Easing.in(Easing.ease),
-        }, (finished) => {
-            if (finished) {
-              runOnJS(router.back)();
-            }
-        });
-        scale.value = withTiming(0.95, {
-            duration: 30,
-            easing: Easing.in(Easing.ease),
-        });
     };
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        opacity: opacity.value,
-        transform: [
-            { translateX: translateX.value },
-            { scale: scale.value },
-        ],
-    }));
 
     const handleChange = (field: string, value: string) => {
         if (field === "userName"){
@@ -306,7 +260,8 @@ export default function Settings() {
 
     return (
         <SafeAreaView className="flex-1 bg-dark-bg">
-            <Animated.View style={[animatedStyle, { flex: 1 }]}>
+            {/*<Animated.View style={[animatedStyle, { flex: 1 }]}> */}
+            <View>
                 {/* Header */}
                 <View className="mb-12 relative">                
                     <TouchableOpacity
@@ -323,7 +278,7 @@ export default function Settings() {
                     </View> 
                 </View>
 
-                <View className="flex-1 px-6">
+                <View className="flex-2 px-6">
                     {/* User name changing */}
                     <Body className="text-dark-text_color">Používateľské meno</Body>
                     {!changeNamePressed 
@@ -447,7 +402,7 @@ export default function Settings() {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </Animated.View>
+            </View>
         </SafeAreaView>
     );
 } 

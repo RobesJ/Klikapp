@@ -430,11 +430,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         onChange={handleScheduledDate}
                         error={errors.scheduledDate}
                     />
-                    {/*errors.dates && (
-                        <Body className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.dates}
-                        </Body>
-                    )*/}
                 </View>
 
                 {/* Project start field */}
@@ -445,11 +440,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         onChange={handleStartdDate}
                         error={errors.startDate}
                     />
-                    {/*errors.dates && (
-                        <Body className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.dates}
-                        </Body>
-                    )*/}
                 </View>
 
                 {/* Project completion field*/}
@@ -460,11 +450,6 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                         onChange={handleCompletionDate}
                         error={errors.completionDate}
                     />
-                    {/*errors.completionDate && (
-                        <Body className='text-red-500 font-semibold ml-2 mt-1'>
-                            {errors.completionDate}
-                        </Body>
-                    )*/}
                 </View>
 
                 {/* note input*/}

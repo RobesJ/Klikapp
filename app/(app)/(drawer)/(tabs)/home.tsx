@@ -1,4 +1,3 @@
-import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS_HOME, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
@@ -158,10 +157,6 @@ export default function Home() {
     ];
   };
 
-  //const handleClearFilters = () => {
-  //  clearFilters();
-  //};
-
   const handleCloseWithUnlock = () => {
     setShowDetails(false);
     if (selectedProject?.project && user){
@@ -174,7 +169,7 @@ export default function Home() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-        <AnimatedScreen tabIndex={0}>       
+          
           {/* Header */}   
           <View className="flex-2 mt-4 mx-4 mb-8">
             <View className="flex-row justify-between">
@@ -283,8 +278,7 @@ export default function Home() {
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
             scrollEnabled={true}
           />
-      
-        </AnimatedScreen>
+
 
       {/* Project details modal */}
       {selectedProject && (

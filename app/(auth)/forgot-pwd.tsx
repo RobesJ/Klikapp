@@ -1,3 +1,4 @@
+import { Body, BodyLarge, Heading1 } from '@/components/typography';
 import { supabase } from '@/lib/supabase';
 import { MaterialIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -74,7 +75,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-dark-bg">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -85,17 +86,17 @@ export default function ForgotPassword() {
             onPress={() => router.back()}
             className="absolute top-4 left-6 w-10 h-10 items-center justify-center"
           >
-            <MaterialIcons name="arrow-back" size={24} color="black" />
+            <MaterialIcons name="arrow-back" size={24} color="#d6d3d1" />
           </TouchableOpacity>
 
           {/* Header */}
           <View className="mb-8">
-            <Text className="text-3xl font-bold text-black mb-2">
+            <Heading1 className="text-dark-text_color mb-2">
               Zabudnuté heslo
-            </Text>
-            <Text className="text-gray-600 text-base">
+            </Heading1>
+            <Body className="text-gray-600">
               Zadajte svoju emailovú adresu a pošleme vám odkaz na obnovenie hesla
-            </Text>
+            </Body>
           </View>
 
           {!emailSent ? (
@@ -105,6 +106,7 @@ export default function ForgotPassword() {
                 <Text className="text-black mb-2 font-semibold">
                   Emailová adresa
                 </Text>
+                
                 <TextInput
                   placeholder="vas@email.com"
                   placeholderTextColor="#9CA3AF"
@@ -139,28 +141,28 @@ export default function ForgotPassword() {
             <View className="bg-green-100 border border-green-500 rounded-xl p-4">
               <View className="flex-row items-center mb-2">
                 <MaterialIcons name="check-circle" size={24} color="#10b981" />
-                <Text className="text-green-700 font-bold text-lg ml-2">
+                <BodyLarge className="text-green-700 font-bold text-lg ml-2">
                   Email odoslaný
-                </Text>
+                </BodyLarge>
               </View>
-              <Text className="text-green-700 mb-2">
+              <Body className="text-green-700 mb-2">
                 Skontrolujte svoju emailovú schránku a kliknite na odkaz na obnovenie hesla.
-              </Text>
-              <Text className="text-green-600 text-sm mb-3">
+              </Body>
+              <Body className="text-green-600 text-sm mb-3">
                 📱 Odkaz otvorí túto aplikáciu priamo na stránku obnovenia hesla.
-              </Text>
+              </Body>
               <TouchableOpacity
                 onPress={() => router.back()}
                 className="mt-2 bg-green-600 rounded-lg py-3 items-center"
               >
-                <Text className="text-white font-semibold">
+                <Body className="text-white font-semibold">
                   Späť na prihlásenie
-                </Text>
+                </Body>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Info */}
+          {/* Info 
           <View className="mt-6 bg-gray-100 rounded-xl p-4">
             <Text className="text-gray-600 text-sm mb-2">
               💡 Tip: Skontrolujte aj spam priečinok, ak email nevidíte v doručenej pošte.
@@ -171,6 +173,7 @@ export default function ForgotPassword() {
               </Text>
             )}
           </View>
+          */}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

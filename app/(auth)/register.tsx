@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Register() {
     const router = useRouter();
@@ -133,15 +134,11 @@ export default function Register() {
     };
 
   return (
+    <SafeAreaView className='flex-1 bg-dark-bg'>
     <KeyboardAvoidingView
         behavior={Platform.OS === "android" ? "padding" : "height"}
         className='flex-1'
     >
-    <ScrollView
-        className='flex-1'
-        contentContainerClassName='flex-grow'
-        keyboardShouldPersistTaps="handled"
-    >   
         <View className='flex-1 px-10 justify-center'>
             {/*header*/}
             <View className='items-center mb-8'>
@@ -218,33 +215,28 @@ export default function Register() {
                 >
                     {loading ? 
                         (
-                            <Body className='font-bold text-white'>
-                                Vytváram účet...
-                            </Body>
+                            <Body className='font-bold text-white'>Vytváram účet...</Body>
                         ) : (
-                            <Body className='text-white font-bold'>
-                                Vytvoriť účet
-                            </Body>
+                            <Body className='text-white font-bold'>Vytvoriť účet</Body>
                         )
                     }
                 </TouchableOpacity>
                 <View className='flex-row justify-center items-center'>
-                    <Body className='text-dark-text_color'>
-                        Už máte účet?{'  '}
+                    <Body className='text-dark-text_color mr-2'>
+                        Už máte účet?
                     </Body>
                     <TouchableOpacity
                         onPress = {() => router.push("/(auth)/login")}
                         disabled = {loading}
                         activeOpacity={1}
                     >
-                        <Body className='font-bold text-dark-text_color'>
-                            Prihláste sa
-                        </Body>
+                        <Body className='font-bold text-dark-text_color'>Prihláste sa</Body>
                     </TouchableOpacity>
                 </View>
             </View>
         </View>
-    </ScrollView>
+    
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

@@ -1,4 +1,3 @@
-import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
@@ -14,7 +13,7 @@ import { format, parseISO } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Dimensions, PanResponder, ScrollView, TouchableOpacity, Vibration, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, PanResponder, TouchableOpacity, Vibration, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -373,8 +372,7 @@ export default function Planning() {
   
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-      <AnimatedScreen tabIndex={4}>
-      <ScrollView>
+      
         <View className="flex-1 px-6 mt-4">
           {/* Header */}
           <View className="flex-row justify-between items-center mb-2">
@@ -545,8 +543,8 @@ export default function Planning() {
             )}
           </View>
         </View>
-      </ScrollView>
-      </AnimatedScreen>
+      
+
       {/* Filters modal */}
       <FilterModal
         visible={showFilterModalUnassigned}

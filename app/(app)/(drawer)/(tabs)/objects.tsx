@@ -1,4 +1,3 @@
-import { AnimatedScreen } from '@/components/animatedScreen';
 import ObjectDetails from '@/components/cardDetails/objectDetails';
 import ObjectCard from '@/components/cards/objectCard';
 import { NotificationToast } from '@/components/notificationToast';
@@ -125,75 +124,73 @@ export default function Objects() {
     );
   }, []);
   
-  return (
-    <SafeAreaView className="flex-1 bg-dark-bg">
-      <AnimatedScreen tabIndex={2}>
-      {/* Header */}
-      <View className="flex-2 mt-4 px-6 mb-8">
-        <View className="flex-row justify-between items-center">
-          <TouchableOpacity
-            onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-            activeOpacity={0.8}
-            className="justify-center"
-          >
-            <EvilIcons name="navicon" size={32} color="white" />
-          </TouchableOpacity>
-          <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Objekty</Heading1>
-          <Body className="text-xl text-green-500">ONLINE</Body>
-        </View>
+    return (
+        <SafeAreaView className="flex-1 bg-dark-bg">
+            {/* Header */}
+            <View className="flex-2 mt-4 px-6 mb-8">
+                <View className="flex-row justify-between items-center">
+                  <TouchableOpacity
+                    onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+                    activeOpacity={0.8}
+                    className="justify-center"
+                  >
+                    <EvilIcons name="navicon" size={32} color="white" />
+                  </TouchableOpacity>
+                  <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Objekty</Heading1>
+                  <Body className="text-xl text-green-500">ONLINE</Body>
+                </View>
 
-        <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4">
-          <EvilIcons name="search" size={20} color="gray" />
-          <TextInput
-            className="ml-2 text-dark-text_color py-3"
-            style={inputStyle}
-            placeholder='Vyhladajte klienta alebo mesto...'
-            placeholderTextColor="#9CA3AF"
-            value={searchText}
-            onChangeText={handleSearchText}
-          />
-        </View>
-        <NotificationToast screen='objects'/>
-      </View>
-
-      <FlashList
-        data={displayedGroups}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        refreshing={loading}
-        onRefresh={handleRefresh}
-        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
-        ListEmptyComponent={
-          loading
-            ? <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
-            : <Body className="text-center text-gray-500 mt-10">Žiadne objekty</Body>
-        }
-      />
-      {/* Create new Object button */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => router.push({
-          pathname: "/addObjectScreen",
-          params: { mode: "create" }
-        })}
-        className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
-      >
-        <Heading2 className='text-white text-3xl'>+</Heading2>
-      </TouchableOpacity>
-      
-      {/* Object details modal */}
-      {selectedObject && (
-        <ObjectDetails 
-          key={selectedObject.object.id}
-          objectWithRelations={selectedObject}          
-          visible={showDetails}
-          onClose={handleClose}
-          onCloseWithUnlock={handleCloseWithUnlock}
-        />
-      )}
-     </AnimatedScreen>
-    </SafeAreaView>
-  );
+                <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4">
+                  <EvilIcons name="search" size={20} color="gray" />
+                  <TextInput
+                    className="ml-2 text-dark-text_color py-3"
+                    style={inputStyle}
+                    placeholder='Vyhladajte klienta alebo mesto...'
+                    placeholderTextColor="#9CA3AF"
+                    value={searchText}
+                    onChangeText={handleSearchText}
+                  />
+                </View>
+                <NotificationToast screen='objects'/>
+            </View>
+        
+            <FlashList
+              data={displayedGroups}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.5}
+              refreshing={loading}
+              onRefresh={handleRefresh}
+              contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
+              ListEmptyComponent={
+                loading
+                  ? <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
+                  : <Body className="text-center text-gray-500 mt-10">Žiadne objekty</Body>
+              }
+            />
+            {/* Create new Object button */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => router.push({
+                pathname: "/addObjectScreen",
+                params: { mode: "create" }
+              })}
+              className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
+            >
+              <Heading2 className='text-white text-3xl'>+</Heading2>
+            </TouchableOpacity>
+            
+            {/* Object details modal */}
+            {selectedObject && (
+              <ObjectDetails 
+                key={selectedObject.object.id}
+                objectWithRelations={selectedObject}          
+                visible={showDetails}
+                onClose={handleClose}
+                onCloseWithUnlock={handleCloseWithUnlock}
+              />
+            )}
+        </SafeAreaView>
+    );
 }

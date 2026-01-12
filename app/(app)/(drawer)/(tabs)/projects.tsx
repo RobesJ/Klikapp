@@ -1,4 +1,3 @@
-import { AnimatedScreen } from '@/components/animatedScreen';
 import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
@@ -154,7 +153,6 @@ export default function Projects() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark-bg">
-      <AnimatedScreen tabIndex={3}>
       {/* HEADER */}
       <View className="flex-2 mt-4 px-6 mb-4">
         <View className="flex-row justify-between">
@@ -265,8 +263,6 @@ export default function Projects() {
       >
         <Heading2 className='text-white'> + </Heading2>
       </TouchableOpacity>
-
-      </AnimatedScreen>
       
       {/* Project details modal */}
       {selectedProjectID && (
