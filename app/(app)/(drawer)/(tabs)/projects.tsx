@@ -3,6 +3,7 @@ import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/modals/filterModal';
 import { NotificationToast } from '@/components/notificationToast';
+import { ProjectsListSkeleton } from '@/components/skeletons/skeleton';
 import { Body, Heading1, Heading2 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';
 import { useProjectStore } from '@/store/projectStore';
@@ -226,32 +227,35 @@ export default function Projects() {
           screen="projects"
         />
       </View>
-        
-      <FlatList
-        data={filteredProjects}
-        keyExtractor={(item) => item?.project?.id || Math.random().toString()}
-        renderItem={({item}) =>(
-          <ProjectCard
-              project={item.project}
-              client={item.client}
-              users={item.users}
-              objects={item.objects}
-              onPress={() => handleModalVisibility(item.project.id, true)}
-          />
-        )}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
-        refreshing={backgroundLoading}
-        onRefresh={handleRefresh}
-        onEndReached={loadMoreProjects}
-        ListEmptyComponent={
-          backgroundLoading ? (
-            <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
-          ) : (
-            <Body className="text-center text-gray-500 mt-10">Žiadne projekty</Body>
-          )
-        }
-      />
       
+      {filteredProjects.length === 0 ? (
+          <ProjectsListSkeleton/>
+      ) : (
+          <FlatList
+            data={filteredProjects}
+            keyExtractor={(item) => item?.project?.id || Math.random().toString()}
+            renderItem={({item}) =>(
+              <ProjectCard
+                  project={item.project}
+                  client={item.client}
+                  users={item.users}
+                  objects={item.objects}
+                  onPress={() => handleModalVisibility(item.project.id, true)}
+              />
+            )}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+            refreshing={backgroundLoading}
+            onRefresh={handleRefresh}
+            onEndReached={loadMoreProjects}
+            ListEmptyComponent={
+              backgroundLoading ? (
+                <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
+              ) : (
+                <Body className="text-center text-gray-500 mt-10">Žiadne projekty</Body>
+              )
+            }
+          />
+      )}
       {/* Add new project buton*/}
       <TouchableOpacity
         activeOpacity={0.8}

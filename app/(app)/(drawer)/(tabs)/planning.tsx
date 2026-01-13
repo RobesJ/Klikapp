@@ -2,6 +2,7 @@ import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/modals/filterModal';
+import { PlanningListSkeleton } from '@/components/skeletons/skeleton';
 import { Body, BodyLarge, Heading1 } from '@/components/typography';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
@@ -51,7 +52,7 @@ export default function Planning() {
     backgroundLoading,
     availableUsers,
     clearFilters,
-    //fetchPlannedProjects,
+    fetchPlannedProjects,
     assignProjectToDate,
     getAssignedProjects,
     getUnassignedProjects,
@@ -89,6 +90,11 @@ export default function Planning() {
     selectedDateRef.current = selectedDate;
   }, [selectedDate]);
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchPlannedProjects();
+    }, [fetchPlannedProjects]),
+  );
   useFocusEffect(
     useCallback(() => {
       return () => {
@@ -455,7 +461,10 @@ export default function Planning() {
               </View>
             )}
 
-            {assignedProjects.length > 0 ? (
+            {assignedProjects.length === 0 && backgroundLoading ? (
+                <PlanningListSkeleton/>
+              )
+              :(
               <View className="bg-dark-secondary rounded-lg p-2">
                 {assignedProjects.map((item) => (
                   <SwipeableProjectCard 
@@ -466,7 +475,8 @@ export default function Planning() {
                   />
                 ))}
               </View>
-            ) : (
+            )}
+            {assignedProjects.length === 0 && !backgroundLoading && (
               <View className="bg-dark-secondary rounded-lg p-6">
                 <Body className="text-dark-text_color text-center opacity-50">
                   Žiadne priradené projekty
@@ -523,7 +533,10 @@ export default function Planning() {
               </View>
             )}
 
-            {unassignedProjects.length > 0 ? (
+            {unassignedProjects.length === 0 && backgroundLoading ? (
+              <PlanningListSkeleton/>
+            ) :
+            (
               <View className="bg-dark-secondary rounded-lg p-2">
                 {unassignedProjects.map((item) => (
                   <SwipeableProjectCard 
@@ -534,13 +547,16 @@ export default function Planning() {
                   />
                 ))}
               </View>
-            ) : (
+            )}
+            
+            { unassignedProjects.length === 0 && !backgroundLoading && (
               <View className="bg-dark-secondary rounded-lg p-6">
                 <Body className="text-dark-text_color text-center opacity-50">
                   Žiadne nepriradené projekty
                 </Body>
               </View>
             )}
+
           </View>
         </View>
       

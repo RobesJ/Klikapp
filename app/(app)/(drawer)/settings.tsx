@@ -6,21 +6,15 @@ import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/store/notificationStore';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Dimensions, TouchableOpacity, View } from 'react-native';
-import {
-    useSharedValue
-} from 'react-native-reanimated';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Settings() {
     const router = useRouter();
-    const isExiting = useRef(false);
+
     const { user, signOut } = useAuth();
-    const { width: SCREEN_WIDTH } = Dimensions.get('window');
-    const opacity = useSharedValue(0);
-    const translateX = useSharedValue(SCREEN_WIDTH);
-    const scale = useSharedValue(0.95);
+  
 
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
@@ -32,32 +26,21 @@ export default function Settings() {
         "password": '',
         "confirmPassword": '',
     });
-    // Entry animation
+  
     useFocusEffect(useCallback(() => {
-        isExiting.current = false;
-      
-        // Handle Android back button
-        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-            handleBack();
-            return true;
-        });
       
         // Cleanup on unmount
         return () => {
-            backHandler.remove();
+           // backHandler.remove();
+            cancelNameChange();
+            cancelPasswordChange();
         };
     
     }, []));
+
     if (!user) {
         return null;
     }
-
-    const handleBack = () => {
-        if (isExiting.current) return;
-        isExiting.current = true;
-
-    };
-
 
     const handleChange = (field: string, value: string) => {
         if (field === "userName"){
@@ -265,7 +248,7 @@ export default function Settings() {
                 {/* Header */}
                 <View className="mb-12 relative">                
                     <TouchableOpacity
-                      onPress={handleBack}
+                      onPress={() => router.back()}
                       className="absolute top-3 left-6 w-10 h-10 items-center justify-center z-10"
                     >
                         <MaterialIcons name="arrow-back" size={24} color="#d6d3d1" />

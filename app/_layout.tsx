@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import "../global.css";
 
 export default function RootLayout() {
+   
     return (
         <SafeAreaProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
@@ -17,18 +18,15 @@ export default function RootLayout() {
                     >
                       <Stack.Screen 
                         name="index" 
-                        options={{ 
-                          headerShown: false }} 
+                        options={{ headerShown: false }} 
                       />
                       <Stack.Screen 
                         name="(auth)" 
-                        options={{ 
-                          headerShown: false }} 
+                        options={{ headerShown: false }} 
                       />
                       <Stack.Screen 
                         name="(app)" 
-                        options={{ 
-                          headerShown: false }} 
+                        options={{ headerShown: false }} 
                       />
                     </Stack>
                 </AuthProvider>

@@ -1,10 +1,11 @@
 import { Body } from "@/components/typography"
 import { useAuth } from "@/context/authContext"
 import { Redirect, Tabs } from "expo-router"
+import { memo } from "react"
 import { ActivityIndicator, Image, View } from "react-native"
 import { icons } from "../../../../constants/icons"
 
-const TabIcon = ({focused, icon, title} : any) => {
+const TabIcon = memo(({focused, icon, title} : any) => {
     if (focused){
         return (
             <View className="flex-1 w-full overflow-hidden min-w-[124px] min-h-16 mt-8 justify-center items-center rounded-full">
@@ -17,7 +18,7 @@ const TabIcon = ({focused, icon, title} : any) => {
                     {title}
                 </Body>
             </View>
-        )
+        );
     }
     return (
         <View className="size-full justify-center items-center mt-4 rounded-full">
@@ -27,24 +28,27 @@ const TabIcon = ({focused, icon, title} : any) => {
               className="size-8"
             />
         </View>
-    )
-}
+    );
+})
+
 
 const _Layout = () => {
     const {user, loading} = useAuth();
     
     if (loading){
-        <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" />
-        </View>
+        return (
+            <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" />
+            </View>
+        )
     }
  
-    if(!user) {
+    if (!user) {
         return <Redirect href ="/(auth)/login" />
     }
 
     return (
-        <Tabs
+        <Tabs 
             screenOptions={{
                 tabBarShowLabel:false,
                 tabBarItemStyle: {
@@ -61,8 +65,9 @@ const _Layout = () => {
                     overflow: "hidden",
                     borderWidth: 1, 
                     borderColor: "#0c1022"
-                }
-                
+                },
+                animation: 'none',
+                lazy: true
             }}
         >
             <Tabs.Screen

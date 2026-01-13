@@ -62,7 +62,7 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   groupedObjects: [],
   filteredGroupedObjects: [],
   filters: initialFilters,
-  loading: false,
+  loading: true,
   hasMore: true,
   lastFetch: 0,
   offset: 0,
@@ -101,15 +101,12 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
 
   fetchObjects: async (limit?: number) => {
     console.log("fetch object called");
-    const { groupedObjects, lastFetch, loading, pageSize } = get();
+    const { groupedObjects, lastFetch, pageSize } = get();
     const now = Date.now();
 
     if (groupedObjects.length > 0 && (now - lastFetch) < CACHE_DURATION) {
       console.log('Using cached objects');
-      return;
-    }
-
-    if (loading) {
+      set({ loading: false, error: null });
       return;
     }
 
@@ -178,7 +175,6 @@ export const useObjectStore = create<ObjectStore>((set, get) => ({
   },
 
   setFilters: (newFilters) => {
-    console.log("setFilters called with:", newFilters);
     const { filters, objects} = get();
   
     const updatedFilters = { ...filters, ...newFilters };

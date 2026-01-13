@@ -2,11 +2,10 @@ import { STATE_OPTIONS_HOME, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
 import FilterModal from '@/components/modals/filterModal';
+import { ProjectsListSkeleton } from '@/components/skeletons/skeleton';
 import { Body, BodyLarge, BodySmall, Heading1 } from '@/components/typography';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
-import { useClientStore } from '@/store/clientStore';
-import { useObjectStore } from '@/store/objectStore';
 import { useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from '@/types/projectSpecific';
 import { EvilIcons, Feather } from '@expo/vector-icons';
@@ -14,7 +13,7 @@ import { DrawerActions } from '@react-navigation/native';
 import { format, isBefore, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,17 +21,18 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithRelations | null>(null);
-
   const [showFilterModal, setShowFilterModal] = useState(false);
+
   const router = useRouter();
   const { user } = useAuth();
   const navigation = useNavigation();
+  const hasInitialized = useRef(false);
   
   const {
+    initialLoading,
     backgroundLoading,
     fetchAvailableUsers,
     fetchActiveProjects,
-    fetchPlannedProjects,
     getFilteredProjects,
     availableUsers,
     projects,
@@ -45,29 +45,16 @@ export default function Home() {
     unlockProject
   } = useProjectStore();
 
+  // fetch data on screen mount
   useEffect(() => {
-
-    //const pixelRatio = PixelRatio.get();
-    //console.log(pixelRatio);
-    //const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-    //console.log(`screen_ width: ${SCREEN_WIDTH}, screen_height: ${SCREEN_HEIGHT}`);
-    if(projects.size === 0){
-      fetchActiveProjects();
-      setTimeout(() => {
-        loadRemamianinData();
-      }, 500);
-
-      async function loadRemamianinData() {
-        await Promise.all([
-          fetchAvailableUsers(),
-          useClientStore.getState().fetchClients(30),
-          useObjectStore.getState().fetchObjects(15),
-          fetchPlannedProjects()
-        ]);
+      if (!hasInitialized.current){
+        hasInitialized.current = true;
+        fetchActiveProjects();
+        fetchAvailableUsers();
       }
-    }
-  }, [projects.size]);
+  }, []);
   
+  // clear filters when leaving the screen
   useFocusEffect(
     useCallback(() => {
       return () => {
@@ -76,7 +63,7 @@ export default function Home() {
     }, [clearFilters])
   );
 
-  const filterSections = [
+  const filterSections = useMemo(() =>[
     {
       id: 'type',
       title: 'Typ',
@@ -110,7 +97,7 @@ export default function Home() {
       selectedValues: filters.users,
       onToggle: toggleUserFilter,
     },
-  ];
+  ], [availableUsers, filters, toggleTypeFilter, toggleStateFilter, toggleUserFilter]);
 
   const projectsForSelectedDate = useMemo(() => {
     const filtered = getFilteredProjects(filters);
@@ -142,34 +129,79 @@ export default function Home() {
 
       return false;
     });
-  }, [filters, getFilteredProjects, selectedDate, projects]);
+  }, [filters, projects.size, selectedDate]);
 
-  const handleDetailsVisibility = (projectData: ProjectWithRelations, value: boolean) => {
+  const handleDetailsVisibility = useCallback((projectData: ProjectWithRelations, value: boolean) => {
     setSelectedProject(projectData);
     setShowDetails(value);
-  };
+  }, []);
 
-  const getActiveFilters = () => {
+  const activeFilters = useMemo(() => {
     return [
       ...filters.type.map(t => ({ type: "type" as const, value: t })),
       ...filters.state.map(s => ({ type: "state" as const, value: s })),
       ...filters.users.map(u => ({ type: "users" as const, value: u }))
     ];
-  };
+  }, [filters]);
 
-  const handleCloseWithUnlock = () => {
+  const handleCloseWithUnlock = useCallback(() => {
     setShowDetails(false);
     if (selectedProject?.project && user){
       unlockProject(selectedProject.project.id, user.id);
     }
     setSelectedProject(null);
-  };
+  }, [selectedProject, user, unlockProject]);
 
   //const hasActiveFilters = (filters.users.length > 0 ) || (filters.state.length > 0 ) || (filters.type.length > 0);
 
+  const renderItem = useCallback(({item}: {item: ProjectWithRelations})  => (
+    <ProjectCard
+      project={item.project}
+      client={item.client}
+      users={item.users}
+      objects={item.objects}
+      onPress={() => handleDetailsVisibility(item, true)}
+    />
+  ), [handleDetailsVisibility]);
+
+  if(initialLoading){
+    return (
+        <SafeAreaView className="flex-1 bg-dark-bg">
+            <View className="flex-2 mt-4 mx-4 mb-8">
+            <View className="flex-row justify-between">
+            <TouchableOpacity
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+              activeOpacity={0.8}
+              className="items-center justify-center"
+            >
+              <EvilIcons name="navicon" size={36} color="white" />
+            </TouchableOpacity>
+  
+              <View className='ml-6 items-center justify-center'>
+                <Heading1 allowFontScaling={false} className="font-bold text-dark-text_color mb-1">Aktuálne projekty</Heading1>
+                <BodyLarge className=' text-dark-text_color'>
+                  {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
+                </BodyLarge>
+              </View>
+              <View className="justify-between items-center">
+                <Body className="text-green-500 mb-1">ONLINE</Body>
+                <TouchableOpacity
+                    onPress={() => setShowFilterModal(true)}
+                    activeOpacity={0.8}
+                    className="ml-2 items-center justify-center pb-3"
+                  >
+                    <Feather name="filter" size={20} color="white" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <ProjectsListSkeleton/>
+            </View>
+        </SafeAreaView>  
+    );
+  }
+
   return (
-    <SafeAreaView className="flex-1 bg-dark-bg">
-          
+    <SafeAreaView className="flex-1 bg-dark-bg">  
           {/* Header */}   
           <View className="flex-2 mt-4 mx-4 mb-8">
             <View className="flex-row justify-between">
@@ -186,11 +218,11 @@ export default function Home() {
                 <BodyLarge className=' text-dark-text_color'>
                   {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
                 </BodyLarge>
-             </View>
+              </View>
               <View className="justify-between items-center">
                 <Body className="text-green-500 mb-1">ONLINE</Body>
                 <TouchableOpacity
-                    onPress={() => {setShowFilterModal(true)}}
+                    onPress={() => setShowFilterModal(true)}
                     activeOpacity={0.8}
                     className="ml-2 items-center justify-center pb-3"
                   >
@@ -207,10 +239,10 @@ export default function Home() {
             </View>
             
             {/* Active filters indicator */}
-            {getActiveFilters().length > 0 && (
+            {activeFilters.length > 0 && (
               <View className="px-6 mt-4">
                 <View className="flex-row flex-wrap">
-                  {getActiveFilters().map((filter, index) => {
+                  {activeFilters.map((filter, index) => {
                     // Get color based on type/value
                     let pillColor = "bg-blue-100";
                     let textColor = "text-blue-700";
@@ -222,10 +254,6 @@ export default function Home() {
                     else if (filter.type === 'state') {
                       pillColor = STATE_OPTIONS_HOME.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
                       textColor = STATE_OPTIONS_HOME.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
-                    }
-                    else {
-                      pillColor = "bg-blue-100";
-                      textColor = "text-blue-700";
                     }
                   
                     return (
@@ -244,41 +272,32 @@ export default function Home() {
             )}
             
           </View>
-
-          <FlatList
-            data={projectsForSelectedDate}
-            keyExtractor={(item) => item.project.id}
-            renderItem={({item}) =>(
-              <ProjectCard
-                  project={item.project}
-                  client={item.client}
-                  users={item.users}
-                  objects={item.objects}
-                  onPress={() => handleDetailsVisibility(item, true)}
-              />
-            )}
-            ListEmptyComponent={
-              backgroundLoading ? (
-                <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
-              ) : (
-                <View className='flex-1 items-center'>
-                <Body className="text-red-500 mb-4">
-                  Žiadne bežiace projekty
-                </Body>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  className="rounded-xl bg-blue-600 py-3 px-8"
-                  onPress={()=> router.push("/planning")}
-                >
-                  <Body className='text-white font-semibold'>Plánovať projekty</Body>
-                </TouchableOpacity>
-                </View>
-              )
-            }
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
-            scrollEnabled={true}
-          />
-
+          
+          {projectsForSelectedDate.length === 0 ?
+            (
+                <ProjectsListSkeleton/>
+            ) : (
+                <FlatList
+                  data={projectsForSelectedDate}
+                  keyExtractor={(item) => item.project.id}
+                  renderItem={renderItem}
+                  ListEmptyComponent={
+                      <View className='flex-1 items-center'>
+                          <Body className="text-red-500 mb-4">Žiadne bežiace projekty</Body>
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            className="rounded-xl bg-blue-600 py-3 px-8"
+                            onPress={()=> router.push("/planning")}
+                          >
+                              <Body className='text-white font-semibold'>Plánovať projekty</Body>
+                          </TouchableOpacity>
+                      </View>
+                  }
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+                  scrollEnabled={true}
+                />
+            )
+          }
 
       {/* Project details modal */}
       {selectedProject && (

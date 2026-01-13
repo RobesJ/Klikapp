@@ -42,7 +42,7 @@ KLIKAPP is a mobile application built with React Native and Expo that helps chim
 - **Responsive Layout**: Optimized for various screen sizes
 - **Custom Drawer Navigation**: Side drawer for quick access to main sections
 - **Tab Navigation**: Bottom tab bar for primary app sections
-- **Modal Presentations**: Modal transitions for forms and details (animations to be improved)
+- **Modal Presentations**: Modal transitions for forms and details
 - **Toast Notifications**: User feedback for actions and errors
 - **Loading States**: Proper loading indicators throughout the app
 
@@ -50,52 +50,55 @@ KLIKAPP is a mobile application built with React Native and Expo that helps chim
 
 ```
 klikon-crm/
-├── app/                         # Expo Router file-based routing
-│   ├── _layout.tsx              # Root layout with Stack navigator
-│   ├── index.tsx                # Entry point (redirects to login)
-│   ├── settings.tsx             # Settings screen
-│   ├── (auth)/                  # Authentication group
-│   │   ├── _authLayout.tsx      # Auth stack layout
-│   │   ├── login.tsx            # Login screen
-│   │   ├── register.tsx         # Registration screen
-│   │   ├── forgot-pwd.tsx       # Password recovery
-│   │   └── reset-pwd.tsx        # Password reset
-│   ├── (drawer)/                # Drawer navigation group
-│   │   ├── _layout.tsx          # Drawer layout
-│   │   └── (tabs)/              # Tab navigation group
-│   │       ├── _layout.tsx      # Tab layout with auth guard
-│   │       ├── home.tsx         # Home/Dashboard tab
-│   │       ├── clients.tsx      # Clients list tab
-│   │       ├── objects.tsx      # Objects list tab
-│   │       ├── projects.tsx     # Projects list tab
-│   │       └── planning.tsx     # Planning/Calendar tab
-│   ├── addClientScreen.tsx      # Modal like Add/Edit client
-│   ├── addObjectScreen.tsx      # Modal like Add/Edit object
-│   └── addProjectScreen.tsx     # Modal like Add/Edit project
+├── app/                                        # Expo Router file-based routing
+│   ├── _layout.tsx                             # Root layout with Stack navigator
+│   ├── index.tsx                               # Entry point (redirects to login)
+│   ├── (auth)/                                 # Authentication group
+│   │   ├── _authLayout.tsx                     # Auth stack layout
+│   │   ├── login.tsx                           # Login screen
+│   │   ├── register.tsx                        # Registration screen
+│   │   ├── forgot-pwd.tsx                      # Password recovery
+│   │   └── reset-pwd.tsx                       # Password reset
+│   └── (app)/              
+│        ├── _layout.tsx                            
+│        └── (drawer)/                          # Drawer navigation group
+│             ├── _layout.tsx                   # Drawer layout
+│             ├── settings.tsx                  # Settings screen
+│             ├── (tabs)/                       # Tab navigation group
+│             |    ├── _layout.tsx              # Tab layout with auth guard
+│             |    ├── home.tsx                 # Home/Dashboard tab
+│             |    ├── clients.tsx              # Clients list tab
+│             |    ├── objects.tsx              # Objects list tab
+│             |    ├── projects.tsx             # Projects list tab
+│             |    └── planning.tsx             # Planning/Calendar tab
+│             └── (flows)/                      # Tab navigation group
+│                  ├── addClientScreen.tsx      # Modal like Add/Edit client
+│                  ├── addObjectScreen.tsx      # Modal like Add/Edit object
+│                  └── addProjectScreen.tsx     # Modal like Add/Edit project
 │
-├── components/                   # Reusable UI components
-│   ├── animatedScreen.tsx       # Screen transition animations
-│   ├── badge.tsx                # Badge component
-│   ├── customDrawer.tsx         # Custom drawer content
-│   ├── formInput.tsx            # Form input component
-│   ├── modernDatePicker.tsx     # Date picker component
-│   ├── notificationToast.tsx    # Toast notification component
-│   ├── typography.tsx           # Typography components
-│   ├── weekCalendar.tsx         # Calendar component
-│   ├── cardDetails/             # Detail view components
-│   │   ├── clientDetails.tsx
-│   │   ├── objectDetails.tsx
-│   │   └── projectDetails.tsx
-│   ├── cards/                   # Card components for lists
-│   │   ├── clientCard.tsx
-│   │   ├── objectCard.tsx
-│   │   └── projectCard.tsx
-│   ├── forms/                   # Form components
-│   │   ├── chimneyForm.tsx
-│   │   ├── clientForm.tsx
-│   │   ├── objectForm.tsx
-│   │   └── projectForm.tsx
-│   └── modals/                  # Modal components
+├── components/                               # Reusable UI components
+│   ├── animatedScreen.tsx                    # Screen transition animations
+│   ├── badge.tsx                             # Badge component
+│   ├── customDrawer.tsx                      # Custom drawer content
+│   ├── formInput.tsx                         # Form input component
+│   ├── modernDatePicker.tsx                  # Date picker component
+│   ├── notificationToast.tsx                 # Toast notification component
+│   ├── typography.tsx                        # Typography components
+│   ├── weekCalendar.tsx                      # Calendar component
+│   ├── cardDetails/                          # Detail view components
+│   │   ├── clientDetails.tsx           
+│   │   ├── objectDetails.tsx           
+│   │   └── projectDetails.tsx             
+│   ├── cards/                                # Card components for lists
+│   │   ├── clientCard.tsx           
+│   │   ├── objectCard.tsx           
+│   │   └── projectCard.tsx             
+│   ├── forms/                                # Form components
+│   │   ├── chimneyForm.tsx             
+│   │   ├── clientForm.tsx           
+│   │   ├── objectForm.tsx           
+│   │   └── projectForm.tsx             
+│   └── modals/                               # Modal components
 │       ├── chimneyTypeCreationModal.tsx
 │       ├── chimneyTypeSelectionModal.tsx
 │       ├── filterModal.tsx
@@ -520,7 +523,6 @@ Ensure your Supabase project has the appropriate tables, relationships, and Row 
 The following features and improvements are planned for future releases:
 
 ### Local Storage & Offline Support
-- **Persistent Local Storage**: Implement comprehensive local storage using AsyncStorage to persist data offline
 - **Offline-First Architecture**: Enable full offline functionality with data synchronization when connection is restored
 - **Conflict Resolution**: Handle data conflicts when syncing offline changes with server data
 - **Cache Management**: Improve cache invalidation strategies and storage management
@@ -534,7 +536,7 @@ The following features and improvements are planned for future releases:
 
 ### Testing & Quality Assurance
 - **Comprehensive Test Coverage**: Expand test coverage to include all components, stores, and services
-- **Fix Test Warnings**: Resolve React `act()` warnings in test files (particularly in `useSearchClient.test.ts`)
+- **Fix Test Warnings**: Resolve React `act()` warnings in test files
 - **Integration Tests**: Add integration tests for critical user flows
 - **E2E Testing**: Implement end-to-end testing for major features
 - **Test Automation**: Set up CI/CD pipeline with automated testing
@@ -548,10 +550,9 @@ The following features and improvements are planned for future releases:
 ### PDF Features
 - **PDF Regeneration**: Add ability to regenerate PDFs with updated data without recreating from scratch
 
-
 ### Data Quality & Validation
-- **Client Duplication Check**: Implement duplicate client detection and prevention
-- **Data Validation**: Enhanced form validation with better error messages
+- **Client Duplication Check**: Implement duplicate client detection and prevention    DONE
+- **Data Validation**: Enhanced form validation with better error messages             DONE
 - **Data Integrity**: Add checks to prevent data inconsistencies
 - **Import/Export**: Add data import and export functionality
 

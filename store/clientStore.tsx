@@ -55,7 +55,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   clients: [],
   filteredClients: [],
   filters: initialFilters,
-  loading: false,
+  loading: true,
   hasMore: true,
   lastFetch: 0,
   error: null,
@@ -63,15 +63,11 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   offset: 0,
 
   fetchClients: async (limit) => {
-    const { clients, lastFetch, loading } = get();
+    const { clients, lastFetch } = get();
     const now = Date.now();
 
     if (clients.length > 0 && (now - lastFetch) < CACHE_DURATION) {
       console.log('Using cached clients');
-      return;
-    }
-
-    if (loading) {
       return;
     }
 

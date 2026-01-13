@@ -126,7 +126,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   filters: initialFilters,
   availableUsers: [],
-  initialLoading: false,
+  initialLoading: true,
   backgroundLoading: false,
   error: null,
 
@@ -135,13 +135,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Fetch all the projects that has state "Naplanovany dnes" | "Prebieha" | "Pozastaveny" ("should be less then 100")
   // this function is called during initial loading
   fetchActiveProjects: async() => {
-    const {initialLoading} = get();
     const today = format(new Date(), "yyyy-MM-dd");
-
-    if (initialLoading){
-      console.log("Using cached active projects");
-      return;
-    }
 
     set({
       initialLoading: true, 
@@ -218,17 +212,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const now = Date.now();
     const today = format(new Date(), "yyyy-MM-dd");
 
-    if (backgroundLoading && (now - metadata.planned.lastFetch) < CACHE_DURATION){
-      if(metadata.planned.dateRange){
-        const rangeStart = metadata.planned.dateRange.start;
-        const midpoint = format(addDays(parseISO(rangeStart),15), "yyyy-MM-dd");
-
-        if (today < midpoint) {
-          console.log("Using cached planned projects");
-          return;
-        }
-      }
-    }
+    //if (backgroundLoading && (now - metadata.planned.lastFetch) < CACHE_DURATION){
+    //  if(metadata.planned.dateRange){
+    //    const rangeStart = metadata.planned.dateRange.start;
+    //    const midpoint = format(addDays(parseISO(rangeStart),15), "yyyy-MM-dd");
+//
+    //    if (today < midpoint) {
+    //      console.log("Using cached planned projects");
+    //      return;
+    //    }
+    //  }
+    //}
 
     set({
       backgroundLoading: true, 
@@ -337,6 +331,20 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   //    ======== FILTER FUNCTIONS ========
   getFilteredProjects(filters: ProjectFilters) {
     const {projects} = get();
+
+    // early return if no filters
+    if (
+      filters.type.length === 0 &&
+      filters.state.length === 0 &&
+      filters.users.length === 0 &&
+      !filters.dateFrom &&
+      !filters.dateTo &&
+      !filters.searchQuery
+    ) {
+      return Array.from(projects.values());
+    }
+
+
     let results = Array.from(projects.values());
 
     if (filters.type.length > 0){
@@ -700,9 +708,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   updateProject: (id: string, updatedProject: ProjectWithRelations, showNotification: boolean) => {
     set(state => {
       const newMap = new Map(state.projects);
+      const existing = newMap.get(id);
+
+      if (existing && JSON.stringify(existing) === JSON.stringify(updatedProject)){
+        return state;
+      }
+
       newMap.set(id, updatedProject);
       return {projects: newMap};
     });
+
     if (showNotification) {
       useNotificationStore.getState().addNotification(
         'Projekt bol úspešne aktualizovaný',

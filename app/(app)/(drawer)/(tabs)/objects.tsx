@@ -1,6 +1,7 @@
 import ObjectDetails from '@/components/cardDetails/objectDetails';
 import ObjectCard from '@/components/cards/objectCard';
 import { NotificationToast } from '@/components/notificationToast';
+import { ObjectsListSkeleton } from '@/components/skeletons/skeleton';
 import { Body, BodyLarge, Heading1, Heading2 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';
 import { ObjectSection, useObjectStore } from '@/store/objectStore';
@@ -41,6 +42,12 @@ export default function Objects() {
       setSearchText('');
     };
   }, [clearFilters]));
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchObjects(30);
+    }, [fetchObjects]),
+  );
 
   const displayedGroups = useMemo(() => {
     return searchText.trim() ? filteredGroupedObjects : groupedObjects;
@@ -153,22 +160,24 @@ export default function Objects() {
                 </View>
                 <NotificationToast screen='objects'/>
             </View>
-        
-            <FlashList
-              data={displayedGroups}
-              keyExtractor={(item) => item.id}
-              renderItem={renderItem}
-              onEndReached={handleLoadMore}
-              onEndReachedThreshold={0.5}
-              refreshing={loading}
-              onRefresh={handleRefresh}
-              contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
-              ListEmptyComponent={
-                loading
-                  ? <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
-                  : <Body className="text-center text-gray-500 mt-10">Žiadne objekty</Body>
-              }
-            />
+            {displayedGroups.length === 0 ? (
+                <ObjectsListSkeleton/>
+            ) : (
+                <FlashList
+                  data={displayedGroups}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderItem}
+                  onEndReached={handleLoadMore}
+                  onEndReachedThreshold={0.5}
+                  refreshing={loading}
+                  onRefresh={handleRefresh}
+                  contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
+                  ListEmptyComponent={
+                      <Body className="text-center text-gray-500 mt-10">Žiadne objekty</Body>
+                  }
+                />
+            )}
+
             {/* Create new Object button */}
             <TouchableOpacity
               activeOpacity={0.8}
@@ -178,7 +187,7 @@ export default function Objects() {
               })}
               className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
             >
-              <Heading2 className='text-white text-3xl'>+</Heading2>
+                <Heading2 className='text-white text-3xl'>+</Heading2>
             </TouchableOpacity>
             
             {/* Object details modal */}
