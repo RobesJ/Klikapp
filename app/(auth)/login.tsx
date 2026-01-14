@@ -5,11 +5,12 @@ import { useNotificationStore } from "@/store/notificationStore";
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Body, BodyLarge, BodySmall, Caption, Heading1 } from "../../components/typography";
 
 export default function Login() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [loading, setLoading] = useState(false);
     const [errors, setErrors]   = useState<Record<string, string>>({});
     const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -87,13 +88,19 @@ export default function Login() {
     }
     
     return (
-        <SafeAreaView className='flex-1 bg-dark-bg'>
+        <View 
+            style={{
+                paddingTop: insets.top,
+                paddingBottom: insets.bottom,
+                flex: 1
+            }}
+            className="bg-dark-bg"
+        >
 
         <KeyboardAvoidingView
             behavior={Platform.OS === "android" ? "padding" : "height"}
             className='flex-1'
-        >
-            
+        >   
                 <View className="flex-1 items-center justify-center">
                     {/* header */}
                     <View className='flex-2 items-center justify-center mb-6'>
@@ -187,6 +194,6 @@ export default function Login() {
                 </View>
             
         </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 }

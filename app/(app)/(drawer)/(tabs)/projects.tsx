@@ -13,9 +13,10 @@ import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Projects() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
   const dpi = PixelRatio.get();
@@ -153,9 +154,16 @@ export default function Projects() {
   },[]);
 
   return (
-    <SafeAreaView className="flex-1 bg-dark-bg">
+    <View
+      style={{
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        flex: 1,
+        backgroundColor: "#0c1026",
+      }}
+    >
       {/* HEADER */}
-      <View className="flex-2 mt-4 px-6 mb-4">
+      <View className="mt-4 px-6 mb-4">
         <View className="flex-row justify-between">
         <TouchableOpacity
             onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
@@ -166,7 +174,7 @@ export default function Projects() {
           </TouchableOpacity>
           <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Heading1>
           
-            <View className='flex-2 justify-between items-center '>
+            <View className='justify-between items-center'>
               <Body className="text-xl text-green-500 mb-1">ONLINE</Body>
               <TouchableOpacity
                 onPress={() => {setShowFilterModal(true)}}
@@ -290,6 +298,6 @@ export default function Projects() {
         onClearAll={clearFilters}
       />
       
-    </SafeAreaView>
+    </View>
   );
 }

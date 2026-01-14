@@ -6,10 +6,12 @@ import { useProjectStore } from "@/store/projectStore";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AddProjectScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { addProject, updateProject, unlockProject } = useProjectStore();
   const { project, mode, preselectedClientID } = useLocalSearchParams();
@@ -60,13 +62,20 @@ export default function AddProjectScreen() {
   };
 
   return (
-    <SafeAreaView className= "flex-1 bg-dark-bg">
+    <View 
+        style={{
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            flex: 1
+        }}
+        className="bg-dark-bg"
+    >
       <ProjectForm
           mode={(mode as "create" | "edit") || "create"}
           initialData={parsedProject}
           onSuccess={handleSuccess}
           preselectedClientID={parsedClientId}
       />
-    </SafeAreaView>
+    </View>
   );
 }

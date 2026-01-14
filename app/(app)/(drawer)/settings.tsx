@@ -8,14 +8,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Settings() {
     const router = useRouter();
-
+    const insets = useSafeAreaInsets();
     const { user, signOut } = useAuth();
   
-
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [userName, setUserName] = useState(user?.user_metadata.name || '');
@@ -242,7 +241,14 @@ export default function Settings() {
 
 
     return (
-        <SafeAreaView className="flex-1 bg-dark-bg">
+        <View 
+            style={{
+                paddingTop: insets.top,
+                paddingBottom: insets.bottom,
+                flex: 1
+            }}
+            className="bg-dark-bg"
+        >
             {/*<Animated.View style={[animatedStyle, { flex: 1 }]}> */}
             <View>
                 {/* Header */}
@@ -386,6 +392,6 @@ export default function Settings() {
                     </View>
                 </View>
             </View>
-        </SafeAreaView>
+        </View>
     );
 } 

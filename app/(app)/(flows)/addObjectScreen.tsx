@@ -6,10 +6,12 @@ import { useObjectStore } from '@/store/objectStore';
 import { ObjectWithRelations } from '@/types/objectSpecific';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AddObjectScreen() {
     const { user } = useAuth();
+    const insets = useSafeAreaInsets();
     const router = useRouter();
     const { mode, object, preselectedClientID } = useLocalSearchParams();
     const { addObject, updateObject,  unlockObject } = useObjectStore();
@@ -60,13 +62,20 @@ export default function AddObjectScreen() {
     };
 
     return (
-        <SafeAreaView className='flex-1 bg-dark-bg'>
+        <View 
+            style={{
+                paddingTop: insets.top,
+                paddingBottom: insets.bottom,
+                flex: 1
+            }}
+            className="bg-dark-bg"
+        >
             <ObjectForm
                 mode={(mode as "create" | "edit") || "create"}
                 initialData={parsedObject}
                 onSuccess={handleSuccess}
                 preselectedClientID={parsedClientID}
             />  
-        </SafeAreaView>
+        </View>
     );
 }

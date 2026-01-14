@@ -12,11 +12,12 @@ import { DrawerActions } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import debounce from 'lodash.debounce';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Objects() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
   const dpi = PixelRatio.get();
@@ -24,6 +25,7 @@ export default function Objects() {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedObject, setSelectedObject] = useState<ObjectWithRelations | null>(null);
   const [searchText, setSearchText] = useState('');
+  const hasInitialized = useRef(false);
 
   const {
     loading,
@@ -35,6 +37,13 @@ export default function Objects() {
     setFilters,
     unlockObject
   } = useObjectStore();
+
+  useEffect(()=> {
+    if(!hasInitialized.current){
+      hasInitialized.current = true;
+      fetchObjects();
+    }
+  },[]);
 
   useFocusEffect(useCallback(() => {
     return () => {
@@ -54,10 +63,10 @@ export default function Objects() {
   }, [searchText, filteredGroupedObjects, groupedObjects]);
 
 
-  const handleModalVisibility = (objectData: ObjectWithRelations, value: boolean) =>{
+  const handleModalVisibility = useCallback((objectData: ObjectWithRelations, value: boolean) =>{
     setShowDetails(value);
     setSelectedObject(objectData);
-  };
+  },[]);
 
   const handleRefresh = () => {
     fetchObjects(30);
@@ -86,18 +95,18 @@ export default function Objects() {
     debounceSearch(text);
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setShowDetails(false);
     setSelectedObject(null);
-  };
+  },[]);
 
-  const handleCloseWithUnlock = () => {
+  const handleCloseWithUnlock = useCallback(() => {
     setShowDetails(false);
     if (selectedObject && user){
       unlockObject(selectedObject.object.id, user.id);
     }
     setSelectedObject(null);
-  };
+  },[selectedObject, unlockObject]);
   
   const inputStyle = useMemo((): TextStyle => {
     const size = FONT_SIZES["lg"];
@@ -132,9 +141,16 @@ export default function Objects() {
   }, []);
   
     return (
-        <SafeAreaView className="flex-1 bg-dark-bg">
+      <View
+      style={{
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        flex: 1,
+        backgroundColor: "#0c1026",
+      }}
+    >
             {/* Header */}
-            <View className="flex-2 mt-4 px-6 mb-8">
+            <View className="mt-4 px-6 mb-8">
                 <View className="flex-row justify-between items-center">
                   <TouchableOpacity
                     onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
@@ -160,6 +176,7 @@ export default function Objects() {
                 </View>
                 <NotificationToast screen='objects'/>
             </View>
+            
             {displayedGroups.length === 0 ? (
                 <ObjectsListSkeleton/>
             ) : (
@@ -200,6 +217,6 @@ export default function Objects() {
                 onCloseWithUnlock={handleCloseWithUnlock}
               />
             )}
-        </SafeAreaView>
+        </View>
     );
 }

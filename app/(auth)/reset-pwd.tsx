@@ -12,9 +12,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ResetPassword() {
+  const insets = useSafeAreaInsets();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -66,7 +67,14 @@ export default function ResetPassword() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-dark-bg">
+      <View 
+        style={{
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            flex: 1
+        }}
+        className="bg-dark-bg"
+      >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -167,6 +175,6 @@ export default function ResetPassword() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

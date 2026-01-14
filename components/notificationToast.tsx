@@ -32,20 +32,20 @@ const ToastItem: React.FC<ToastItemProps> = ({message, type}) => {
     };
 
     return (
-        <Animated.View
-          style={[
-            animatedStyle
-          ]}
-          className="flex-row justify-center items-center py-2"
+      <Animated.View
+        style={[
+          animatedStyle
+        ]}
+        className="flex-row justify-center items-center py-2 px-4 rounded-full bg-black/70"
+      >
+        <Body 
+          className="font-bold text-white" 
+          style={{color: getColor(type)}}
         >
-            <Body 
-                className="font-bold" 
-                style={{color: getColor(type)}}
-            >
-                {message}
-            </Body>
-        </Animated.View>
-    )
+          {message}
+        </Body>
+      </Animated.View>
+    );
 }
 
 export const NotificationToast = ({screen} : {screen: string}) => {

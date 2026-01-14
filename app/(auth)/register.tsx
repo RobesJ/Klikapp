@@ -6,11 +6,11 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Register() {
     const router = useRouter();
-
+    const insets = useSafeAreaInsets();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -134,7 +134,14 @@ export default function Register() {
     };
 
   return (
-    <SafeAreaView className='flex-1 bg-dark-bg'>
+    <View 
+        style={{
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            flex: 1
+        }}
+        className="bg-dark-bg"
+    >
     <KeyboardAvoidingView
         behavior={Platform.OS === "android" ? "padding" : "height"}
         className='flex-1'
@@ -237,6 +244,6 @@ export default function Register() {
         </View>
     
     </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

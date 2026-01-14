@@ -5,10 +5,12 @@ import { useClientStore } from '@/store/clientStore';
 import { Client } from '@/types/generics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AddClientScreen(){
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { user } = useAuth();
     const { addClient, updateClient, unlockClient } = useClientStore();
     const { mode, client } = useLocalSearchParams();
@@ -53,12 +55,19 @@ export default function AddClientScreen(){
     };
 
     return (
-        <SafeAreaView className='flex-1 bg-dark-bg'>
+        <View 
+            style={{
+                paddingTop: insets.top,
+                paddingBottom: insets.bottom,
+                flex: 1
+            }}
+            className="bg-dark-bg"
+        >
             <ClientForm
                 mode={(mode as "create" | "edit") || "create"}
                 initialData={parsedClient}
                 onSuccess={handleSuccess}
             />
-        </SafeAreaView>
+        </View>
     );
 }

@@ -13,12 +13,14 @@ import { useFocusEffect, useNavigation, useRouter } from "expo-router";
 import debounce from "lodash.debounce";
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function Clients() {
+  const insets = useSafeAreaInsets();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [searchText, setSearchText] = useState('');
+
   const { user } = useAuth();
   const dpi = PixelRatio.get();
   const hasInitialized = useRef(false);
@@ -109,9 +111,16 @@ export default function Clients() {
    
 
   return (
-    <SafeAreaView className="flex-1 bg-dark-bg">
+    <View
+      style={{
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        flex: 1,
+        backgroundColor: "#0c1026",
+      }}
+    >
         {/* header */}
-        <View className="flex-2 mt-4 px-6 mb-8">
+        <View className="mt-4 px-6 mb-8">
           <View className="flex-row justify-between items-center">
             <TouchableOpacity
               onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
@@ -120,7 +129,7 @@ export default function Clients() {
             >
               <EvilIcons name="navicon" size={32} color="white" />
             </TouchableOpacity>
-            <Heading1 className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Heading1>
+            <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Heading1>
 
             {/* online / offline indicator */}
             <Body className="text-xl text-green-500">ONLINE</Body>
@@ -142,7 +151,8 @@ export default function Clients() {
             screen="clients"
           />
         </View>
-
+        
+        <View style={{flex: 1}}>
         { loading && clients.length === 0 ? (
           <ClientsListSkeleton/>
         ) : (
@@ -163,6 +173,7 @@ export default function Clients() {
           onEndReached={loadMore}
         />
         )}
+        </View>
         { /* Action Button - add new client */}
         <TouchableOpacity
           onPress={handleAddClient}
@@ -172,7 +183,7 @@ export default function Clients() {
           <Heading2 className='text-white'>+</Heading2>
         </TouchableOpacity>
       
-        {/* Client details modal*/}
+        {/* Client details modal */}
         {selectedClient && (
           <ClientDetails 
             key={selectedClient.id}
@@ -182,6 +193,7 @@ export default function Clients() {
             onCloseWithUnlocking={handleOnCloseWithUnlocking}
           />
         )}
-    </SafeAreaView>
+    </View>
   );
 }
+

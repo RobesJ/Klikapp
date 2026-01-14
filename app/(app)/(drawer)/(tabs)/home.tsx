@@ -15,9 +15,10 @@ import { sk } from 'date-fns/locale';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Home() {
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithRelations | null>(null);
@@ -164,140 +165,122 @@ export default function Home() {
     />
   ), [handleDetailsVisibility]);
 
-  if(initialLoading){
-    return (
-        <SafeAreaView className="flex-1 bg-dark-bg">
-            <View className="flex-2 mt-4 mx-4 mb-8">
-            <View className="flex-row justify-between">
-            <TouchableOpacity
-              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-              activeOpacity={0.8}
-              className="items-center justify-center"
-            >
-              <EvilIcons name="navicon" size={36} color="white" />
-            </TouchableOpacity>
-  
-              <View className='ml-6 items-center justify-center'>
-                <Heading1 allowFontScaling={false} className="font-bold text-dark-text_color mb-1">Aktuálne projekty</Heading1>
-                <BodyLarge className=' text-dark-text_color'>
-                  {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
-                </BodyLarge>
-              </View>
-              <View className="justify-between items-center">
-                <Body className="text-green-500 mb-1">ONLINE</Body>
-                <TouchableOpacity
-                    onPress={() => setShowFilterModal(true)}
-                    activeOpacity={0.8}
-                    className="ml-2 items-center justify-center pb-3"
-                  >
-                    <Feather name="filter" size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <ProjectsListSkeleton/>
-            </View>
-        </SafeAreaView>  
-    );
-  }
-
   return (
-    <SafeAreaView className="flex-1 bg-dark-bg">  
-          {/* Header */}   
-          <View className="flex-2 mt-4 mx-4 mb-8">
-            <View className="flex-row justify-between">
-            <TouchableOpacity
-              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-              activeOpacity={0.8}
-              className="items-center justify-center"
-            >
-              <EvilIcons name="navicon" size={36} color="white" />
-            </TouchableOpacity>
-  
-              <View className='ml-6 items-center justify-center'>
-                <Heading1 allowFontScaling={false} className="font-bold text-dark-text_color mb-1">Aktuálne projekty</Heading1>
-                <BodyLarge className=' text-dark-text_color'>
-                  {format(selectedDate, "EEE, d. MMMM yyyy", {locale: sk})}
-                </BodyLarge>
-              </View>
-              <View className="justify-between items-center">
-                <Body className="text-green-500 mb-1">ONLINE</Body>
-                <TouchableOpacity
-                    onPress={() => setShowFilterModal(true)}
-                    activeOpacity={0.8}
-                    className="ml-2 items-center justify-center pb-3"
-                  >
-                    <Feather name="filter" size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-            </View>
-             
-            <View className="mt-4">
-               <WeekCalendar 
-                 selectedDay={selectedDate}
-                 onDateSelect={setSelectedDate}
-               />
-            </View>
-            
-            {/* Active filters indicator */}
-            {activeFilters.length > 0 && (
-              <View className="px-6 mt-4">
-                <View className="flex-row flex-wrap">
-                  {activeFilters.map((filter, index) => {
-                    // Get color based on type/value
-                    let pillColor = "bg-blue-100";
-                    let textColor = "text-blue-700";
-                  
-                    if (filter.type === 'type') {
-                      pillColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
-                      textColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
-                    } 
-                    else if (filter.type === 'state') {
-                      pillColor = STATE_OPTIONS_HOME.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
-                      textColor = STATE_OPTIONS_HOME.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
-                    }
-                  
-                    return (
-                      <TouchableOpacity
-                        key={`${filter.type}-${filter.value}-${index}`}
-                        onPress={() => removeFilter(filter.type, filter.value)}
-                        className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
-                      >
-                        <BodySmall className={`${textColor} font-medium mr-1`}>{filter.value}</BodySmall>
-                        <BodySmall className={`${textColor} font-bold`}>✕</BodySmall>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-            
-          </View>
-          
-          {projectsForSelectedDate.length === 0 ?
-            (
-                <ProjectsListSkeleton/>
-            ) : (
-                <FlatList
-                  data={projectsForSelectedDate}
-                  keyExtractor={(item) => item.project.id}
-                  renderItem={renderItem}
-                  ListEmptyComponent={
-                      <View className='flex-1 items-center'>
-                          <Body className="text-red-500 mb-4">Žiadne bežiace projekty</Body>
-                          <TouchableOpacity
-                            activeOpacity={0.8}
-                            className="rounded-xl bg-blue-600 py-3 px-8"
-                            onPress={()=> router.push("/planning")}
-                          >
-                              <Body className='text-white font-semibold'>Plánovať projekty</Body>
-                          </TouchableOpacity>
-                      </View>
-                  }
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
-                  scrollEnabled={true}
+    <View
+      style={{
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        flex: 1,
+        backgroundColor: "#0c1026",
+    }}
+    >
+      {/* Header */}
+      <View className="mt-4 mx-4 mb-4">
+        <View className="flex-row justify-between">
+          <View className="items-center justify-center">
+            {/* Drawer toggle */}
+            <View className="items-center justify-center">
+              <View className="items-center justify-center">
+                <EvilIcons.Button
+                  name="navicon"
+                  size={36}
+                  color="white"
+                  backgroundColor="transparent"
+                  underlayColor="transparent"
+                  onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
                 />
-            )
-          }
+              </View>
+            </View>
+          </View>
+
+          <View className="ml-6 items-center justify-center">
+            <Heading1 allowFontScaling={false} className="font-bold text-dark-text_color mb-1">
+              Aktuálne projekty
+            </Heading1>
+            <BodyLarge className="text-dark-text_color">
+              {format(selectedDate, "EEE, d. MMMM yyyy", { locale: sk })}
+            </BodyLarge>
+          </View>
+
+          <View className="justify-between items-center">
+            <Body className="text-green-500 mb-1">ONLINE</Body>
+            <Feather.Button
+              name="filter"
+              size={20}
+              color="white"
+              backgroundColor="transparent"
+              underlayColor="transparent"
+              onPress={() => setShowFilterModal(true)}
+            />
+          </View>
+        </View>
+
+        <View className="mt-4">
+          <WeekCalendar 
+            selectedDay={selectedDate}
+            onDateSelect={setSelectedDate}
+          />
+        </View>
+
+        {/* Active filters indicator */}
+        {activeFilters.length > 0 && (
+          <View className="px-6 mt-4">
+            <View className="flex-row flex-wrap">
+              {activeFilters.map((filter, index) => {
+                // Get color based on type/value
+                let pillColor = "bg-blue-100";
+                let textColor = "text-blue-700";
+              
+                if (filter.type === 'type') {
+                  pillColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
+                  textColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
+                } 
+                else if (filter.type === 'state') {
+                  pillColor = STATE_OPTIONS_HOME.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
+                  textColor = STATE_OPTIONS_HOME.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
+                }
+              
+                return (
+                  <TouchableOpacity
+                    key={`${filter.type}-${filter.value}-${index}`}
+                    onPress={() => removeFilter(filter.type, filter.value)}
+                    className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
+                  >
+                    <BodySmall className={`${textColor} font-medium mr-1`}>{filter.value}</BodySmall>
+                    <BodySmall className={`${textColor} font-bold`}>✕</BodySmall>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Content */}
+      <View className="flex-1 px-5 pb-24">
+        {initialLoading ? (
+          <ProjectsListSkeleton />
+        ) : projectsForSelectedDate.length === 0 ? (
+          <View className="flex-1 items-center justify-center">
+            <Body className="text-red-500 mb-4">Žiadne bežiace projekty</Body>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              className="rounded-xl bg-blue-600 py-3 px-8"
+              onPress={() => router.push("/planning")}
+            >
+              <Body className="text-white font-semibold">Plánovať projekty</Body>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={projectsForSelectedDate}
+            keyExtractor={(item) => item.project.id}
+            renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            scrollEnabled
+          />
+        )}
+      </View>
 
       {/* Project details modal */}
       {selectedProject && (
@@ -321,6 +304,6 @@ export default function Home() {
         onClearAll={clearFilters}
       />
 
-    </SafeAreaView>
+    </View>
   );
 }

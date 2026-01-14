@@ -14,8 +14,8 @@ import { format, parseISO } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Dimensions, PanResponder, TouchableOpacity, Vibration, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Animated, Dimensions, PanResponder, TouchableOpacity, Vibration, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_TRESHOLD = SCREEN_WIDTH * 0.4;
@@ -59,7 +59,7 @@ export default function Planning() {
     changeStateOfAssignedProject,
     unassignProject
   } = useProjectStore();
-
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const selectedDateRef = useRef(selectedDate);
@@ -79,6 +79,14 @@ export default function Planning() {
     state: [],
     users: []
   }); 
+  const hasInitialized = useRef(false);
+
+  useEffect(() => {  
+    if (!hasInitialized.current){
+      hasInitialized.current = true;
+      fetchPlannedProjects();
+    }
+  }, []);
 
   useEffect(() => {  
     if (preselectedDate){
@@ -90,11 +98,7 @@ export default function Planning() {
     selectedDateRef.current = selectedDate;
   }, [selectedDate]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchPlannedProjects();
-    }, [fetchPlannedProjects]),
-  );
+  // change states of assigned projects when leaving the screen
   useFocusEffect(
     useCallback(() => {
       return () => {
@@ -377,8 +381,14 @@ export default function Planning() {
   };
   
   return (
-    <SafeAreaView className="flex-1 bg-dark-bg">
-      
+    <View
+      style={{
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        flex: 1,
+        backgroundColor: "#0c1026",
+      }}
+    > 
         <View className="flex-1 px-6 mt-4">
           {/* Header */}
           <View className="flex-row justify-between items-center mb-2">
@@ -408,10 +418,6 @@ export default function Planning() {
               initialWeekStart={selectedDate}
             />
           </View>
-
-          {backgroundLoading && (
-            <ActivityIndicator size="large" color="#3B82F6" />
-          )}
 
           {/* Assigned Projects List */}
           <View className="mb-6">
@@ -576,7 +582,7 @@ export default function Planning() {
         onClearAll={clearFiltersAssigned}
       />
 
-    </SafeAreaView>
+    </View>
   );
 }
 
