@@ -13,7 +13,7 @@ import { DrawerActions } from "@react-navigation/native";
 import { format, parseISO } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, Dimensions, PanResponder, TouchableOpacity, Vibration, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -80,6 +80,7 @@ export default function Planning() {
     users: []
   }); 
   const hasInitialized = useRef(false);
+  //const getSelectedDate = useCallback(() => selectedDate, [selectedDate]);
 
   useEffect(() => {  
     if (!hasInitialized.current){
@@ -93,10 +94,6 @@ export default function Planning() {
       setSelectedDate(parseISO(JSON.parse(preselectedDate as string)))
     }
   }, [preselectedDate]);
-
-  useEffect(() => {
-    selectedDateRef.current = selectedDate;
-  }, [selectedDate]);
 
   // change states of assigned projects when leaving the screen
   useFocusEffect(
@@ -112,7 +109,9 @@ export default function Planning() {
           );
           currentAssingmentsRef.current = {};
         }
-  
+        
+        currentAssingmentsRef.current = {};
+        selectedDateRef.current = new Date();
         clearFilters();
         clearFiltersUnassigned();
         clearFiltersAssigned();
@@ -308,13 +307,12 @@ export default function Planning() {
     setSelectedDate(date);
   };
 
-  const handleAssignProject = async (projectId: string) => {
+  const handleAssignProject = useCallback(async (projectId: string) => {
     try{
-      const dateToAssign = selectedDateRef.current;
-      assignProjectToDate(projectId, dateToAssign);
+      assignProjectToDate(projectId, selectedDate);
       currentAssingmentsRef.current = {
         ...currentAssingmentsRef.current,
-        [projectId]: dateToAssign
+        [projectId]: selectedDate
       };
       Vibration.vibrate(50);
     }
@@ -322,9 +320,9 @@ export default function Planning() {
       console.error("Error assigning project to date:", error);
       Alert.alert('Chyba', error.message || "Nastal problém pri priradení projektu k dátumu");
     }
-  };
+  }, [selectedDate, assignProjectToDate]);
 
-  const handleUnassignProject = async (projectId: string) => {
+  const handleUnassignProject = useCallback(async (projectId: string) => {
     try{
       await unassignProject(projectId);
       delete currentAssingmentsRef.current[projectId];
@@ -336,7 +334,7 @@ export default function Planning() {
       console.error("Error unassigning project:", error);
       Alert.alert('Chyba', error.message || "Nastal problém pri presune projektu");
     }
-  };
+  },[selectedDate, unassignProject]);
   
   const getActiveFiltersAssigned = () => {
     return [
@@ -384,12 +382,13 @@ export default function Planning() {
     <View
       style={{
         paddingTop: insets.top,
+        paddingHorizontal: 16,
         paddingBottom: insets.bottom,
         flex: 1,
         backgroundColor: "#0c1026",
       }}
     > 
-        <View className="flex-1 px-6 mt-4">
+        <View>
           {/* Header */}
           <View className="flex-row justify-between items-center mb-2">
             <TouchableOpacity
@@ -491,7 +490,7 @@ export default function Planning() {
             )}
           </View>
 
-          {/* Unassigned Projects List */}
+          {/* Assigned Projects List */}
           <View className="mb-20">
             <View className='flex-row justify-between items-center'>
               <BodyLarge className="text-dark-text_color text-xl font-bold mb-3">
@@ -507,6 +506,7 @@ export default function Planning() {
               
             </View>
             {/* Active filters indicator */}
+            
             {getActiveFiltersUnassigned().length > 0 && (
               <View className="px-6 mt-4">
                 <View className="flex-row flex-wrap">
@@ -588,7 +588,7 @@ export default function Planning() {
 
 // Draggable Project Card Component
 interface SwipeableProjectCardProps {
-  project: any;
+  project: ProjectWithRelations;
   onSwipeRight?: () => void;
   onSwipeLeft?: () => void;
   swipeDirection: "left" | "right";
@@ -602,18 +602,25 @@ function SwipeableProjectCard({
 }: SwipeableProjectCardProps) {
   const translateX = useRef(new Animated.Value(0)).current;
   const [swiped, setSwiped] = useState(false);
+  const swipedRef = useRef(false);
+
+  useEffect(() => {
+    swipedRef.current = swiped;
+  }, [swiped]);
+
   const { user } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithRelations | null>(null);
   const { unlockProject } = useProjectStore();
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+
+  const panResponder = useMemo(
+    () => PanResponder.create({
+      onStartShouldSetPanResponder: () => !swipedRef.current,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 10;
+        return !swipedRef.current && Math.abs(gestureState.dx) > 10;
       },
       onPanResponderMove: (_, gestureState) => {
-        if (swiped) return;
+        if (swipedRef.current) return;
 
         if(swipeDirection === "right" && gestureState.dx > 0){
           translateX.setValue(gestureState.dx);
@@ -623,7 +630,7 @@ function SwipeableProjectCard({
         }
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (swiped) return;
+        if (swipedRef.current) return;
 
         const shouldTrigger = Math.abs(gestureState.dx) > SWIPE_TRESHOLD;
 
@@ -659,9 +666,23 @@ function SwipeableProjectCard({
           }).start();
         }
       },
-    })
-  ).current;
 
+      onPanResponderTerminate: () => {
+        if(!swipedRef.current){
+          Animated.spring(translateX, {
+            toValue:0,
+            useNativeDriver: true,
+          }).start();
+        }
+      }
+    }), [swipeDirection, onSwipeRight, onSwipeLeft]
+  );
+
+  useEffect(() => {
+    return () => {
+      translateX.stopAnimation();
+    };
+  }, []);
 
   const handleModalVisibility = (projectData: ProjectWithRelations, value: boolean) => {
     setSelectedProject(projectData);

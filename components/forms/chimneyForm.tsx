@@ -1,8 +1,9 @@
 import { ChimneyInput, ChimneyType } from "@/types/objectSpecific";
 import { EvilIcons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Modal, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
+import { NotificationToast } from "../notificationToast";
 import { Body, BodySmall, Heading3 } from "../typography";
 
 interface ChimneyFormProps {
@@ -87,7 +88,20 @@ export default function ChimneyForm ({
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async () => {
+    const handleOnClose = useCallback(() => {
+        setFocusedField(null);
+        setChimneyFormData({
+            chimney_type_id: '',
+            chimney_type: undefined,
+            appliance:  '',
+            placement: '',
+            note: '',
+        });
+        setErrors({});
+        onClose();
+    }, [onClose, chimneyFormData, focusedField]);
+
+    const handleSubmit = useCallback(async () => {
         if ( !validate() || loading ) {
             return;
         }
@@ -95,7 +109,7 @@ export default function ChimneyForm ({
         setLoading(true);
 
         try{
-            const chimneyToSave: ChimneyInput ={
+            const chimneyToSave: ChimneyInput = {
                 chimney_type_id: chimneyFormData.chimney_type_id,
                 chimney_type: chimneyFormData.chimney_type,
                 placement: chimneyFormData.placement,
@@ -112,20 +126,7 @@ export default function ChimneyForm ({
         finally{
             setLoading(false);
         }
-    }
-
-    const handleOnClose = () => {
-        setFocusedField(null);
-        setChimneyFormData({
-            chimney_type_id: '',
-            chimney_type: undefined,
-            appliance:  '',
-            placement: '',
-            note: '',
-        });
-        setErrors({});
-        onClose();
-    };
+    }, [validate, handleOnClose]);
 
     return (
         <Modal
@@ -152,7 +153,7 @@ export default function ChimneyForm ({
 
                     {/* Form */}
                     <View className="p-6">
-                        
+                        <NotificationToast screen="chimneyForm"/>
                         {/* Chimney Type (read-only) */}
                         <View className="mb-4">
                             <Body className="mb-2 ml-1 font-semibold text-dark-text_color">Typ</Body>

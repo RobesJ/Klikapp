@@ -9,13 +9,8 @@ interface ClientFilters {
 }
 
 export type LockClientResult =
-  | {
-      success: true;
-    }
-  | {
-      success: false;
-      lockedByName: string | null;
-    };
+  | { success: true }
+  | { success: false; lockedByName: string | null };
 
 interface ClientStore {
   clients: Client[];
@@ -28,6 +23,7 @@ interface ClientStore {
   pageSize: number;
   offset: number;
   error: string | null;
+  isSearching: boolean;
   
   fetchClients: (limit: number) => Promise<void>;
   setFilters: (filters: Partial<ClientFilters>) => void;
@@ -36,22 +32,21 @@ interface ClientStore {
   updateClient: (id: string, client: Client) => void;
   deleteClient: (id: string) => void;
   applyFilters: () => Client[];
-  lookForClientInDBS: () => void;
+  lookForClientInDBS: () => Promise<void>;
   loadMore: () => Promise<void>;
   lockClient: (id: string, userID: string, userName: string) => Promise<LockClientResult>;
   unlockClient: (id: string, userID: string) => Promise<void>;
-  // refreshClientLock: (id: string, userID: string) => Promise<void>;
   updateClientCounts: (id: string, projectCount: number, objectCount: number) => void;
+  reset: () => void;
 }
 
 const CACHE_DURATION = 300000; // 5 min
+const MIN_SEARCH_LENGTH = 2;
 
 const initialFilters: ClientFilters = {
   searchQuery: '',
 };
-
-export const useClientStore = create<ClientStore>((set, get) => ({
-  // Initial state
+const initialState = {
   clients: [],
   filteredClients: [],
   filters: initialFilters,
@@ -61,13 +56,25 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   error: null,
   pageSize: 30,
   offset: 0,
+  isSearching: false,
+};
+
+export const useClientStore = create<ClientStore>((set, get) => ({
+  ...initialState,
+
+  reset: () => set(initialState),
 
   fetchClients: async (limit) => {
-    const { clients, lastFetch } = get();
+    const { clients, lastFetch, loading } = get();
     const now = Date.now();
+
+    if (loading && clients.length > 0){
+      return;
+    }
 
     if (clients.length > 0 && (now - lastFetch) < CACHE_DURATION) {
       console.log('Using cached clients');
+      set({loading: false});
       return;
     }
 
@@ -93,14 +100,14 @@ export const useClientStore = create<ClientStore>((set, get) => ({
           projectsCount: item.projects[0]?.count || 0,
           objectsCount: item.objects[0]?.count || 0
       }));
-      
-      const hasMoreLoc = (clients.length < limit) ? false : true; 
+     
       set({ 
-        clients: clients,
+        clients,
         lastFetch: now,
         offset: clients.length,
         loading: false, 
-        hasMore: hasMoreLoc
+        hasMore: clients.length >= limit,
+        error: null
       });
       
       console.log(`Fetched ${clients.length} clients`);
@@ -118,7 +125,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   },
   
   lockClient: async (id: string, userID: string, userName: string) => {
-    try{
+    try {
       const {data, error} = await supabase.rpc("lock_client", {
         p_client_id: id,
         p_user_id: userID,
@@ -126,6 +133,11 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       });
 
       if (error) throw error;
+
+      if(!data || data.length === 0){
+        console.error("No data returned from lock_client");
+        return { success: false, lockedByName: null };
+      }
 
       if (!data?.[0].locked){
         return {
@@ -136,6 +148,16 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
       set(state => ({
         clients: state.clients.map(c =>
+          c.id === id
+            ? {
+                ...c,
+                locked_by: userID,
+                locked_by_name: userName ?? 'Unknown',
+                lock_expires_at: data[0].lock_expires_at
+              }
+            : c
+        ),
+        filteredClients: state.filteredClients.map(c =>
           c.id === id
             ? {
                 ...c,
@@ -159,57 +181,106 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   },
 
   unlockClient: async (id: string, userID: string) => {
-    const { error } = await supabase.rpc("unlock_client", {
-      p_client_id: id,
-      p_user_id: userID
-    });
+    try {
+      const { error } = await supabase.rpc("unlock_client", {
+        p_client_id: id,
+        p_user_id: userID
+      });
 
-    if (error) throw error;
-    set(state => ({
-      clients: state.clients.map(c =>
-        c.id === id
-          ? {
-            ...c,
-            locked_by: null,
-            locked_by_name: null,
-            lock_expires_at: null
-          }
-          : c
+      if (error) throw error;
+      set(state => ({
+        clients: state.clients.map(c =>
+          c.id === id
+            ? {
+              ...c,
+              locked_by: null,
+              locked_by_name: null,
+              lock_expires_at: null
+            }
+            : c
+          ),
+          filteredClients: state.filteredClients.map(c =>
+            c.id === id
+              ? {
+                  ...c,
+                  locked_by: null,
+                  locked_by_name: null,
+                  lock_expires_at: null
+                }
+              : c
+          )
+      }));
+    } catch (error) {
+      console.error('Error unlocking client:', error);
+      // Still update UI even if unlock fails (prevents stuck locks)
+      set(state => ({
+        clients: state.clients.map(c =>
+          c.id === id
+            ? {
+                ...c,
+                locked_by: null,
+                locked_by_name: null,
+                lock_expires_at: null
+              }
+            : c
         )
-    }));
+      }));
+    }
   },
 
   setFilters: (newFilters) => {
     const { filters } = get(); 
-    
-    set({ filters: { ...filters, ...newFilters } });
+    const updatedFilters = {...filters, ...newFilters};
+    set({ filters: updatedFilters});
     const filtered = get().applyFilters();
     set({ filteredClients: filtered });
   
-    if (newFilters.searchQuery?.trim() && newFilters.searchQuery?.trim().length > 3 && filtered.length === 0) {
+    // if (newFilters.searchQuery?.trim() && newFilters.searchQuery?.trim().length > 3 && filtered.length === 0) {
+    //   get().lookForClientInDBS();
+    // }
+    const query = updatedFilters.searchQuery?.trim();
+    if (query && query.length >= MIN_SEARCH_LENGTH && filtered.length === 0) {
       get().lookForClientInDBS();
     }
   },
 
   clearFilters: () => {
-    set({ filters: initialFilters });
-    set({filteredClients: []});
+    set({
+      filters: initialFilters,
+      filteredClients: [],
+      error: null
+    });
   },
 
   applyFilters: () => {
     const { clients, filters } = get();
-    let filtered = [...clients];
 
-    if (filters.searchQuery.trim()) {
-      const query = filters.searchQuery.toLowerCase();
-      filtered = filtered.filter(client => 
-        client.name.toLowerCase().includes(query) ||
-        client.phone?.includes(query)
-      );
+    const query = filters.searchQuery.trim();
+    if (!query) {
+      return [];
     }
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = clients.filter(client => 
+      client.name.toLowerCase().includes(lowerQuery) ||
+      client.phone?.includes(query) || // Phone search without toLowerCase for exact matches
+      client.unformatted_email?.toLowerCase().includes(lowerQuery)
+    );
 
     console.log(`Filtered: ${filtered.length}/${clients.length} clients`);
     return filtered;
+    //let filtered = [...clients];
+//
+    //if (filters.searchQuery.trim()) {
+    //  const query = filters.searchQuery.toLowerCase();
+    //  filtered = filtered.filter(client => 
+    //    client.name.toLowerCase().includes(query) ||
+    //    client.phone?.includes(query)
+    //  );
+    //}
+//
+    //console.log(`Filtered: ${filtered.length}/${clients.length} clients`);
+    //return filtered;
   },
 
   lookForClientInDBS: async () =>{
@@ -265,9 +336,11 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     if (loading || !hasMore) {
       return;
     }
+
     console.log("Fetching more clients...");
     set({ loading: true });
-    try{
+
+    try {
       const { data: clientsData, error: clientsError } = await supabase
           .from("clients")
           .select(`
@@ -372,8 +445,11 @@ export const useClientStore = create<ClientStore>((set, get) => ({
           style: 'destructive',
           onPress: async() =>{
             const previousClients = get().clients;
+            const previousFiltered = get().filteredClients;
+           
             set((state) => ({
-              clients: state.clients.filter(client => client.id !== id)
+              clients: state.clients.filter(client => client.id !== id),
+              filteredClients: state.filteredClients.filter(client => client.id !== id)
             }));    
 
             try{
@@ -399,6 +475,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
               console.error("error deleting client:",error);
               set({
                 clients: previousClients,
+                filteredClients: previousFiltered,
                 error: "Nepodarilo sa odstrániť klienta"
               });
               

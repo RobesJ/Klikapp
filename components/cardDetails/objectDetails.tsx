@@ -9,7 +9,7 @@ import { regeneratePDFUtil } from "@/utils/pdfRegeneration";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { parseISO } from "date-fns";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { PDF_Viewer } from "../modals/pdfViewer";
 import { NotificationToast } from "../notificationToast";
@@ -96,12 +96,12 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
             
   }, [visible, canEdit, user?.id]);
   
-  const handleClosePdfViewer = () => {
+  const handleClosePdfViewer = useCallback(() => {
     setShowPDFReports(false);
     setSelectedPDF(null);
-  };
+  }, [selectedPDF]);
 
-  const deletePDF = async (pdf: PDF) => {
+  const deletePDF = useCallback(async (pdf: PDF) => {
     const parts = pdf.storage_path.split("pdf-reports/");
     const filename = parts[1];
 
@@ -153,9 +153,9 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
         }
       ]
     );
-  };
+  },[selectedPDF, PDFs]);
 
-    const handleRegeneratePDF = async (pdf: PDF) => {
+    const handleRegeneratePDF = useCallback(async (pdf: PDF) => {
         try{
             const newPDF = await regeneratePDFUtil(pdf);
         
@@ -179,9 +179,9 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
                 4000
             );
         }
-    };
+    }, [regeneratePDFUtil, PDFs, handleClosePdfViewer]);
 
-    const handleEditObject = () => {
+    const handleEditObject = useCallback(() => {
         onClose();
         router.push({
           pathname: "/addObjectScreen",
@@ -191,7 +191,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
             preselectedClientID: objectWithRelations.client.id
           }
         });  
-    };
+    }, [onClose, router]);
 
     return (
         <Modal
@@ -230,7 +230,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
                       
                     <ScrollView className="max-h-screen-safe-offset-12 p-4">
                       <View className="flex-1">
-                        {!canEdit && <Body style={{color: "#F59E0B"}}>`Tento objekt upravuje používateľ ${lockedByName}`</Body>}
+                        {!canEdit && <Body style={{color: "#F59E0B"}}>Tento objekt upravuje používateľ {lockedByName}</Body>}
                         <NotificationToast
                           screen="objectDetails"
                         />

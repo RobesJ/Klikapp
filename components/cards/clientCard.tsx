@@ -1,5 +1,6 @@
 import { Client } from "@/types/generics";
 import { Feather } from "@expo/vector-icons";
+import { useCallback } from "react";
 import { TouchableOpacity, View } from "react-native";
 import { Body, BodyLarge } from "../typography";
 
@@ -10,11 +11,11 @@ interface ClientCardProps {
 
 export default function ClientCard({ client, onPress } : ClientCardProps) {
 
-    const handlePress = () => {
+    const handlePress = useCallback(() => {
         if (onPress){
             onPress();
         }
-    };
+    }, []);
    
     return (
         <TouchableOpacity

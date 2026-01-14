@@ -12,7 +12,7 @@ import { DrawerActions } from "@react-navigation/native";
 import { useFocusEffect, useNavigation, useRouter } from "expo-router";
 import debounce from "lodash.debounce";
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
+import { FlatList, Keyboard, PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function Clients() {
@@ -27,6 +27,7 @@ export default function Clients() {
 
   const {
     filteredClients,
+    hasMore,
     clients,
     loading,
     loadMore,
@@ -44,7 +45,7 @@ export default function Clients() {
       hasInitialized.current = true;
       fetchClients(50);
     }
-  }, []);
+  }, [fetchClients]);
 
   useFocusEffect(useCallback(() => {
     return () => {
@@ -60,17 +61,31 @@ export default function Clients() {
 
   const handleRefresh = useCallback(() => {
     fetchClients(50);
-  }, [fetchClients]);
+    setSearchText('');
+    clearFilters();
+  }, [fetchClients, clearFilters]);
 
-  const debounceSearch = useMemo(() => {
-    const debouncedFn = debounce((text: string) => setFilters({ searchQuery: text}), 300);
-    return debouncedFn;
-  }, [setFilters]);
+  const debounceSearch = useMemo(
+    () => debounce((text: string) => {setFilters({ searchQuery: text})}, 300), 
+    [setFilters]
+  );
+
+  useEffect(() => {
+    return () => {
+      debounceSearch.cancel();
+    }
+  }, [debounceSearch]);
 
   const handleSearch = useCallback((text: string) => {
     setSearchText(text);
     debounceSearch(text);
   }, [debounceSearch]);
+  
+  const handleClearSearch = useCallback(() => {
+    setSearchText('');
+    clearFilters();
+    Keyboard.dismiss();
+  }, [clearFilters]);
   
   const handleOnClose = useCallback(() => {
     setShowDetails(false);
@@ -83,7 +98,7 @@ export default function Clients() {
       unlockClient(selectedClient.id, user.id);
     }
     setSelectedClient(null);
-  },[selectedClient, user, unlockClient]);
+  }, [selectedClient, user, unlockClient]);
 
   const inputStyle = useMemo((): TextStyle => {
     const size = FONT_SIZES["lg"];
@@ -108,28 +123,38 @@ export default function Clients() {
         />
     );
   }, [handleModalVisibility]);
+
+  const keyExtractor = useCallback((item: Client) => item.id, []);
+
+  const handleLoadMore = useCallback(() =>{
+    if(!searchText && hasMore && !loading){
+      loadMore();
+    }
+  }, [loadMore, hasMore, loading, loadMore]);
    
 
   return (
     <View
       style={{
         paddingTop: insets.top,
+        paddingHorizontal: 16,
         paddingBottom: insets.bottom,
         flex: 1,
         backgroundColor: "#0c1026",
       }}
     >
         {/* header */}
-        <View className="mt-4 px-6 mb-8">
+        <View className="mb-8">
           <View className="flex-row justify-between items-center">
+            {/* Drawer toggle */}
             <TouchableOpacity
-              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-              activeOpacity={0.8}
-              className="justify-center"
-            >
-              <EvilIcons name="navicon" size={32} color="white" />
+                onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+                activeOpacity={0.8}
+                className="items-center justify-center"
+              >
+                <EvilIcons name="navicon" size={36} color="white" />
             </TouchableOpacity>
-            <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Klienti</Heading1>
+            <Heading1 className="text-dark-text_color">Klienti</Heading1>
 
             {/* online / offline indicator */}
             <Body className="text-xl text-green-500">ONLINE</Body>
@@ -152,15 +177,14 @@ export default function Clients() {
           />
         </View>
         
-        <View style={{flex: 1}}>
+        <View className="flex-1 pb-16">
         { loading && clients.length === 0 ? (
           <ClientsListSkeleton/>
         ) : (
         <FlatList
           data={searchText.length > 0 ? filteredClients : clients }
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
           refreshing={loading}
           onRefresh={handleRefresh}
           ListEmptyComponent={
@@ -170,17 +194,18 @@ export default function Clients() {
               <Body className="text-center text-gray-500 mt-10">Žiadny klienti</Body>
             )
           }
-          onEndReached={loadMore}
+          onEndReached={handleLoadMore}
         />
         )}
         </View>
+        
         { /* Action Button - add new client */}
         <TouchableOpacity
           onPress={handleAddClient}
           activeOpacity={0.8}
           className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
         >
-          <Heading2 className='text-white'>+</Heading2>
+            <Heading2 className='text-white'>+</Heading2>
         </TouchableOpacity>
       
         {/* Client details modal */}

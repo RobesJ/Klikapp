@@ -125,7 +125,7 @@ export const ChimneyTypeSelectionModal = ({
                 </View>
                 
                 {/* Create new chimney type button */}
-                <View className="absolute bottom-10 left-0 right-0 bg-dark-bg items-center justify-center">
+                <View className="absolute bottom-10 left-0 right-0 bg-dark-bg items-center justify-center border-x border-gray-500">
                     <TouchableOpacity
                       onPress={handleCreateNew}
                       className="rounded-xl bg-slate-500 py-4 px-12 active:bg-slate-800"

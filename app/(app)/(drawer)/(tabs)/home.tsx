@@ -166,55 +166,45 @@ export default function Home() {
   ), [handleDetailsVisibility]);
 
   return (
-    <View
-      style={{
-        paddingTop: insets.top,
-        paddingBottom: insets.bottom,
-        flex: 1,
-        backgroundColor: "#0c1026",
-    }}
-    >
-      {/* Header */}
-      <View className="mt-4 mx-4 mb-4">
-        <View className="flex-row justify-between">
-          <View className="items-center justify-center">
-            {/* Drawer toggle */}
-            <View className="items-center justify-center">
-              <View className="items-center justify-center">
-                <EvilIcons.Button
-                  name="navicon"
-                  size={36}
-                  color="white"
-                  backgroundColor="transparent"
-                  underlayColor="transparent"
-                  onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-                />
+      <View
+        style={{
+          paddingTop: insets.top,
+          paddingHorizontal: 16,
+          paddingBottom: insets.bottom,
+          flex: 1,
+          backgroundColor: "#0c1026"
+      }}
+      >
+          <View className="flex-row justify-between items-center">
+              {/* Drawer toggle */}
+              <TouchableOpacity
+                onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+                activeOpacity={0.8}
+                className="items-center justify-center"
+              >
+                  <EvilIcons name="navicon" size={36} color="white" />
+              </TouchableOpacity>
+              <View className='items-center'>
+                  <Heading1 className="text-dark-text_color mb-1">
+                      Aktuálne projekty
+                  </Heading1>
+                  <BodyLarge className="text-dark-text_color">
+                      {format(selectedDate, "EEE, d. MMMM yyyy", { locale: sk })}
+                  </BodyLarge>
               </View>
-            </View>
+              <View className="justify-between items-center">
+                  <Body className="text-green-500 mb-2">ONLINE</Body>
+                  <TouchableOpacity
+                    onPress={() => setShowFilterModal(true)}
+                    activeOpacity={0.8}
+                    className="items-center justify-center"
+                  >
+                      <Feather name="filter" size={20} color="white" />
+                  </TouchableOpacity>    
+              </View>
           </View>
-
-          <View className="ml-6 items-center justify-center">
-            <Heading1 allowFontScaling={false} className="font-bold text-dark-text_color mb-1">
-              Aktuálne projekty
-            </Heading1>
-            <BodyLarge className="text-dark-text_color">
-              {format(selectedDate, "EEE, d. MMMM yyyy", { locale: sk })}
-            </BodyLarge>
-          </View>
-
-          <View className="justify-between items-center">
-            <Body className="text-green-500 mb-1">ONLINE</Body>
-            <Feather.Button
-              name="filter"
-              size={20}
-              color="white"
-              backgroundColor="transparent"
-              underlayColor="transparent"
-              onPress={() => setShowFilterModal(true)}
-            />
-          </View>
-        </View>
-
+      <View> 
+        
         <View className="mt-4">
           <WeekCalendar 
             selectedDay={selectedDate}
@@ -257,7 +247,7 @@ export default function Home() {
       </View>
 
       {/* Content */}
-      <View className="flex-1 px-5 pb-24">
+      <View className="flex-1 pt-6 pb-16">
         {initialLoading ? (
           <ProjectsListSkeleton />
         ) : projectsForSelectedDate.length === 0 ? (
@@ -276,8 +266,8 @@ export default function Home() {
             data={projectsForSelectedDate}
             keyExtractor={(item) => item.project.id}
             renderItem={renderItem}
-            contentContainerStyle={{ paddingBottom: 40 }}
             scrollEnabled
+            
           />
         )}
       </View>

@@ -1,13 +1,13 @@
 import { useAuth } from "@/context/authContext";
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
-import { Client, User } from "@/types/generics";
-import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
+import { Client } from "@/types/generics";
+import { ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { NotificationToast } from "../notificationToast";
 import { Body, BodyLarge, BodySmall, Heading3 } from "../typography";
 
@@ -21,132 +21,37 @@ interface ClientCardDetailsProps{
 export default function ClientDetails({client, visible, onClose, onCloseWithUnlocking} : ClientCardDetailsProps) {
     const router = useRouter();
     const { user } = useAuth();
+    const { deleteClient, lockClient }= useClientStore();
+
     const [objectsWithRelations, setObjectsWithRelations] = useState<ObjectWithRelations[]>([]);
     const [projectsWithRelations, setProjectsWithRelations] = useState<ProjectWithRelations[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [canEdit, setCanEdit] = useState(false);
+    const [checkingLock, setCheckingLock] = useState(true);
     const [lockedByName, setLockedByName] = useState<string | null>(null);
-    const { deleteClient, lockClient }= useClientStore();
 
+    const lockHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // const isMountedRef = useRef(true);
+
+    // fetch relations when modal opens or clear data when closes
     useEffect(() => {
-        fetchRelations(client);
-    }, [client.id]);
-
-    async function fetchRelations(client: Client) {
-        try{
-            const { data: objectsData, error: objectError} = await supabase
-                .from("objects")
-                .select(`
-                    *,
-                    chimneys (
-                      id,
-                      object_id,
-                      chimney_type_id,
-                      placement,
-                      appliance,
-                      note,
-                      chimney_type:chimney_types (
-                        id,
-                        type,
-                        labelling
-                      )
-                    )
-                  `)
-                .eq("client_id", client.id);
-                
-            if (objectError) throw objectError;
-            if(objectsData){
-                const objectWithRelations: ObjectWithRelations[] = objectsData.map((objectItem: any) => {
-                    const chimneys: Chimney[] = objectItem.chimneys || [];
-                
-                    return {
-                      object: objectItem,
-                      client: client,
-                      chimneys: chimneys,
-                    };
-                });
-
-                setObjectsWithRelations(objectWithRelations);
-            }
-
-            const { data: projectsData, error: projectError } = await supabase
-                .from("projects")
-                .select(`
-                  *,
-                  project_assignments (
-                    user_profiles (id, name, email)
-                  ),
-                  project_objects (
-                    objects (
-                      id,
-                      client_id,
-                      address,
-                      city, 
-                      streetNumber,
-                      country,
-                      chimneys (
-                        id,
-                        chimney_types (id, type, labelling),
-                        placement,
-                        appliance,
-                        note
-                      )
-                    )
-                  )
-                `)
-                .eq("client_id", client.id)
-                .order('created_at', { ascending: false });
-                
-            if (projectError) throw projectError;
-                
-            const projectWithRelations: ProjectWithRelations[] = projectsData.map((projectItem: any) => {
-                const users: User[] = projectItem.project_assignments
-                    ?.map((pa: any) => pa.user_profiles)
-                    .filter(Boolean) || [];
-            
-                const objects = projectItem.project_objects
-                    ?.map((po: any) => {
-                        if (!po.objects) return null;
-                    
-                        const chimneys: Chimney[] = po.objects.chimneys
-                            ?.map((c: any) => ({
-                                id: c.id,
-                                type: c.chimney_types?.type || null,
-                                labelling: c.chimney_types?.labelling || null,
-                                appliance: c.appliance,
-                                placement: c.placement,
-                                note: c.note
-                            }))
-                            .filter(Boolean) || [];
-                        
-                        return {
-                            object: po.objects,
-                            chimneys: chimneys
-                        };
-                    })
-                    .filter(Boolean) || [];
-                
-                return {
-                    project: projectItem,
-                    client: client,
-                    users: users,
-                    objects: objects,
-                };
-            });
-        
-            setProjectsWithRelations(projectWithRelations);
-        } catch (err: any) {
-            console.error('Error fetching relations:', err);
-            setError(err.message);
-        } finally {
-            setLoading(false);
+        if (visible){
+            fetchRelations(client);
         }
-    };
+        else{
+            setObjectsWithRelations([]);
+            setProjectsWithRelations([]);
+            setError(null);
+        }
+    }, [visible, client.id]);
 
+    // acquire lock when modal opens
     useEffect(() => {
         if(!visible || !client || !user) return;
         let active = true;
+
+        setCheckingLock(true);
 
         (async () => {
             const result = await lockClient(client.id, user.id ,user.user_metadata.name);
@@ -154,6 +59,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
 
             if(result.success){
                 setCanEdit(true);  
+                setLockedByName(null);
                 console.log("Client lock aquired");
             }
             else{
@@ -161,48 +67,169 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                 setLockedByName(result.lockedByName);
                 console.log("Client lock not aquired");
             }
+
+            setCheckingLock(false);
         })();
+        return () => {
+            active = false;
+          };
 
     }, [visible, client?.id, user?.id]);
 
-    // locks heartbeat (adding 5 mins every 2 minutes to expires_at value) 
+    // lock heartbeat (adding 5 mins every 2 minutes to expires_at value) 
     useEffect(() => {
         if(!canEdit || !visible || !user) return;
         
-        const interval = setInterval(() => {
-            supabase
-              .from('clients')
-              .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
-              .eq('id', client.id)
-              .eq('locked_by', user.id);
+        const heartbeat = setInterval( async() => {
+            try{
+                await supabase
+                    .from('clients')
+                    .update({ lock_expires_at: new Date(Date.now() + 5 * 60 * 1000) })
+                    .eq('id', client.id)
+                    .eq('locked_by', user.id);
+            }
+            catch (error: any){
+                console.error("Failed to send lock heartbeat:", error);
+            }
           }, 120_000);
 
-        return () => clearInterval(interval);
+          lockHeartbeatRef.current = heartbeat;
+          return () => {
+            if (lockHeartbeatRef.current) {
+              clearInterval(lockHeartbeatRef.current);
+              lockHeartbeatRef.current = null;
+            }
+          };
                 
-    }, [visible, canEdit, user?.id]);
+    }, [visible, canEdit, user?.id, client.id]);
 
-    if (loading) {
-        return (
-            <View className="flex-1 items-center justify-center">
-                <ActivityIndicator size="large" color="#3b82f6" />
-            </View>
-        );
+    async function fetchRelations(client: Client) {
+        setLoading(true);
+        setError(null);
+        
+        try {
+          // Fetch objects in parallel with projects
+          const [objectsResult, projectsResult] = await Promise.all([
+            supabase
+              .from("objects")
+              .select(`
+                *,
+                chimneys (
+                  id,
+                  object_id,
+                  chimney_type_id,
+                  placement,
+                  appliance,
+                  note,
+                  chimney_type:chimney_types (
+                    id,
+                    type,
+                    labelling
+                  )
+                )
+              `)
+              .eq("client_id", client.id),
+            
+            supabase
+              .from("projects")
+              .select(`
+                *,
+                project_assignments (
+                  user_profiles (id, name, email)
+                ),
+                project_objects (
+                  objects (
+                    id,
+                    client_id,
+                    address,
+                    city, 
+                    streetNumber,
+                    country,
+                    chimneys (
+                      id,
+                      chimney_types (id, type, labelling),
+                      placement,
+                      appliance,
+                      note
+                    )
+                  )
+                )
+              `)
+              .eq("client_id", client.id)
+              .order('created_at', { ascending: false })
+          ]);
+    
+          if (objectsResult.error) throw objectsResult.error;
+          if (projectsResult.error) throw projectsResult.error;
+    
+          // Process objects
+          if (objectsResult.data) {
+            const processedObjects: ObjectWithRelations[] = objectsResult.data.map((objectItem: any) => ({
+              object: objectItem,
+              client: client,
+              chimneys: objectItem.chimneys || [],
+            }));
+            setObjectsWithRelations(processedObjects);
+          }
+    
+          // Process projects
+          if (projectsResult.data) {
+            const processedProjects: ProjectWithRelations[] = projectsResult.data.map((projectItem: any) => {
+              const users = projectItem.project_assignments
+                ?.map((pa: any) => pa.user_profiles)
+                .filter(Boolean) || [];
+    
+              const objects = projectItem.project_objects
+                ?.map((po: any) => {
+                  if (!po.objects) return null;
+    
+                  const chimneys = po.objects.chimneys
+                    ?.map((c: any) => ({
+                      id: c.id,
+                      type: c.chimney_types?.type || null,
+                      labelling: c.chimney_types?.labelling || null,
+                      appliance: c.appliance,
+                      placement: c.placement,
+                      note: c.note
+                    }))
+                    .filter(Boolean) || [];
+    
+                  return {
+                    object: po.objects,
+                    chimneys: chimneys
+                  };
+                })
+                .filter(Boolean) || [];
+    
+              return {
+                project: projectItem,
+                client: client,
+                users: users,
+                objects: objects,
+              };
+            });
+    
+            setProjectsWithRelations(processedProjects);
+          }
+        } 
+        catch (err: any) {
+          console.error('Error fetching relations:', err);
+          setError(err.message || 'Nepodarilo sa načítať dáta');
+        } 
+        finally {
+          setLoading(false);
+        }
     }
 
-    if (error) {
-        return (
-            <View className="flex-1 items-center justify-center">
-                <Body className="text-red-500">{error}</Body>
-            </View>
-        );
-    }
-
-    const handleNavigateAndRefresh = async (pathname: any, params: any) => {
+    const handleNavigateAndRefresh = useCallback(async (pathname: any, params: any) => {
         onClose(); 
         router.push({ pathname, params });
-    };
+    },[router, onClose]);
 
-    const handleEditClient = () => {
+    // handler for editing client
+    const handleEditClient = useCallback(() => {
+        if(!canEdit) return;
+
         onClose();
         router.push({
         pathname: "/addClientScreen",
@@ -211,9 +238,12 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
             mode: "edit" 
             }
         });
-    };
+    }, [router, onClose, canEdit, client]);
 
-    const handleDeleteClient = () => {
+    // handler for deleting client
+    const handleDeleteClient = useCallback(() => {
+        if(!canEdit) return;
+
         try{
             deleteClient(client.id);
             onClose();
@@ -221,7 +251,15 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
           catch (error){
             console.error("Delete failed:", error);
           }
-    };
+    }, [deleteClient, onClose, canEdit, client.id]);
+
+    if (error) {
+        return (
+            <View className="flex-1 items-center justify-center">
+                <Body className="text-red-500">{error}</Body>
+            </View>
+        );
+    }
     
     return (
         <Modal
@@ -237,7 +275,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                 <View className="px-4 py-6 border-b border-gray-400">
                   <View className="flex-row items-center justify-between">
                     <View>
-                      <Heading3 className="text-xl font-bold text-dark-text_color mb-1">{client.name}</Heading3>   
+                      <Heading3 selectable className="text-xl font-bold text-dark-text_color mb-1">{client.name}</Heading3>   
                       <BodySmall className="text-sm text-dark-text_color">{client.type}</BodySmall>
                     </View>
                     {/* Close details modal */}
@@ -253,8 +291,8 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                 {/* Client Info */}
                 <ScrollView className="max-h-screen-safe-offset-12 p-4">
 
-                    <ScrollView className="flex-1">
-                        {!canEdit && <Body style={{color: "#F59E0B"}}>`Tohto klienta upravuje používateľ ${lockedByName}`</Body>}
+                    <View className="flex-1">
+                        {!canEdit && !checkingLock && <Body style={{color: "#F59E0B"}}>Tohto klienta upravuje používateľ {lockedByName}</Body>}
                         <NotificationToast
                           screen="clientDetails"
                         />
@@ -262,28 +300,28 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                             {client.unformatted_email && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="email" size={20} color={"white"}/>
-                                    <Body className="text-dark-text_color ml-2">{client.unformatted_email}</Body>
+                                    <Body selectable className="text-dark-text_color ml-2">{client.unformatted_email}</Body>
                                 </View>
                             )}
 
                             {client.phone && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="phone" size={20} color={"white"}/>
-                                    <BodyLarge className="text-dark-text_color ml-2 text-lg">{client.phone}</BodyLarge>
+                                    <BodyLarge selectable className="text-dark-text_color ml-2 text-lg">{client.phone}</BodyLarge>
                                 </View>
                             )}
 
                             {client.address && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="location-pin" size={20} color={"white"}/>
-                                    <Body className="text-dark-text_color ml-2">{client.address}</Body>
+                                    <Body selectable className="text-dark-text_color ml-2">{client.address}</Body>
                                 </View>
                             )}
 
                             {client.note && (
                                 <View className="flex-row items-center mb-2">
                                     <MaterialIcons name="notes" size={20} color={"white"}/>
-                                    <Body className="text-dark-text_color w-80 ml-2">{client.note}</Body>
+                                    <Body selectable className="text-dark-text_color w-80 ml-2">{client.note}</Body>
                                 </View>
                             )}
                         </View>
@@ -340,7 +378,6 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                         <View className="mb-3">
                             <View className="flex-row items-center justify-between mb-2">
                                 <Body className="text-gray-400 mt-2">PROJEKTY ({projectsWithRelations.length})</Body>
-
                                 <TouchableOpacity
                                     activeOpacity={0.8}
                                     className="flex-row gap-2 bg-gray-500 py-2 px-4 rounded-lg"
@@ -371,7 +408,7 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                                 ))
                             )}
                         </View>
-                    </ScrollView>
+                    </View>
                 </ScrollView>
 
                 {/* FOOTER */}  

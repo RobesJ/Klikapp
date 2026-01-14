@@ -65,14 +65,13 @@ function ClientCardSkeleton() {
 // Full Clients List Skeleton
 export function ClientsListSkeleton() {
     return (
-      <View className="px-5">
+      <View>
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <ClientCardSkeleton key={i} />
         ))}
       </View>
     );
 }
-
 
 function ObjectCardSkeleton() {
     return (
@@ -82,11 +81,11 @@ function ObjectCardSkeleton() {
 
         <View className="flex-2 px-6">
           {/* Client name */}
-          <View className="flex-row justify-center items-center border-t border-gray-400">
+          <View className="flex-row justify-center items-center border-t border-gray-600">
                 <Skeleton width="70%" height={14} borderRadius={4} />
                 <Skeleton width="10%" height={14} borderRadius={4} />
           </View>
-          <View className="flex-row justify-center items-center border-t border-gray-400">
+          <View className="flex-row justify-center items-center border-t border-gray-600">
                 <Skeleton width="70%" height={14} borderRadius={4} />
                 <Skeleton width="10%" height={14} borderRadius={4} />
           </View>
@@ -98,7 +97,7 @@ function ObjectCardSkeleton() {
 // Full Clients List Skeleton
 export function ObjectsListSkeleton() {
     return (
-      <View className="px-5">
+      <View>
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <ObjectCardSkeleton key={i} />
         ))}
@@ -126,7 +125,7 @@ function ProjectCardSkeleton() {
 // Full Clients List Skeleton
 export function ProjectsListSkeleton() {
     return (
-      <View className="px-5">
+      <View>
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <ProjectCardSkeleton key={i} />
         ))}
@@ -136,7 +135,7 @@ export function ProjectsListSkeleton() {
 
 export function PlanningListSkeleton() {
     return (
-      <View className="px-5">
+      <View>
         {[1, 2, 3].map((i) => (
           <ProjectCardSkeleton key={i} />
         ))}

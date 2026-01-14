@@ -7,6 +7,7 @@ import { ProjectsListSkeleton } from '@/components/skeletons/skeleton';
 import { Body, Heading1, Heading2 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';
 import { useProjectStore } from '@/store/projectStore';
+import { ProjectWithRelations } from '@/types/projectSpecific';
 import { FONT_SIZES } from '@/utils/responsive';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
@@ -58,6 +59,13 @@ export default function Projects() {
   );
 
   useEffect(() => {
+    const filteredProjects = getFilteredProjects(filters);
+    const hasActiveFilters = 
+      filters.searchQuery || 
+      filters.state.length > 0 || 
+      filters.type.length > 0 || 
+      filters.users.length > 0;
+  
     const shouldFetch = 
       filteredProjects.length < MINIMUM_RESULTS &&
       !backgroundLoading &&
@@ -68,7 +76,7 @@ export default function Projects() {
       const amountToFetch = MINIMUM_RESULTS - filteredProjects.length;
       applySmartFilters(filters, Math.max(amountToFetch, 30));
     }
-  }, [filters, getFilteredProjects]);
+  }, [filters, backgroundLoading, metadata.projects.hasMore]);
 
   const filterSections = [
     {
@@ -108,10 +116,10 @@ export default function Projects() {
 
   const filteredProjects = getFilteredProjects(filters);
     
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     fetchActiveProjects();
     fetchPlannedProjects();
-  };
+  },[fetchActiveProjects, fetchPlannedProjects]);
 
   const handleSearch = (text: string) => {
     setSearchText(text);
@@ -128,22 +136,29 @@ export default function Projects() {
 
   const hasActiveFilters = filters.searchQuery || (filters.state.length > 0 ) || (filters.type.length > 0) || (filters.users.length > 0);
 
-  const handleModalVisibility = (projectID: string, value: boolean) => {
+  const handleModalVisibility = useCallback((projectID: string, value: boolean) => {
     setSelectedProjectID(projectID);
     setShowDetails(value);
-  };
+  }, [selectedProjectID]);
 
   async function loadMoreProjects() {
     loadMore(filters, 30);
   };
 
-  const handleCloseWithUnlock = () => {
+  const handleCloseWithUnlock = useCallback(() => {
       setShowDetails(false);
       if(selectedProjectID && user){
         unlockProject(selectedProjectID, user.id);
       }
       setSelectedProjectID(null);
-  };
+  }, [selectedProjectID, unlockProject]);
+
+  const handleAddProject = useCallback(() => {
+    router.push({
+      pathname: "/addProjectScreen",
+      params: {mode: "create"}
+    });
+  }, [router]);
 
   const inputStyle = useMemo((): TextStyle => {
     const size = FONT_SIZES["lg"];
@@ -153,24 +168,37 @@ export default function Projects() {
     };
   },[]);
 
+  const renderItem = useCallback(({item}: {item: ProjectWithRelations}) => {
+    return(
+        <ProjectCard
+            project={item.project}
+            client={item.client}
+            users={item.users}
+            objects={item.objects}
+            onPress={() => handleModalVisibility(item.project.id, true)}
+        />
+    );
+  }, [handleModalVisibility]);
+
   return (
     <View
       style={{
         paddingTop: insets.top,
+        paddingHorizontal: 16,
         paddingBottom: insets.bottom,
         flex: 1,
         backgroundColor: "#0c1026",
       }}
     >
       {/* HEADER */}
-      <View className="mt-4 px-6 mb-4">
+      <View className=" mb-4">
         <View className="flex-row justify-between">
         <TouchableOpacity
             onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
             activeOpacity={0.8}
             className="justify-center"
           >
-            <EvilIcons name="navicon" size={32} color="white" />
+            <EvilIcons name="navicon" size={36} color="white" />
           </TouchableOpacity>
           <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Heading1>
           
@@ -236,41 +264,37 @@ export default function Projects() {
         />
       </View>
       
-      {filteredProjects.length === 0 ? (
-          <ProjectsListSkeleton/>
-      ) : (
-          <FlatList
-            data={filteredProjects}
-            keyExtractor={(item) => item?.project?.id || Math.random().toString()}
-            renderItem={({item}) =>(
-              <ProjectCard
-                  project={item.project}
-                  client={item.client}
-                  users={item.users}
-                  objects={item.objects}
-                  onPress={() => handleModalVisibility(item.project.id, true)}
+      <View className='flex-1 pb-16'>
+          {filteredProjects.length === 0 ? (
+              <ProjectsListSkeleton/>
+          ) : (
+              <FlatList
+                data={filteredProjects}
+                keyExtractor={(item) => item.project.id}
+                renderItem={renderItem}
+                refreshing={backgroundLoading}
+                onRefresh={handleRefresh}
+                onEndReached={loadMoreProjects}
+                ListEmptyComponent={
+                  backgroundLoading ? (
+                    <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
+                  ) : (
+                    <Body className="text-center text-gray-500 mt-10">Žiadne projekty</Body>
+                  )
+                }
+              
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                updateCellsBatchingPeriod={50}
+                initialNumToRender={15}
+                windowSize={10}
               />
-            )}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
-            refreshing={backgroundLoading}
-            onRefresh={handleRefresh}
-            onEndReached={loadMoreProjects}
-            ListEmptyComponent={
-              backgroundLoading ? (
-                <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
-              ) : (
-                <Body className="text-center text-gray-500 mt-10">Žiadne projekty</Body>
-              )
-            }
-          />
-      )}
+          )}
+      </View>
       {/* Add new project buton*/}
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => {router.push({
-          pathname: "/addProjectScreen",
-          params: { mode: "create" }
-        })}}
+        onPress={handleAddProject}
         className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
       >
         <Heading2 className='text-white'> + </Heading2>

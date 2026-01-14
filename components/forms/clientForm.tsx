@@ -6,7 +6,7 @@ import { validateAndNormalizePhone } from "@/utils/phoneInputValidation";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { AsYouType } from "libphonenumber-js";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
 import { NotificationToast } from "../notificationToast";
@@ -184,7 +184,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         return { isDuplicate: false, duplicateInfoQuit: [], duplicateInfoWarn: []};
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         
         if(!validate()){
             return;
@@ -298,12 +298,12 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         finally{
             setLoading(false);
         }
-    };
+    },[initialData, formData, validate, checkDuplicateWithFuzzy]);
 
-    const handleSelectedType = (type: string) => {
+    const handleSelectedType = useCallback((type: string) => {
         setSelectedType(type);
         setFormData(prev => ({...prev, type: type}))
-    };
+    }, [selectedType, formData]);
 
     return (
         <View className="flex-1">
@@ -326,11 +326,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                 </View>
                 
                 {/* Form */}
-                <View className="flex-1 mb-24 justify-center px-10">
-                    <ScrollView 
-                      className="flex-1"
-                      contentContainerStyle={{paddingHorizontal: 16, paddingTop: 16}}
-                    >   
+                <View className="flex-1 px-10">
                         <NotificationToast
                           screen="clientForm"
                         />
@@ -461,7 +457,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
                             multiline
                             numberOfLines={3}
                         />
-                    </ScrollView>
+                
                 </View>
             </KeyboardAvoidingView>
             

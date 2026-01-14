@@ -70,9 +70,7 @@ export default function ProjectDetails({
       takePhoto,
       pickFromGallery,
       deletePhoto
-    } = useHandlePhotos({ 
-      projectWithRelations: projectWithRelations!
-    });
+    } = useHandlePhotos({ projectWithRelations: projectWithRelations! });
 
     if (!projectWithRelations) {
         return null;
@@ -261,27 +259,27 @@ export default function ProjectDetails({
         }
     };
 
-    const handlePressGeneratePDF = () => {
+    const handlePressGeneratePDF = useCallback(() => {
         if(projectWithRelations.project.type === "Čistenie"){
             setpdfGenModalVisible(true);
         }
         else{
             handleGeneratePDF("inspection");
         }
-    };
+    }, [handleGeneratePDF]);
 
-    const closePdfModal = () => {
+    const closePdfModal = useCallback(() => {
         setpdfGenModalVisible(false);
         setChimneySums({});
-    };
+    }, [chimneySums]);
 
-    const handleCloseViewer = () => {
+    const handleCloseViewer = useCallback(() => {
         setShowPDFReports(false);
         setShowGallery(false);
         setSelectedPDF(null);
         setSelectedPhoto(null);
         setChimneySums({});
-    };
+    }, [selectedPDF, chimneySums, selectedPhoto]);
 
     const handlePdfGenerationWithClose = useCallback((type: "cleaningWithPaymentReceipt" | "cleaning", chimneyId?: string) => {
         console.log("Called generation wiht chimney sums:", chimneySums);
@@ -295,9 +293,9 @@ export default function ProjectDetails({
             handleGeneratePDF(type);
         }
         handleCloseViewer();
-    }, [chimneySums]);
+    }, [chimneySums, handleGeneratePDF, handleCloseViewer]);
 
-    const handleRegeneratePDF = async (pdf: PDF) => {
+    const handleRegeneratePDF = useCallback(async (pdf: PDF) => {
         try {
             const newPDF = await regeneratePDFUtil(pdf);
             
@@ -323,7 +321,7 @@ export default function ProjectDetails({
                 4000
             );
         }
-    };
+    },[PDFs, regeneratePDFUtil, handleCloseViewer]);
 
     return (
         <Modal

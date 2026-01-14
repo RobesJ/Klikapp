@@ -244,18 +244,18 @@ export default function Settings() {
         <View 
             style={{
                 paddingTop: insets.top,
+                paddingHorizontal: 16,
                 paddingBottom: insets.bottom,
                 flex: 1
             }}
             className="bg-dark-bg"
         >
-            {/*<Animated.View style={[animatedStyle, { flex: 1 }]}> */}
             <View>
                 {/* Header */}
                 <View className="mb-12 relative">                
                     <TouchableOpacity
                       onPress={() => router.back()}
-                      className="absolute top-3 left-6 w-10 h-10 items-center justify-center z-10"
+                      className="absolute top-3 left-2 w-10 h-10 items-center justify-center z-10"
                     >
                         <MaterialIcons name="arrow-back" size={24} color="#d6d3d1" />
                     </TouchableOpacity>
@@ -267,7 +267,7 @@ export default function Settings() {
                     </View> 
                 </View>
 
-                <View className="flex-2 px-6">
+                <View className="flex-2 px-2">
                     {/* User name changing */}
                     <Body className="text-dark-text_color">Používateľské meno</Body>
                     {!changeNamePressed 
