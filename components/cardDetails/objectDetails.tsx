@@ -40,9 +40,9 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
     }
   }, [objectWithRelations.object.id]);
 
-  const fetchPDFs = async () => {
+  async function fetchPDFs(){
     setLoadingPDFs(true);
-    try{
+    try {
         const {data, error} = await supabase
             .from("pdfs")
             .select('*')
@@ -52,10 +52,10 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
         if (error) throw error;
         setPDFs(data || []);
     }
-    catch(error: any){
+    catch (error: any) {
         console.log("Error fetching pdfs:", error);
     }
-    finally{
+    finally {
         setLoadingPDFs(false);
     }
   };

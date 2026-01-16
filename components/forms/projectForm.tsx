@@ -8,7 +8,7 @@ import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { BadgeSelector, ModalSelector, STATE_OPTIONS, TYPE_OPTIONS } from "../badge";
 import { FormInput } from "../formInput";
@@ -27,19 +27,10 @@ interface ProjectFormProps{
 
 export default function ProjectForm({ mode, initialData, onSuccess, preselectedClientID} : ProjectFormProps) {
 
-    const [formData, setFormData] =  useState<Omit<Project, 'id'> & { id?: string }>({
-        client_id: initialData?.client.id ?? preselectedClientID ?? "",
-        type: initialData?.project.type ?? "",
-        state: initialData?.project.state ?? "",
-        scheduled_date: initialData?.project.scheduled_date ?? null,
-        start_date: initialData?.project.start_date ?? null,
-        completion_date: initialData?.project.completion_date ?? null,
-        note: initialData?.project.note ?? "",
-      });
-
     const router = useRouter();
     const { width } = useWindowDimensions();
     const { availableUsers, fetchAvailableUsers } = useProjectStore();
+
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [focusedField, setFocusedField] = useState<string | null>(null);
 
@@ -56,6 +47,17 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     const [loadingObjects, setLoadingObjects] = useState(false);
     const [assignedObjects, setAssignedObjects] = useState<ObjectWithRelations[]>(initialData?.objects ?? [] );
     const [showObjectModal, setShowObjectModal] = useState(false);
+    
+    const [formData, setFormData] =  useState<Omit<Project, 'id'> & { id?: string }>({
+        client_id: initialData?.client.id ?? preselectedClientID ?? "",
+        type: initialData?.project.type ?? "",
+        state: initialData?.project.state ?? "",
+        scheduled_date: initialData?.project.scheduled_date ?? null,
+        start_date: initialData?.project.start_date ?? null,
+        completion_date: initialData?.project.completion_date ?? null,
+        note: initialData?.project.note ?? "",
+      });
+
     let oldState: string = initialData ? initialData.project.state : '';
 
     const {loading, submitProject } = useProjectSubmit({mode, oldState, initialData, onSuccess}); 
@@ -129,7 +131,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
     }, [showUserModal]);
 
     
-    const validate = () : boolean => {
+    function validate () : boolean {
         const newErrors: Record<string, string> = {};
 
         if (!formData.client_id?.trim()){
@@ -150,7 +152,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         if(!validate()){
             return;
         }
@@ -158,37 +160,37 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
             await submitProject(formData, selectedUsers, assignedObjects);
         }
         catch (error){}
-    };
+    }, [validate, submitProject]);
     
-    const handleSelectedType = (type: string) => {
+    const handleSelectedType = useCallback((type: string) => {
         setSelectedType(type);
         setFormData(prev => ({...prev, type: type}));
-    };
+    }, []);
 
-    const handleSelectedState = (state: string) => {
+    const handleSelectedState = useCallback((state: string) => {
         setSelectedState(state);
         setFormData(prev => ({...prev, state: state}));
-    };
+    }, []);
     
-    const handleScheduledDate = (date: Date | null) =>{
+    const handleScheduledDate = useCallback((date: Date | null) =>{
         setScheduledDate(date);
         const convertDate2String = date ? date.toISOString().split('T')[0] : null;
         setFormData(prev => ({...prev, scheduled_date: convertDate2String }));
-    };
+    }, []);
 
-    const handleStartdDate = (date: Date | null) =>{
+    const handleStartdDate = useCallback((date: Date | null) =>{
         setStartDate(date);
         const convertDate2String1 = date ? date.toISOString().split('T')[0] : null;
         setFormData(prev => ({...prev, start_date: convertDate2String1}));
-    };
+    }, []);
 
-    const handleCompletionDate = (date: Date | null) =>{
+    const handleCompletionDate = useCallback((date: Date | null) =>{
         setCompletionDate(date);
         const convertDate2String2 = date ? date.toISOString().split('T')[0] : null;
         setFormData(prev => ({...prev, completion_date: convertDate2String2 }));
-    };
+    }, []);
 
-    const handleToggleUser = async (userId: string) => {
+    const handleToggleUser = useCallback((userId: string) => {
         setSelectedUsers(prev => {
             const isSelected = prev.some(u => u.id === userId);
             
@@ -203,11 +205,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 return [...prev, user];
             }
         });
-    };
+    }, [selectedUsers]);
 
-    const handleRemoveUser = (userId: string) => {
+    const handleRemoveUser = useCallback((userId: string) => {
         setSelectedUsers(prev => prev.filter(c => c.id !== userId));
-    };
+    }, [selectedUsers]);
 
     async function getAllClientsObjects(): Promise<boolean> {
         if(!formData.client_id) {
@@ -288,7 +290,7 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
     };
 
-    const handleToggleObject = (objectId: string) => {
+    const handleToggleObject = useCallback((objectId: string) => {
         setAssignedObjects(prev => {
             const isSelected = prev.some(o => o.object.id === objectId);
             
@@ -304,11 +306,11 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
                 return [...prev, object];
             }
         });
-    };
+    }, [assignedObjects]);
 
-    const handleRemoveObject = (objectId: string) => {
+    const handleRemoveObject = useCallback((objectId: string) => {
         setAssignedObjects(prev => prev.filter(c => c.object.id !== objectId));
-    };
+    }, [assignedObjects]);
 
     return (
         <View className="flex-1">

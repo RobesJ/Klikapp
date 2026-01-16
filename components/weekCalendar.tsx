@@ -1,6 +1,6 @@
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import { sk } from "date-fns/locale";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { BodyLarge, Caption, Heading1, Heading3 } from "./typography";
 
@@ -25,18 +25,18 @@ export default function WeekCalendar({selectedDay, onDateSelect, initialWeekStar
 
     const weekDays = Array.from({ length: 7}, (_, i) => addDays(currentWeekStart,i));
 
-    const goToPreviousWeek = () => {
+    const goToPreviousWeek = useCallback(() => {
         setCurrentWeekStart(addDays(currentWeekStart, -7));
-    };
+    }, [currentWeekStart]);
 
-    const goToNextWeek = () => {
+    const goToNextWeek = useCallback(() => {
         setCurrentWeekStart(addDays(currentWeekStart, 7));
-    };
+    }, [currentWeekStart]);
 
-    const goToToday = () => {
+    const goToToday = useCallback(() => {
         setCurrentWeekStart(startOfWeek(new Date(), {weekStartsOn: 1}));
         onDateSelect(new Date());
-    };
+    }, [currentWeekStart]);
 
     const horizontalPadding = 32; // px-4 = 16 on each side
     const arrowSpace = 80; // Space for arrows and gaps

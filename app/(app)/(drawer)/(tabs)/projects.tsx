@@ -11,10 +11,13 @@ import { ProjectWithRelations } from '@/types/projectSpecific';
 import { FONT_SIZES } from '@/utils/responsive';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
+import { FlashList } from '@shopify/flash-list';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const MINIMUM_RESULTS = 20;
 
 export default function Projects() {
   const insets = useSafeAreaInsets();
@@ -22,14 +25,17 @@ export default function Projects() {
   const { user } = useAuth();
   const dpi = PixelRatio.get();
   const navigation = useNavigation();
+
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProjectID, setSelectedProjectID] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
 
+  const isInitialMount = useRef(true);
+  const lastFilterCheck = useRef(0);
+
   const {
     backgroundLoading,
-    //projects,
     metadata,
     availableUsers,
     fetchActiveProjects,
@@ -46,19 +52,30 @@ export default function Projects() {
     removeFilter,
     unlockProject
   } = useProjectStore();
-  
-  const MINIMUM_RESULTS = 20;
 
+  // clear filters on screen blur
   useFocusEffect(
     useCallback(() => {
       return () => {
         clearFilters();
         setFilters({searchQuery: ''});
+        setSearchText('');
       }
     }, [clearFilters, setFilters])
   );
 
   useEffect(() => {
+    if(isInitialMount.current){
+      isInitialMount.current = false;
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastFilterCheck.current < 300){
+      return;
+    }
+    lastFilterCheck.current = now;
+
     const filteredProjects = getFilteredProjects(filters);
     const hasActiveFilters = 
       filters.searchQuery || 
@@ -67,18 +84,16 @@ export default function Projects() {
       filters.users.length > 0;
   
     const shouldFetch = 
-      filteredProjects.length < MINIMUM_RESULTS &&
-      !backgroundLoading &&
-      metadata.projects.hasMore && 
-      (hasActiveFilters || filteredProjects.length === 0);
+      filteredProjects.length < MINIMUM_RESULTS && !backgroundLoading &&
+      metadata.projects.hasMore &&  (hasActiveFilters || filteredProjects.length === 0);
   
     if (shouldFetch) {
       const amountToFetch = MINIMUM_RESULTS - filteredProjects.length;
       applySmartFilters(filters, Math.max(amountToFetch, 30));
     }
-  }, [filters, backgroundLoading, metadata.projects.hasMore]);
+  }, [filters, backgroundLoading, metadata.projects.hasMore, getFilteredProjects, applySmartFilters]);
 
-  const filterSections = [
+  const filterSections = useMemo(() =>[
     {
       id: 'type',
       title: 'Typ',
@@ -112,7 +127,7 @@ export default function Projects() {
       selectedValues: filters.users,
       onToggle: toggleUserFilter,
     },
-  ];
+  ], [filters.type, filters.state, filters.users, availableUsers, toggleStateFilter, toggleTypeFilter, toggleUserFilter]);
 
   const filteredProjects = getFilteredProjects(filters);
     
@@ -121,29 +136,29 @@ export default function Projects() {
     fetchPlannedProjects();
   },[fetchActiveProjects, fetchPlannedProjects]);
 
-  const handleSearch = (text: string) => {
+  const handleSearch = useCallback((text: string) => {
     setSearchText(text);
     setFilters({searchQuery: text});
-  };
+  }, [setFilters]);
 
-  const getActiveFilters = () => {
-    return [
+  const activeFilters = useMemo(() => [
       ...filters.type.map(t => ({ type: "type" as const, value: t })),
       ...filters.state.map(s => ({ type: "state" as const, value: s })),
       ...filters.users.map(u => ({ type: "users" as const, value: u }))
-    ];
-  };
+    ], [filters.type, filters.state, filters.users]);
 
-  const hasActiveFilters = filters.searchQuery || (filters.state.length > 0 ) || (filters.type.length > 0) || (filters.users.length > 0);
+  //const hasActiveFilters = useMemo(() =>
+  //  !!(filters.searchQuery || (filters.state.length > 0 ) || (filters.type.length > 0) || (filters.users.length > 0)),
+  //[filters.searchQuery, filters.state.length, filters.type.length, filters.users.length]);
 
   const handleModalVisibility = useCallback((projectID: string, value: boolean) => {
     setSelectedProjectID(projectID);
     setShowDetails(value);
-  }, [selectedProjectID]);
+  }, []);
 
-  async function loadMoreProjects() {
+  const loadMoreProjects = useCallback(() => {
     loadMore(filters, 30);
-  };
+  },[loadMore, filters]);
 
   const handleCloseWithUnlock = useCallback(() => {
       setShowDetails(false);
@@ -180,6 +195,48 @@ export default function Projects() {
     );
   }, [handleModalVisibility]);
 
+  const keyExtractor = useCallback((item: ProjectWithRelations) => item.project.id, []);
+
+  // TODO finish this
+  const renderFilterPills = useCallback(() => {
+    if (activeFilters.length === 0) return null;
+
+    return (
+  
+      <View className="px-6 mt-4">
+        <View className="flex-row flex-wrap">
+          {activeFilters.map((filter, index) => {
+            let pillColor = "bg-blue-100";
+            let textColor = "text-blue-700";
+
+            if (filter.type === 'type') {
+              const typeOption = TYPE_OPTIONS.find(s => s.value === filter.value);
+              pillColor = typeOption?.colors[1] ?? "bg-yellow-100";
+              textColor = typeOption?.colors[0] ?? "bg-yellow-700";
+            } 
+            else if (filter.type === "state") {
+              const stateOption = STATE_OPTIONS.find(s => s.value === filter.value);
+              pillColor = stateOption?.colors[1] ?? "bg-yellow-100";
+              textColor = stateOption?.colors[0] ?? "bg-yellow-700";
+            }
+
+            return (
+              <TouchableOpacity
+                key={`${filter.type}-${filter.value}-${index}`}
+                onPress={() => removeFilter(filter.type, filter.value)}
+                className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
+              >
+                <Body className={`${textColor} font-medium mr-1`}>{filter.value}</Body>
+                <Body className={`${textColor} font-bold`}>✕</Body>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    )
+  }, [activeFilters, removeFilter]);
+
+
   return (
     <View
       style={{
@@ -202,7 +259,7 @@ export default function Projects() {
           </TouchableOpacity>
           <Heading1 allowFontScaling={false} className="font-bold text-4xl text-dark-text_color ml-4">Projekty</Heading1>
           
-            <View className='justify-between items-center'>
+          <View className='justify-between items-center'>
               <Body className="text-xl text-green-500 mb-1">ONLINE</Body>
               <TouchableOpacity
                 onPress={() => {setShowFilterModal(true)}}
@@ -211,7 +268,6 @@ export default function Projects() {
               >
                 <Feather name="filter" size={20} color="white" />
               </TouchableOpacity>
-            
           </View>
         </View>
 
@@ -219,9 +275,9 @@ export default function Projects() {
         <View className="flex-row items-center border-2 border-gray-500 rounded-xl px-4 py-1 mt-4 mb-4">
           <EvilIcons name="search" size={20} color="gray" />
           <TextInput
-            className="ml-2 text-dark-text_color py-3"
+            className="flex-1 ml-2 text-dark-text_color py-3"
             style={inputStyle}
-            placeholder='Vyhladajte klienta alebo mesto...'
+            placeholder='Vyhľadajte klienta alebo mesto...'
             placeholderTextColor="#9CA3AF"
             value={searchText}
             onChangeText={handleSearch}
@@ -229,52 +285,23 @@ export default function Projects() {
         </View>
 
         {/* Active filters indicator */}
-        {getActiveFilters().length > 0 && (
-          <View className="px-6 mt-4">
-            <View className="flex-row flex-wrap">
-              {getActiveFilters().map((filter, index) => {
-                let pillColor = "bg-blue-100";
-                let textColor = "text-blue-700";
+        {renderFilterPills()}
 
-                if (filter.type === 'type') {
-                  pillColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
-                  textColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
-                } 
-                else {
-                  pillColor = STATE_OPTIONS.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
-                  textColor = STATE_OPTIONS.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
-                }
-
-                return (
-                  <TouchableOpacity
-                    key={`${filter.type}-${filter.value}-${index}`}
-                    onPress={() => removeFilter(filter.type, filter.value)}
-                    className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
-                  >
-                    <Body className={`${textColor} font-medium mr-1`}>{filter.value}</Body>
-                    <Body className={`${textColor} font-bold`}>✕</Body>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-        <NotificationToast
-          screen="projects"
-        />
+        <NotificationToast screen="projects" />
       </View>
       
       <View className='flex-1 pb-16'>
           {filteredProjects.length === 0 ? (
               <ProjectsListSkeleton/>
           ) : (
-              <FlatList
+              <FlashList
                 data={filteredProjects}
-                keyExtractor={(item) => item.project.id}
+                keyExtractor={keyExtractor}
                 renderItem={renderItem}
                 refreshing={backgroundLoading}
                 onRefresh={handleRefresh}
                 onEndReached={loadMoreProjects}
+                onEndReachedThreshold={0.5}
                 ListEmptyComponent={
                   backgroundLoading ? (
                     <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
@@ -282,12 +309,6 @@ export default function Projects() {
                     <Body className="text-center text-gray-500 mt-10">Žiadne projekty</Body>
                   )
                 }
-              
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                updateCellsBatchingPeriod={50}
-                initialNumToRender={15}
-                windowSize={10}
               />
           )}
       </View>
@@ -297,7 +318,7 @@ export default function Projects() {
         onPress={handleAddProject}
         className={`absolute bottom-24 right-6 ${dpi > 2.5 ? "w-16 h-16" : "w-20 h-20" } justify-center items-center border border-white z-10 rounded-full bg-blue-600`}
       >
-        <Heading2 className='text-white'> + </Heading2>
+        <Heading2 className='text-white'>+</Heading2>
       </TouchableOpacity>
       
       {/* Project details modal */}

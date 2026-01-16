@@ -1,5 +1,5 @@
 import { EvilIcons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Modal, TouchableOpacity, View } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Body, Heading2, Heading3 } from './typography';
@@ -56,14 +56,14 @@ export default function ModernDatePicker({
     return `${year}-${month}-${day}`;
   };
 
-  const handleDayPress = (day: any) => {
+  const handleDayPress = useCallback((day: any) => {
     const selectedDate = new Date(day.year, day.month - 1, day.day);
     const isSameAsCurrent =
       value && selectedDate.toDateString() === value.toDateString();
 
     onChange(isSameAsCurrent ? null : selectedDate);
     setShow(false);
-  };
+  }, [onChange, show]);
 
   return (
     <View>

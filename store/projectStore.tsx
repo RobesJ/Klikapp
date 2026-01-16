@@ -39,7 +39,6 @@ interface ProjectsMetadata {
     count: number,
   },
   projects: {
-    //currentOffset: number;
     hasMore: boolean;
     totalCount: number;
     futureDate: string;
@@ -48,11 +47,10 @@ interface ProjectsMetadata {
 
 interface ProjectStore {
   projects: Map<string, ProjectWithRelations>;
-
+  projectsVersion: number;
   metadata: ProjectsMetadata;
   filters: ProjectFilters;
   availableUsers: User[];
-
   initialLoading : boolean;
   backgroundLoading: boolean;
   error: string | null;
@@ -106,6 +104,7 @@ const CACHE_DURATION = 300000; // 5 min
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Initial state
   projects: new Map(),
+  projectsVersion: 0,
   metadata: {
     filtered: {
       offset: 0,
@@ -131,16 +130,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   error: null,
 
   // ======== FETCHING FUNCTIONS ========
-
-  // Fetch all the projects that has state "Naplanovany dnes" | "Prebieha" | "Pozastaveny" ("should be less then 100")
-  // this function is called during initial loading
   fetchActiveProjects: async() => {
     const today = format(new Date(), "yyyy-MM-dd");
 
-    set({
-      initialLoading: true, 
-      error: null
-    });
+    set({ initialLoading: true, error: null });
 
     try {
       const { data, error} = await supabase
@@ -199,7 +192,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať aktívne projekty',
         'error',
-        "projects",
+        "home",
         4000
       );
     }
@@ -208,9 +201,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Fetch all the projects that has state "Novy" | "Naplanovany"
   // This function is called during background loading
   fetchPlannedProjects: async() => {
-    const {metadata, backgroundLoading} = get();
-    const now = Date.now();
-    const today = format(new Date(), "yyyy-MM-dd");
+    const { metadata } = get();
 
     //if (backgroundLoading && (now - metadata.planned.lastFetch) < CACHE_DURATION){
     //  if(metadata.planned.dateRange){
@@ -271,17 +262,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         const transformedProjects = transformProjects(data || []);
         const projectsMap = new Map(get().projects);
 
-        transformedProjects.forEach(p => {
-          projectsMap.set(p.project.id, p);
-        });
-        //console.log(projectsMap.size);
-
+        transformedProjects.forEach(p => projectsMap.set(p.project.id, p));
+        const today = format(new Date(), "yyyy-MM-dd");
         set({
           projects: projectsMap,
           metadata: {
             ...get().metadata,
             planned: {
-              lastFetch: now,
+              lastFetch: Date.now(),
               dateRange: {start: today, end: metadata.planned.futureDate},
               futureDate: metadata.planned.futureDate,
               count: count || 0
@@ -298,10 +286,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
     catch (error: any){
       console.error('Error fetching planned projects:', error);
-      set({
-        backgroundLoading: false, 
-        error: error.message
-      });
+      set({ backgroundLoading: false, error: error.message });
       useNotificationStore.getState().addNotification(
         'Nepodarilo sa načítať plánované projekty',
         'error',
@@ -618,8 +603,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   toggleTypeFilter:(type: string) => {
       set(state => {
         const types = state.filters.type.includes(type)
-          ? state.filters.type.filter(t => t !== type)  // Remove type from filter
-          : [...state.filters.type, type];              // Add new type to filter
+          ? state.filters.type.filter(t => t !== type) 
+          : [...state.filters.type, type];              
 
         return {
           filters: { ...state.filters, type: types},
@@ -637,8 +622,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   toggleStateFilter: (state: string) => {
     set(currentState => {
       const states = currentState.filters.state.includes(state)
-        ? currentState.filters.state.filter(t => t !== state)  // Remove state from filter
-        : [...currentState.filters.state, state];              // Add new state to filter
+        ? currentState.filters.state.filter(t => t !== state)  
+        : [...currentState.filters.state, state];             
 
       return {
         filters: { ...currentState.filters, state: states},
@@ -707,15 +692,18 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   
   updateProject: (id: string, updatedProject: ProjectWithRelations, showNotification: boolean) => {
     set(state => {
-      const newMap = new Map(state.projects);
-      const existing = newMap.get(id);
+      const existing = state.projects.get(id);
 
       if (existing && JSON.stringify(existing) === JSON.stringify(updatedProject)){
         return state;
       }
 
+      const newMap = new Map(state.projects);
       newMap.set(id, updatedProject);
-      return {projects: newMap};
+      return {
+        projects: newMap,
+        projectsVerion: state.projectsVersion + 1
+      };
     });
 
     if (showNotification) {
@@ -732,7 +720,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // delete project with optimistic updates
   deleteProject: async(id: string) => {
     Alert.alert(
-      'Odstrániť objekt',
+      'Odstrániť projekt',
       'Naozaj chcete odstrániť tento projekt?',
       [
         { text: 'Zrušiť', style: 'cancel' },
@@ -747,7 +735,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               newMap.delete(id);
               return {projects: newMap};
             });
-            //get().applySmartFilters(get().filters);
           
             try{
               const { error } = await supabase
@@ -792,7 +779,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   
   // ======== LOCK MANAGEMENT ========
   lockProject: async (id: string, userID: string, userName: string) => {
-    try{
+    try {
       const {data, error} = await supabase.rpc("lock_project_and_relations", {
         p_project_id: id,
         p_user_id: userID,
@@ -802,12 +789,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       if (error) throw error;
 
       if (!data?.[0].locked){
-         //useNotificationStore.getState().addNotification(
-         //  `Projekt upravuje používateľ ${data?.[0]?.locked_by_name}`,
-         //  "warning",
-         //  4000
-         //);
-
         return {
           success: false,
           lockedByName: data?.[0]?.locked_by_name ?? null
@@ -815,7 +796,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       }
 
       const project = get().projects.get(id);
-      if(project){
+      if (project) {
         const updated = {
           ...project,
           project: {
@@ -839,33 +820,38 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   unlockProject: async (id: string, userID: string) => {
-    const { error } = await supabase.rpc("unlock_project", {
-      p_project_id: id,
-      p_user_id: userID
-    });
+    try { 
+        const { error } = await supabase.rpc("unlock_project", {
+          p_project_id: id,
+          p_user_id: userID
+        });
 
-    if (error) throw error;
-    const project = get().projects.get(id);
-      if(project){
-        const updated = {
-          ...project,
-          project: {
-            ...project.project,
-            locked_by: null,
-            locked_by_name: null,
-            lock_expires_at: null
-          }
-        };
-        get().updateProject(id, updated, false);
-      }
+        if (error) throw error;
+        const project = get().projects.get(id);
+        if(project){
+          const updated = {
+            ...project,
+            project: {
+              ...project.project,
+              locked_by: null,
+              locked_by_name: null,
+              lock_expires_at: null
+            }
+          };
+          get().updateProject(id, updated, false);
+        }
+    }
+    catch (error: any){
+      console.error("Error unlokcing project:", error);
+    }
   },
 
   // ======== PLANNING FUNCTIONS ========
   assignProjectToDate: (projectId: string, date: Date) => {
-    try{
+    try {
       const dateStr = format(date, 'yyyy-MM-dd');
-      
       const project = get().projects.get(projectId);
+
       if (project) {
         const updated = {
           ...project,
@@ -875,10 +861,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             start_date: dateStr
           }
         };
-        console.log('Updated project in store:', updated.project.start_date);
         get().updateProject(projectId, updated, false);
       }
-      
     }
     catch(error: any){
       console.error("Error assigning project:", error);
@@ -887,8 +871,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   unassignProject: async(projectId: string) => {
-    try{
-      
+    try {
       const {error} = await supabase
         .from("projects")
         .update({
@@ -967,9 +950,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   }
 ));
 
-function transformProjects(data: any): ProjectWithRelations[]{
-  const projectWithRelations: ProjectWithRelations[] = data
-    .filter((projectItem: any) => projectItem && projectItem.id && projectItem.clients)
+function transformProjects(data: any): ProjectWithRelations[] {
+  return data
+    .filter((projectItem: any) => projectItem?.id && projectItem?.clients)
     .map((projectItem: any) => {
       const users: User[] = projectItem.project_assignments
         ?.map((pa: any) => pa.user_profiles)
@@ -1017,8 +1000,6 @@ function transformProjects(data: any): ProjectWithRelations[]{
         objects: objects,
       };
     });
-  //projectWithRelations.map(p => p.objects.map(o => o.chimneys.map(ch => console.log(ch))));
-  return projectWithRelations;
 }
 
 function isInitialFilter(filters: ProjectFilters) : boolean {

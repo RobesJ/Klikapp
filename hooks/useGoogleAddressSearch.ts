@@ -1,8 +1,9 @@
 import { AddressFields, Client } from "@/types/generics";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 export const useGoogleSearchAddress = <T extends AddressFields>(
-    handleChange: (field: keyof T , value: string) => void
+    handleChange: (field: keyof T , value: string) => void,
+    options?: { includePlaceId?: boolean }
 ) => {
 
     const [addressSearch, setAddressSearch] = useState('');
@@ -11,7 +12,7 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
     const [searchingAddress, setSearchingAddress] = useState(false);
     const API_KEY = process.env.EXPO_PUBLIC_MAPS_API_KEY;
 
-    const searchGoogleAddress = async (text: string) => {
+    const searchGoogleAddress = useCallback(async (text: string) => {
         setAddressSearch(text);
         handleChange("address" as keyof T, text);
 
@@ -43,9 +44,9 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
         } finally {
             setSearchingAddress(false);
         }
-    };
+    }, [handleChange]);
 
-    const selectClientAddress = async (preselectedClient: Client) => {
+    const selectClientAddress = useCallback(async (preselectedClient: Client) => {
         if(preselectedClient.address){
             const fullAddress = preselectedClient.address;
             handleChange("address", fullAddress);
@@ -61,7 +62,7 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
                 handleChange("country" as keyof T,preselectedClient.country);
             }
         }
-    };
+    }, [handleChange]);
 
     function parseAddressComponents(components: any[]) {
         let street: string | null = null;
@@ -93,10 +94,9 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
         }
     };
 
-    const selectAddress = async (suggestion: any) => {
+    const selectAddress = useCallback(async (suggestion: any) => {
         const fullAddress = suggestion.description;
         handleChange("address" as keyof T, fullAddress);
-        //handleChange("place_id"  as keyof T, suggestion.place_id);
         setAddressSearch(fullAddress);
         setShowAddressSuggestions(false);
         
@@ -117,7 +117,9 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
             }
             
             if (data.result) {
-                handleChange("place_id"  as keyof T, data.result.place_id);
+                if (options?.includePlaceId) {
+                    handleChange("place_id"  as keyof T, data.result.place_id);
+                }
                 if (data.result.address_components){
                     parseAddressComponents(data.result.address_components);
                 }
@@ -125,7 +127,7 @@ export const useGoogleSearchAddress = <T extends AddressFields>(
         } catch (error) {
             console.error('Error fetching place details:', error);
         }
-    };
+    }, [handleChange, setAddressSearch, addressSuggestions, parseAddressComponents]);
 
     return {
         addressSearch,

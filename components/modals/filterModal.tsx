@@ -1,5 +1,5 @@
 import { EvilIcons, Feather } from '@expo/vector-icons';
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Modal, ScrollView, Switch, TouchableOpacity, View } from "react-native";
 import { Body, BodySmall, Caption, Heading3 } from '../typography';
 
@@ -33,7 +33,7 @@ export default function FilterModal({
 }: FilterModalProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
-  const toggleSection = (sectionId: string) => {
+  const toggleSection = useCallback((sectionId: string) => {
     setExpandedSections(prev => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
@@ -43,7 +43,7 @@ export default function FilterModal({
       }
       return newSet;
     });
-  };
+  },[]);
 
   const totalFiltersCount = sections.reduce(
     (sum, section) => sum + section.selectedValues.length,

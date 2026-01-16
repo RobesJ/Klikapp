@@ -41,7 +41,7 @@ export const ChimneyTypeCreationModal = ({
         }
     };
 
-    const validate = () : boolean => {
+    function validate () : boolean {
         const newErrors : Record<string, string> = {};
 
         if (!chimneyTypeFormData.type.trim()) {

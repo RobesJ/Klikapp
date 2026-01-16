@@ -77,11 +77,11 @@ function ObjectCardSkeleton() {
     return (
       <View className="flex-2 bg-gray-800 rounded-lg p-4 mb-3">
         {/* Client info */}
-        <Skeleton width="30%" height={22} className="mb-2" borderRadius={4} />
+        <Skeleton width="30%" height={22} className="mb-4" borderRadius={4} />
 
         <View className="flex-2 px-6">
           {/* Client name */}
-          <View className="flex-row justify-center items-center border-t border-gray-600">
+          <View className="flex-row justify-center items-center border-t border-gray-600 mb-2">
                 <Skeleton width="70%" height={14} borderRadius={4} />
                 <Skeleton width="10%" height={14} borderRadius={4} />
           </View>

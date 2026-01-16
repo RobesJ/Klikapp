@@ -16,13 +16,16 @@ import { FlatList, Keyboard, PixelRatio, TextInput, TextStyle, TouchableOpacity,
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function Clients() {
+  const router = useRouter();
+  const dpi = PixelRatio.get();
+  const { user } = useAuth();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
   const [showDetails, setShowDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [searchText, setSearchText] = useState('');
 
-  const { user } = useAuth();
-  const dpi = PixelRatio.get();
   const hasInitialized = useRef(false);
 
   const {
@@ -36,9 +39,6 @@ export default function Clients() {
     clearFilters,
     unlockClient
   } = useClientStore();
-
-  const router = useRouter();
-  const navigation = useNavigation();
 
   useEffect(() => {
     if (!hasInitialized.current){

@@ -249,7 +249,7 @@ export default function ProjectDetails({
         }
     }, [users, projectWithRelations, updateProject]);
   
-    const toggleUserAssign = async (userId: string) => {
+    const toggleUserAssign = useCallback(async (userId: string) => {
         const exists = users.some(u => u.id === userId);
       
         if (!exists) {
@@ -257,7 +257,7 @@ export default function ProjectDetails({
         } else {
             await handleRemoveUser(userId);
         }
-    };
+    }, [handleAddUser, handleRemoveUser]);
 
     const handlePressGeneratePDF = useCallback(() => {
         if(projectWithRelations.project.type === "Čistenie"){
@@ -298,8 +298,6 @@ export default function ProjectDetails({
     const handleRegeneratePDF = useCallback(async (pdf: PDF) => {
         try {
             const newPDF = await regeneratePDFUtil(pdf);
-            
-            // Update PDFs list
             setPDFs(prev => {
                 const filtered = prev.filter(p => p.id !== pdf.id);
                 return [newPDF, ...filtered];

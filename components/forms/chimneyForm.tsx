@@ -73,7 +73,7 @@ export default function ChimneyForm ({
         }
     };
 
-    const validate = () : boolean => {
+    function validate () : boolean {
         const newErrors : Record<string, string> = {};
 
         if (!chimneyFormData.appliance?.trim()) {

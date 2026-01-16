@@ -6,7 +6,7 @@ import { useClientStore } from "@/store/clientStore";
 import { ChimneyInput, ChimneyType, Object as ObjectType, ObjectWithRelations } from "@/types/objectSpecific";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
 import { ChimneyTypeCreationModal } from "../modals/chimneyTypeCreationModal";
@@ -126,9 +126,9 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         catch (error: any){
             console.error("Error fetching chimneys: ", error);
         }
-    }
+    };
 
-    const handleSelectChimneyType = (chimneyType: ChimneyType) => {
+    const handleSelectChimneyType = useCallback((chimneyType: ChimneyType) => {
         setEditingChimney({
             chimney_type_id: chimneyType.id,
             chimney_type: chimneyType,
@@ -139,44 +139,39 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         setEditingChimneyIndex(null);
         setShowChimneyTypeSelectionModal(false); 
         setShowChimneyModal(true);
-    };
+    }, [editingChimney]);
 
-    const handleEditChimney = (chimney: ChimneyInput, index: number) => {
+    const handleEditChimney = useCallback((chimney: ChimneyInput, index: number) => {
         setEditingChimney(chimney);
         setEditingChimneyIndex(index);
         setShowChimneyModal(true);
-    };
+    }, [editingChimney]);
 
-    const handleSaveChimney = (chimney: ChimneyInput, isEdit: boolean, editIndex?: number) => {
+    const handleSaveChimney = useCallback((chimney: ChimneyInput, isEdit: boolean, editIndex?: number) => {
         if (isEdit && editIndex !== null && editIndex !== undefined) {
-            // Update existing chimney
-            setSelectedChimneys(prev => 
-                prev.map((c, i) => i === editIndex ? chimney : c)
-            );
+            setSelectedChimneys(prev => prev.map((c, i) => i === editIndex ? chimney : c));
         } else {
-            // Add new chimney
             setSelectedChimneys(prev => [...prev, chimney]);
         }
         
-        // Reset editing state
         setEditingChimney(null);
         setEditingChimneyIndex(null);
-    };
+    },[editingChimney, selectedChimneys]);
 
-    const handleChimneyTypeCreated = (chimneyType: ChimneyType) => {
+    const handleChimneyTypeCreated = useCallback((chimneyType: ChimneyType) => {
         setAllChimneyTypes(prev => [...prev, chimneyType]);
         handleSelectChimneyType(chimneyType);
-    };
+    },[allChimneyTypes, handleSelectChimneyType]);
 
-    const handleRemoveChimney = (index: number) => {
+    const handleRemoveChimney = useCallback((index: number) => {
         setSelectedChimneys(prev => prev.filter((_, i) => i !== index));
-    };
+    }, []);
 
-    const handleAddChimney = () => {        
+    const handleAddChimney = useCallback(() => {        
         setShowChimneyTypeSelectionModal(true);
-    };
+    }, []);
 
-    const validate = () : boolean => {
+    function validate() : boolean {
         const newErrors : Record<string, string> = {};
 
         if(!formData.client_id?.trim()){
@@ -196,7 +191,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         if(!validate()){
             return;
         }
@@ -204,7 +199,7 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
             await submitObject(formData, selectedChimneys);
         }
         catch (error){}
-    };
+    }, [validate, submitObject, selectedChimneys, formData]);
    
     return (
         <View className="flex-1">

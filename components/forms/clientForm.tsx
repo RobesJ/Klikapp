@@ -64,7 +64,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         searchingAddress,
         searchGoogleAddress,
         selectAddress
-    } = useGoogleSearchAddress<Omit<Client,"id">>(handleChange);
+    } = useGoogleSearchAddress<Omit<Client,"id">>(handleChange, {includePlaceId: true});
 
     useEffect(() => {
         if (initialData){
@@ -88,7 +88,7 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         }
     }, [initialData]);
 
-    const validate = () : boolean => {
+    function validate () : boolean {
         const newErrors : Record<string, string> = {};
         const updates: Partial<typeof formData> = {};
 

@@ -8,6 +8,7 @@
     "main": "expo-router/entry",
     "scheme": "klikapp",
     "userInterfaceStyle": "automatic",
+    "jsEngine": "hermes",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -58,7 +59,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/chimney-sweep-holding-sweeper-logo-vector.jpg",
-          "imageWidth": 200,
+          "imageWidth": 400,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
@@ -71,10 +72,13 @@
         {
           "cameraPermission": "Aplikácia potrebuje prístup k fotoaparátu na fotenie."
         }
-      ]
+      ],
+      "expo-sqlite",
+      "@sentry/react-native"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "reactCompiler": true
     },
     "extra": {
       "router": {},

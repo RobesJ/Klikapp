@@ -52,12 +52,6 @@ export default function Objects() {
         };
     }, [clearFilters]));
 
-    //useFocusEffect(
-    //    useCallback(() => {
-    //        fetchObjects(30);
-    //    }, [fetchObjects]),
-    //);
-
     const displayedGroups = useMemo(() => {
         return searchText.trim() ? filteredGroupedObjects : groupedObjects;
     }, [searchText, filteredGroupedObjects, groupedObjects]);

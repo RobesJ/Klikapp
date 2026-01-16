@@ -1,6 +1,6 @@
 import { ChimneyType } from "@/types/objectSpecific";
 import { EvilIcons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FlatList, Modal, TextInput, TouchableOpacity, View } from "react-native";
 import { Body, BodySmall, Heading3 } from "../typography";
 
@@ -45,22 +45,42 @@ export const ChimneyTypeSelectionModal = ({
         }
     };
 
-    const handleSelect = (chimneyType: ChimneyType) => {
+    const handleSelect = useCallback((chimneyType: ChimneyType) => {
         setSearchQueryChimney(''); // Reset search
         onSelectChimneyType(chimneyType);
         onClose();
-    };
+    }, []);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setSearchQueryChimney('');
         onClose();
-    };
+    }, []);
 
-    const handleCreateNew = () => {
+    const handleCreateNew = useCallback(() => {
         setSearchQueryChimney('');
         onClose();
         onCreateNewType();
-    };
+    },[]);
+
+
+    const renderItem = useCallback(({ item }: {item: ChimneyType}) => {
+        return(
+            <TouchableOpacity
+                onPress={() => handleSelect(item)}
+                className="px-6 py-4 border-b border-gray-600"
+            >
+                <Body className="text-base font-semibold text-dark-text_color">
+                    {item.type}
+                </Body>
+                {item.labelling && (
+                    <BodySmall className="text-sm text-gray-500 mt-1">
+                        {item.labelling}
+                    </BodySmall>
+                )}
+            </TouchableOpacity>
+        );
+    }, [handleSelect]);
+
 
     return (
         <Modal
@@ -103,21 +123,7 @@ export const ChimneyTypeSelectionModal = ({
                             <FlatList
                                 data={filteredChimneyTypes}
                                 keyExtractor={(item) => item.id}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        onPress={() => handleSelect(item)}
-                                        className="px-6 py-4 border-b border-gray-600"
-                                    >
-                                        <Body className="text-base font-semibold text-dark-text_color">
-                                            {item.type}
-                                        </Body>
-                                        {item.labelling && (
-                                            <BodySmall className="text-sm text-gray-500 mt-1">
-                                                {item.labelling}
-                                            </BodySmall>
-                                        )}
-                                    </TouchableOpacity>
-                                )}
+                                renderItem={renderItem}
                                 contentContainerStyle={{ paddingBottom: 100}}
                             />
                         )}
@@ -137,5 +143,5 @@ export const ChimneyTypeSelectionModal = ({
                 </View>
             </View>
         </Modal>
-)
+    );
 }

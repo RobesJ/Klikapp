@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { Body, BodyLarge, BodySmall, Caption } from './typography';
 
@@ -14,17 +15,17 @@ export default function CustomDrawerContent(props: any) {
     return null;
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     console.log("Logout");
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     router.replace('/(auth)/login');
-  };
+  }, [router, signOut]);
 
-  const handleSettings = () => {
+  const handleSettings = useCallback(() => {
     props.navigation.closeDrawer()
     router.push('/settings');
-  };
+  },[router]);
 
   return (
     <DrawerContentScrollView {...props} className="bg-dark-bg">

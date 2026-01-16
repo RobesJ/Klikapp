@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/notificationStore";
 import { ChimneyInput, Object as ObjectType, ObjectWithRelations } from "@/types/objectSpecific";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 
 interface UseObjectSubmitProps {
@@ -28,7 +28,7 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
         };
     };
 
-    const fetchCompleteObject = async (objectId: string) => {
+    async function fetchCompleteObject (objectId: string) {
         const { data: completeObject, error: fetchError } = await supabase
             .from('objects')
             .select(`
@@ -55,7 +55,7 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
         return transforCompleteObject(completeObject);
     };
 
-    const saveChimneys = async (objectId: string, chimneys: ChimneyInput[]) => {
+    async function saveChimneys(objectId: string, chimneys: ChimneyInput[]){
         if (chimneys.length === 0) return;
 
         const chimneyData = chimneys.map(chimney => ({
@@ -73,7 +73,7 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
         if (error) throw error;
     };
 
-    const deleteChimneys = async (objectId: string) => {
+    async function deleteChimneys(objectId: string){
         const { error: deleteError } = await supabase
             .from('chimneys')
             .delete()
@@ -82,11 +82,10 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
         if (deleteError) throw deleteError;
     };
 
-    const createObject = async (
+    async function  createObject (
         formData: Omit<ObjectType, "id">,
         chimneys: ChimneyInput[]
-    ) => {
-
+    ){
         const {data: objectData, error: objectError} = await supabase
             .from('objects')
             .insert([formData])
@@ -98,11 +97,10 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
         return await fetchCompleteObject(objectData.id);
     };
 
-    const updateObject = async (
+    async function updateObject (
         formData: Omit<ObjectType, "id">,
         chimneys: ChimneyInput[]
-    ) => {
-
+    ){
         const {data: objectData, error: objectError} = await supabase
            .from('objects')
            .update(formData)
@@ -117,7 +115,7 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
     };
 
     
-    const handleSubmit = async (
+    const handleSubmit = useCallback(async (
         formData: Omit<ObjectType, "id">,
         chimneys: ChimneyInput[]
     ) => {
@@ -154,7 +152,7 @@ export function useObjectSubmit({mode, initialData, onSuccess} : UseObjectSubmit
         finally{
             setLoading(false);
         }
-    };
+    }, [createObject, updateObject]);
 
     return {
         loading,

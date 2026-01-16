@@ -1,6 +1,6 @@
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { EvilIcons } from "@expo/vector-icons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
 import { Body, BodyLarge, BodySmall } from "../typography";
@@ -41,7 +41,7 @@ export default function PdfGenerationModal({
           return projectWithRelations.objects.reduce((sum, o) => sum + o.chimneys.length, 0);
     },[projectWithRelations.objects]);
     
-    const handleChimneySumChange = (chimneyId: string, index: number, value: string) => {
+    const handleChimneySumChange = useCallback((chimneyId: string, index: number, value: string) => {
         setChimneySums((prev) => {
             const currentArray = prev[chimneyId] || ['', ''];
             const updatedArray = [...currentArray];
@@ -51,14 +51,14 @@ export default function PdfGenerationModal({
                 [chimneyId]: updatedArray,
             };
         });
-    };
+    },[chimneySums]);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setPdfStep("choice");
         setSelectedChimneyId(null);
         setFocusedField(null);
         onCloseSimple();
-    };
+    }, []);
 
     return(
         <Modal

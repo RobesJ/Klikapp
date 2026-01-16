@@ -1,6 +1,6 @@
 import { Photo } from "@/types/projectSpecific";
 import { EvilIcons, MaterialIcons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Image, Modal, TouchableOpacity, View } from "react-native";
 import { Body, Heading3 } from "../typography";
 
@@ -16,19 +16,19 @@ interface PhotoViewerProps {
 export const PhotoViewer = ({ visible, onClose, selectedPhoto, onDelete, canEdit, photos } : PhotoViewerProps ) => {
     const [selectedPhotoLocal, setSelectedPhotoLocal] = useState(selectedPhoto);
 
-    const goToNextPhoto = () => {
+    const goToNextPhoto = useCallback(() => {
         if (!selectedPhotoLocal) return;
         const currentIndex = photos.findIndex(p => p.id === selectedPhotoLocal.id);
         const nextIndex = (currentIndex + 1) % photos.length;
         setSelectedPhotoLocal(photos[nextIndex]);
-      };
+    }, [selectedPhoto]);
       
-      const goToPreviousPhoto = () => {
+    const goToPreviousPhoto = useCallback(() => {
         if (!selectedPhotoLocal) return;
         const currentIndex = photos.findIndex(p => p.id === selectedPhotoLocal.id);
         const previousIndex = currentIndex === 0 ? photos.length - 1 : currentIndex - 1;
         setSelectedPhotoLocal(photos[previousIndex]);
-      };
+    }, [selectedPhoto]);
 
     return (
         <Modal
