@@ -105,10 +105,9 @@ export function ObjectsListSkeleton() {
     );
 }
 
-
 function ProjectCardSkeleton() {
     return (
-      <View className="flex-2 bg-gray-800 rounded-2xl p-4 mb-3">
+      <View className="flex-1 bg-gray-800 rounded-2xl p-4 mb-3">
         <View className="flex-row  items-center justify-between mb-3">
             <Skeleton width="30%" height={30} borderRadius={4} />
             <Skeleton width="20%" height={20} borderRadius={100} />

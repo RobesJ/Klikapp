@@ -1,13 +1,12 @@
+import { useClientSubmit } from "@/hooks/submitHooks/useClientSubmit";
 import { useGoogleSearchAddress } from "@/hooks/useGoogleAddressSearch";
-import { supabase } from "@/lib/supabase";
-import { useNotificationStore } from "@/store/notificationStore";
 import { Client } from "@/types/generics";
-import { validateAndNormalizePhone } from "@/utils/phoneInputValidation";
+import { validateClient } from "@/utils/validation/clientValidation";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { AsYouType } from "libphonenumber-js";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import { FormInput } from "../formInput";
 import { NotificationToast } from "../notificationToast";
 import { Body, Heading1 } from "../typography";
@@ -35,11 +34,11 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
     });
 
     const router = useRouter();
-    const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [selectedType, setSelectedType] = useState('');
     const [focusedField, setFocusedField] = useState<string | null>(null);
     
+    const { loading, submitClient } = useClientSubmit({ mode, initialData, onSuccess});
     const handleChange = (field: keyof Omit<Client,"id">, value: string) => {
         setFormData(prev => ({...prev, [field]: value}));
         if(errors[field]){
@@ -88,218 +87,21 @@ export default function ClientForm({ mode, initialData, onSuccess} : ClientFormP
         }
     }, [initialData]);
 
-    function validate () : boolean {
-        const newErrors : Record<string, string> = {};
-        const updates: Partial<typeof formData> = {};
-
-        if(!formData.name.trim()){
-            newErrors.name = "Meno je povinná položka!";
-        }
-        else {
-            const normalizedName = formData.name
-                .trim()
-                .replace(/\s+/g, ' ')                           // Normalize spaces: "   " → " "            
-                .replace(/\s*,\s*/g, ', ')                      // Normalize commas: "ABC,s.r.o." → "ABC, s.r.o."
-                .replace(/\bs\.?\s*r\.?\s*o\.?\b/gi, 's.r.o.')  // Normalize s.r.o variations: "sro" → "s.r.o."
-                .replace(/\ba\.?\s*s\.?\b/gi, 'a.s.');          // Normalize a.s. variations: "as" → "a.s."
-            if (normalizedName !== formData.name){
-                updates.name = normalizedName;
-            }
-        }
-
-        if(formData.email && formData.email.trim() !== ''){
-            const normalizedEmail = formData.email.trim().toLowerCase();
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-                newErrors.email = 'Neplatný formát emailu!';
-            }
-            else if (normalizedEmail !== formData.email){
-                updates.email = normalizedEmail;
-                updates.unformatted_email = formData.email.trim();
-            }
-        }
-
-        if(!formData.address?.trim()){
-            newErrors.address = "Adresa je povinná položka!";
-        }
-
-        if(!formData.phone || formData.phone.trim() === ' '){
-            newErrors.phone = "Telefonné číslo je povinná položka!";
-        }
-        else {
-            const phoneValidation = validateAndNormalizePhone(formData.phone);
-            if (!phoneValidation.valid && phoneValidation.error ){
-                newErrors.phone = phoneValidation.error;
-            }
-            else if (phoneValidation.valid && phoneValidation.normalized){
-                updates.phone = phoneValidation.normalized;
-            }
-        }
-
-        if(!formData.type){
-            newErrors.type = "Typ klienta je povinná položka!";
-        }
-
-        if (Object.keys(updates).length > 0) {
-           setFormData(prev => ({ ...prev, updates }));
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    async function checkDuplicateWithFuzzy(name: string, phone: string | null, email: string | null, place_id: string | null) {
-        const { data, error } = await supabase.rpc('find_similar_clients', {
-            p_name: name,
-            p_phone: phone,
-            p_place_id: place_id,
-            p_email: email,
-            similarity_threshold: 0.4
-        });
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-            const duplicateInfoWarn: string [] = [];
-            const duplicateInfoQuit: string [] = [];
-            data.forEach((match: any) => {
-                if(match.match_type === "exact_email"){
-                    duplicateInfoQuit.push(`${match.name} (rovnaký email)`);
-                }
-                else if(match.match_type === "exact_phone"){
-                    duplicateInfoQuit.push(`${match.name} (rovnaké číslo)`);
-                }
-                else if(match.match_type === "exact_address"){
-                    duplicateInfoWarn.push(`${match.name} (rovnaká adresa)`);
-                }
-                else if(match.match_type === "name_similarity"){
-                    duplicateInfoWarn.push(`${match.name} (podobné meno)`);
-                }
-            });
-            return {
-              isDuplicate: true,
-              duplicateInfoQuit,
-              duplicateInfoWarn
-            };
-        }
-        return { isDuplicate: false, duplicateInfoQuit: [], duplicateInfoWarn: []};
-    };
-
     const handleSubmit = useCallback(async () => {
-        
-        if(!validate()){
+        const result = validateClient(formData);
+
+        if(!result.valid){
+            setErrors(result.errors);
             return;
         }
 
-        setLoading(true);
-        try{
-            if (mode === "create"){
-                const result = await checkDuplicateWithFuzzy(formData.name, formData.phone, formData.email, formData.place_id);
-                if (result.isDuplicate){
-                    if(result.duplicateInfoQuit.length > 0){
-                        const duplicateInfo = result.duplicateInfoQuit.join('\n'); 
-                        Alert.alert(
-                            "Klient existuje",
-                            `V databáze existuje klient s rovnakým číslom alebo emailom:\n${duplicateInfo}`,
-                            [
-                                { 
-                                    text: 'Zrusit', 
-                                    style: "cancel",
-                                    onPress:  () => {
-                                        setLoading(false);
-                                  }
-                                }
-                            ]
-                        );
-                        return;
-                    }
+        if (result.normalized){
+            setFormData(prev => ({...prev, ...result.normalized}));
+        }
 
-                    else if (result.duplicateInfoWarn.length > 0){
-                        const duplicateInfo = result.duplicateInfoWarn.join('\n'); 
-                        Alert.alert(
-                            "Nájdená duplicita v mene alebo adrese",
-                            `Podobní klienti: ${duplicateInfo}\n\nChcete pokračovať?`,
-                            [
-                                { 
-                                    text: 'Nie', 
-                                    style: "cancel",
-                                    onPress:  () => {
-                                        setLoading(false);
-                                  }
-                                },
-                                {
-                                    text: 'Áno',
-                                    style: 'default',
-                                    onPress: async () => {
-                                        try {
-                                            const {data, error} = await supabase
-                                            .from('clients')
-                                            .insert([formData])
-                                            .select()
-                                            .single();
-
-                                            if (error) throw error;
-                                            onSuccess?.(data);
-                                        }
-                                        catch (error: any){
-                                            console.error("Error creating client: ", error);
-                                            useNotificationStore.getState().addNotification(
-                                                "Nastala chyba pri vytváraní klienta",
-                                                'error',
-                                                "clientForm",
-                                                3000
-                                            );
-                                        }
-                                        finally {
-                                            setLoading(false);
-                                        }
-                                    }
-                                }
-                            ]
-                        );
-                        return;
-                    }
-                }
-                const {data, error} = await supabase
-                    .from('clients')
-                    .insert([formData])
-                    .select()
-                    .single();
+        submitClient(formData);
+    }, [submitClient]);
                     
-                if (error) throw error;
-                onSuccess?.(data);
-            }
-            else { 
-                if (initialData){
-                    const {data, error} = await supabase
-                    .from('clients')
-                    .update(formData)
-                    .eq('id', initialData?.id)
-                    .select()
-                    .single();
-
-                    if (error) throw error;
-                    onSuccess?.(data);
-                }
-            }
-        }
-        catch (error: any){
-            console.error("Error saving client: ", error);
-            let message: string = mode === "create" 
-             ? "Nastala chyba pri vytváraní klienta"
-             : "Nastala chyba pri úprave klienta";
-
-            useNotificationStore.getState().addNotification(
-                message,
-                'error',
-                "clientForm",
-                3000
-            );
-        }
-        finally{
-            setLoading(false);
-        }
-    },[initialData, formData, validate, checkDuplicateWithFuzzy]);
-
     const handleSelectedType = useCallback((type: string) => {
         setSelectedType(type);
         setFormData(prev => ({...prev, type: type}))

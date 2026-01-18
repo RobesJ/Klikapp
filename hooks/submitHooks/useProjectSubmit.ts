@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/notificationStore";
-import { useProjectStore } from "@/store/projectStore";
+import { useProjectStore } from "@/store/projectScreenStore";
 import { Project, User } from "@/types/generics";
 import { Chimney, ChimneyType, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";

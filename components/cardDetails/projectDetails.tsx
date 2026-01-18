@@ -5,7 +5,7 @@ import { useHandlePhotos } from '@/hooks/useHandlePhotos';
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from '@/store/clientStore';
 import { useNotificationStore } from '@/store/notificationStore';
-import { useProjectStore } from "@/store/projectStore";
+import { useProjectStore } from "@/store/projectScreenStore";
 import { PDF, User } from "@/types/generics";
 import { regeneratePDFUtil } from '@/utils/pdfRegeneration';
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
@@ -36,8 +36,10 @@ export default function ProjectDetails({
 }: ProjectCardDetailsProps) {
     
     const { user } = useAuth();
+    const router = useRouter();
+   
     const projectWithRelations = useProjectStore(state => state.projects.get(projectWithRelationsID));
-    const [canEdit, setCanEdit] = useState(false);
+
     const { handleStateChange: handleStateChangeFromHook } = useProjectSubmit({
       mode: "edit",
       oldState: projectWithRelations?.project.state,
@@ -71,14 +73,8 @@ export default function ProjectDetails({
       pickFromGallery,
       deletePhoto
     } = useHandlePhotos({ projectWithRelations: projectWithRelations! });
-
-    if (!projectWithRelations) {
-        return null;
-    }
-
-    const router = useRouter();
-    const { users } = projectWithRelations;
    
+    const [canEdit, setCanEdit] = useState(false);
     const [showUserModal, setShowUserModal] = useState(false);
     const [lockedByName, setLockedByName] = useState<string | null>(null);
 
@@ -89,6 +85,12 @@ export default function ProjectDetails({
 
     const { updateProject, deleteProject, availableUsers, lockProject } = useProjectStore();
     const { updateClientCounts } = useClientStore();
+
+    if (!projectWithRelations) {
+      return null;
+  }
+  const { users } = projectWithRelations;
+
     const projectId = projectWithRelations.project.id;
     const PDFsRef = useRef(PDFs);
 

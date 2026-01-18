@@ -269,18 +269,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
     console.log(`Filtered: ${filtered.length}/${clients.length} clients`);
     return filtered;
-    //let filtered = [...clients];
-//
-    //if (filters.searchQuery.trim()) {
-    //  const query = filters.searchQuery.toLowerCase();
-    //  filtered = filtered.filter(client => 
-    //    client.name.toLowerCase().includes(query) ||
-    //    client.phone?.includes(query)
-    //  );
-    //}
-//
-    //console.log(`Filtered: ${filtered.length}/${clients.length} clients`);
-    //return filtered;
   },
 
   lookForClientInDBS: async () =>{
@@ -312,7 +300,6 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         set({ 
           clients: [...filtered, ...clients],
           filteredClients: filtered,
-          //offset: get().offset +1
         });
         console.log(`Found: ${filtered.length} matching clients`);
       } 

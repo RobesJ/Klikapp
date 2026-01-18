@@ -1,4 +1,5 @@
 import { ChimneyInput, ChimneyType } from "@/types/objectSpecific";
+import { validateChimney } from "@/utils/validation/objectAndChimneyValidation";
 import { EvilIcons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import { Modal, TouchableOpacity, View } from "react-native";
@@ -73,21 +74,6 @@ export default function ChimneyForm ({
         }
     };
 
-    function validate () : boolean {
-        const newErrors : Record<string, string> = {};
-
-        if (!chimneyFormData.appliance?.trim()) {
-            newErrors.appliance= "Druh spotrebiča je povinná položka!";
-        }
-
-        if (!chimneyFormData.placement?.trim()) {
-            newErrors.placement = "Umiestnenie spotrebiča je povinná položka!";
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleOnClose = useCallback(() => {
         setFocusedField(null);
         setChimneyFormData({
@@ -102,7 +88,11 @@ export default function ChimneyForm ({
     }, [onClose, chimneyFormData, focusedField]);
 
     const handleSubmit = useCallback(async () => {
-        if ( !validate() || loading ) {
+        if (loading) return;
+        const result = validateChimney(chimneyFormData)
+        
+        if(!result.valid){
+            setErrors(result.errors);
             return;
         }
 
@@ -126,7 +116,7 @@ export default function ChimneyForm ({
         finally{
             setLoading(false);
         }
-    }, [validate, handleOnClose]);
+    }, [chimneyFormData, handleOnClose]);
 
     return (
         <Modal

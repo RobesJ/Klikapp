@@ -4,6 +4,7 @@ import { useSearchClient } from "@/hooks/useSearchClient";
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
 import { ChimneyInput, ChimneyType, Object as ObjectType, ObjectWithRelations } from "@/types/objectSpecific";
+import { validateObject } from "@/utils/validation/objectAndChimneyValidation";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -13,7 +14,7 @@ import { ChimneyTypeCreationModal } from "../modals/chimneyTypeCreationModal";
 import { ChimneyTypeSelectionModal } from "../modals/chimneyTypeSelectionModal";
 import { NotificationToast } from "../notificationToast";
 import { Body, BodySmall, Caption, Heading1 } from "../typography";
-import ChimneyForm from "./chimneyForm";
+import ChimneyForm from "./chimney-form";
 
 interface ObjectFormProps {
     mode: "create" | "edit";
@@ -171,35 +172,19 @@ export default function ObjectForm({ mode, initialData, onSuccess, preselectedCl
         setShowChimneyTypeSelectionModal(true);
     }, []);
 
-    function validate() : boolean {
-        const newErrors : Record<string, string> = {};
-
-        if(!formData.client_id?.trim()){
-            newErrors.client = "Klient je povinná položka!";
-        }
-
-        if(!formData.address?.trim()){
-            newErrors.address = "Adresa je povinná položka!";
-        }
-
-        if (selectedChimneys.length === 0) {
-            newErrors.chimneys = "Pre uloženie objektu vytvorte aspoň jeden komín!";
-        }
-
-        setErrors(newErrors);
-        console.log(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleSubmit = useCallback(async () => {
-        if(!validate()){
+        const result = validateObject(formData, selectedChimneys)
+        
+        if(!result.valid){
+            setErrors(result.errors);
             return;
         }
+
         try {
             await submitObject(formData, selectedChimneys);
         }
         catch (error){}
-    }, [validate, submitObject, selectedChimneys, formData]);
+    }, [formData, submitObject, selectedChimneys, formData]);
    
     return (
         <View className="flex-1">

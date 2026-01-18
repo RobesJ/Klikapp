@@ -10,10 +10,11 @@ import { Alert } from "react-native";
 
 interface UseHandlePDFsProps {
     projectWithRelations: ProjectWithRelations;
-    users: User[]
+    users: User[];
+    objectId?: string;
 }
 
-export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps){
+export function useHandlePDFs({projectWithRelations, users, objectId}: UseHandlePDFsProps){
     const projectRef = useRef(projectWithRelations);
     const usersRef = useRef(users);
 
@@ -30,12 +31,23 @@ export function useHandlePDFs({projectWithRelations, users}: UseHandlePDFsProps)
   
     const fetchPDFs = useCallback(async () => {
         setLoadingPDFs(true);
-        try{
-            const {data, error} = await supabase
+        try {
+            let query;
+            if (objectId){
+                query = supabase
+                .from("pdfs")
+                .select('*')
+                .eq("object_id", objectId)
+                .order("generated_at", {ascending: false});
+            }
+            else {
+                query = supabase
                 .from("pdfs")
                 .select('*')
                 .eq("project_id", projectRef.current.project.id)
                 .order("generated_at", {ascending: false});
+            }
+            const {data, error} = await query;
             
             if (error) throw error;
             setPDFs(data || []);

@@ -17,3 +17,13 @@ export interface Photo{
   storage_path: string;
   uploaded_at: string;
 }
+
+export interface ProjectFilters {
+  type: string[];
+  state: string[];
+  users: string[];
+  cities?: string[];
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  searchQuery?: string;
+}

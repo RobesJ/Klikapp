@@ -4,6 +4,7 @@ import { useClientStore } from "@/store/clientStore";
 import { Client } from "@/types/generics";
 import { ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
+import { transformProjects } from "@/utils/transformProject";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -32,14 +33,13 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
     const [lockedByName, setLockedByName] = useState<string | null>(null);
 
     const lockHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    // const isMountedRef = useRef(true);
 
     // fetch relations when modal opens or clear data when closes
     useEffect(() => {
         if (visible){
             fetchRelations(client);
         }
-        else{
+        else {
             setObjectsWithRelations([]);
             setProjectsWithRelations([]);
             setError(null);
@@ -174,7 +174,8 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
     
           // Process projects
           if (projectsResult.data) {
-            const processedProjects: ProjectWithRelations[] = projectsResult.data.map((projectItem: any) => {
+            const transformed = transformProjects(projectsResult.data);
+            /*const processedProjects: ProjectWithRelations[] = projectsResult.data.map((projectItem: any) => {
               const users = projectItem.project_assignments
                 ?.map((pa: any) => pa.user_profiles)
                 .filter(Boolean) || [];
@@ -208,8 +209,8 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                 objects: objects,
               };
             });
-    
-            setProjectsWithRelations(processedProjects);
+            */
+            setProjectsWithRelations(transformed);
           }
         } 
         catch (err: any) {

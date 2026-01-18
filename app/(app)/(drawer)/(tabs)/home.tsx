@@ -1,20 +1,25 @@
-import { STATE_OPTIONS_HOME, TYPE_OPTIONS } from '@/components/badge';
+import { STATE_OPTIONS_HOME } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
+import { FilterPills } from '@/components/FilterPills';
 import FilterModal from '@/components/modals/filterModal';
 import { ProjectsListSkeleton } from '@/components/skeletons/skeleton';
-import { Body, BodyLarge, BodySmall, Heading1 } from '@/components/typography';
+import { Body, BodyLarge, Heading1 } from '@/components/typography';
 import WeekCalendar from '@/components/weekCalendar';
 import { useAuth } from '@/context/authContext';
-import { useProjectStore } from '@/store/projectStore';
+import { useActiveFilters } from '@/hooks/projectFilteringHooks/useActiveFilters';
+import { useFilterSections } from '@/hooks/projectFilteringHooks/useFilterSections';
+import { useProjectFilters } from '@/hooks/projectFilteringHooks/useProjectFilters';
+import { useHomeScreenStore } from '@/store/homeScreenStore';
 import { ProjectWithRelations } from '@/types/projectSpecific';
+import { applyFilters } from '@/utils/projectFilteringUtils';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { format, isBefore, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,20 +38,14 @@ export default function Home() {
   
   const {
     initialLoading,
-    projectsVersion,
     fetchAvailableUsers,
     fetchActiveProjects,
-    getFilteredProjects,
     availableUsers,
-    projects,
-    filters,
-    clearFilters,
-    removeFilter,
-    toggleTypeFilter,
-    toggleStateFilter,
-    toggleUserFilter,
+    activeProjects,
     unlockProject
-  } = useProjectStore();
+  } = useHomeScreenStore();
+
+  const filterState = useProjectFilters({includeCities: false});
 
   // Init data on screen mount
   useEffect(() => {
@@ -61,48 +60,22 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       return () => {
-        clearFilters();
+        filterState.clearFilters();
       }
-    }, [clearFilters])
+    }, [filterState.clearFilters])
   );
 
-  const filterSections = useMemo(() =>[
-    {
-      id: 'type',
-      title: 'Typ',
-      type: 'styled' as const,
-      options: TYPE_OPTIONS.map(type => ({
-        value: type.value,
-        colors: type.colors,
-      })),
-      selectedValues: filters.type,
-      onToggle: toggleTypeFilter,
-    },
-    {
-      id: 'state',
-      title: 'Stav',
-      type: 'styled' as const,
-      options: STATE_OPTIONS_HOME.map(state => ({
-        value: state.value,
-        colors: state.colors,
-      })),
-      selectedValues: filters.state,
-      onToggle: toggleStateFilter,
-    },
-    {
-      id: 'users',
-      title: 'Priradení používatelia',
-      type: 'simple' as const,
-      options: availableUsers.map(user => ({
-        value: user.id,
-        label: user.name,
-      })),
-      selectedValues: filters.users,
-      onToggle: toggleUserFilter,
-    },
-  ], [availableUsers, filters, toggleTypeFilter, toggleStateFilter, toggleUserFilter]);
+  const filterSections = useFilterSections({
+    filters: filterState.filters,
+    availableUsers: availableUsers,
+    toggleType: filterState.toggleType,
+    toggleState: filterState.toggleState,
+    toggleUser: filterState.toggleUser,
+    stateOptions: STATE_OPTIONS_HOME,
+  });
 
-  const filtered = getFilteredProjects(filters);
+  const activeFilters = useActiveFilters(filterState.filters, availableUsers);
+  const filtered = applyFilters(Array.from(activeProjects.values()),filterState.filters);
   const selectedDay = startOfDay(selectedDate);
   
   const projectsForSelectedDate = filtered.filter((p) => {
@@ -135,13 +108,9 @@ export default function Home() {
     setShowDetails(value);
   }, []);
 
-  const activeFilters = useMemo(() => {
-    return [
-      ...filters.type.map(t => ({ type: "type" as const, value: t })),
-      ...filters.state.map(s => ({ type: "state" as const, value: s })),
-      ...filters.users.map(u => ({ type: "users" as const, value: u }))
-    ];
-  }, [filters]);
+  const handleRefresh = useCallback(() => {
+    fetchActiveProjects();
+  }, [fetchActiveProjects]);
 
   const handleCloseWithUnlock = useCallback(() => {
     setShowDetails(false);
@@ -166,42 +135,6 @@ export default function Home() {
   ), [handleDetailsVisibility]);
 
   const keyExtractor = useCallback((item: ProjectWithRelations) => item.project.id, []);
-
-  const renderFilterPills = useMemo(() => {
-    if ( activeFilters.length === 0 ) return null;
-    return (
-        <View className="px-6 mt-4">
-          <View className="flex-row flex-wrap">
-            {activeFilters.map((filter, index) => {
-              // Get color based on type/value
-              let pillColor = "bg-blue-100";
-                  let textColor = "text-blue-700";
-            
-              if (filter.type === 'type') {
-                pillColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
-                textColor = TYPE_OPTIONS.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
-              } 
-              else if (filter.type === 'state') {
-                pillColor = STATE_OPTIONS_HOME.find(s => s.value === filter.value)?.colors[1] ?? "border-gray-500 bg-yellow-100";
-                textColor = STATE_OPTIONS_HOME.find(s => s.value === filter.value)?.colors[0] ?? "border-gray-500 bg-yellow-100";
-                  }
-              
-              return (
-                <TouchableOpacity
-                  key={`${filter.type}-${filter.value}-${index}`}
-                  onPress={() => removeFilter(filter.type, filter.value)}
-                  className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
-                >
-                  <BodySmall className={`${textColor} font-medium mr-1`}>{filter.value}</BodySmall>
-                  <BodySmall className={`${textColor} font-bold`}>✕</BodySmall>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-    );
-  }, [activeFilters, removeFilter]);
-
 
   return (
       <View
@@ -251,14 +184,39 @@ export default function Home() {
         </View>
 
         {/* Active filters */}
-        { renderFilterPills }
+        <FilterPills filters={activeFilters} onRemove={filterState.removeFilter}/>
       </View>
 
       {/* Content */}
       <View className="flex-1 pt-6 pb-16">
-        {initialLoading ? (
+        {projectsForSelectedDate.length === 0 && initialLoading ? (
           <ProjectsListSkeleton />
-        ) : projectsForSelectedDate.length === 0 ? (
+        ) : (
+          <FlashList
+            data={projectsForSelectedDate}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            scrollEnabled
+            refreshing={initialLoading}
+            onRefresh={handleRefresh}
+            ListEmptyComponent={
+              <View className="flex-1 items-center justify-center">
+                <Body className="text-red-500 mb-4">Žiadne bežiace projekty</Body>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  className="rounded-xl bg-blue-600 py-3 px-8"
+                  onPress={handleNavigatePlanning}
+                >
+                  <Body className="text-white font-semibold">Plánovať projekty</Body>
+                </TouchableOpacity>
+              </View>
+            }
+          />
+        )}
+      </View>
+      
+      {/*
+      ) : projectsForSelectedDate.length === 0 ? (
           <View className="flex-1 items-center justify-center">
             <Body className="text-red-500 mb-4">Žiadne bežiace projekty</Body>
             <TouchableOpacity
@@ -269,15 +227,8 @@ export default function Home() {
               <Body className="text-white font-semibold">Plánovať projekty</Body>
             </TouchableOpacity>
           </View>
-        ) : (
-          <FlashList
-            data={projectsForSelectedDate}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            scrollEnabled
-          />
-        )}
-      </View>
+        ) : 
+         */}
 
       {/* Project details modal */}
       {selectedProject && (
@@ -298,7 +249,7 @@ export default function Home() {
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         sections={filterSections}
-        onClearAll={clearFilters}
+        onClearAll={filterState.clearFilters}
       />
 
     </View>

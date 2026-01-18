@@ -2,10 +2,11 @@ import { useProjectSubmit } from "@/hooks/submitHooks/useProjectSubmit";
 import { useSearchClient } from "@/hooks/useSearchClient";
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
-import { useProjectStore } from "@/store/projectStore";
+import { useProjectStore } from "@/store/projectScreenStore";
 import { Project, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
+import { validateProject } from "@/utils/validation/projectValidation";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -130,37 +131,19 @@ export default function ProjectForm({ mode, initialData, onSuccess, preselectedC
         }
     }, [showUserModal]);
 
-    
-    function validate () : boolean {
-        const newErrors: Record<string, string> = {};
-
-        if (!formData.client_id?.trim()){
-            newErrors.client = "Klient je povinný údaj!";
-        }
-        if (!formData.scheduled_date && !formData.start_date ){
-            newErrors.dates = "Pre uloženie je potrebné zadať plánovaný dátum alebo dátum začatia projektu!";
-        }
-        
-        if (!formData.type){
-            newErrors.type = "Vyberte typ projektu!";
-        }
-
-        if (!formData.state){
-            newErrors.state = "Vyberte stav projektu!";
-        }
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
 
     const handleSubmit = useCallback(async () => {
-        if(!validate()){
+        const result = validateProject(formData);
+
+        if(!result.valid){
+            setErrors(result.errors);
             return;
         }
         try {
             await submitProject(formData, selectedUsers, assignedObjects);
         }
         catch (error){}
-    }, [validate, submitProject]);
+    }, [formData, submitProject]);
     
     const handleSelectedType = useCallback((type: string) => {
         setSelectedType(type);

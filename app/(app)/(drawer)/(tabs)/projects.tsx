@@ -1,13 +1,18 @@
-import { STATE_OPTIONS, TYPE_OPTIONS } from '@/components/badge';
 import ProjectDetails from '@/components/cardDetails/projectDetails';
 import ProjectCard from '@/components/cards/projectCard';
+import { FilterPills } from '@/components/FilterPills';
 import FilterModal from '@/components/modals/filterModal';
 import { NotificationToast } from '@/components/notificationToast';
 import { ProjectsListSkeleton } from '@/components/skeletons/skeleton';
 import { Body, Heading1, Heading2 } from '@/components/typography';
 import { useAuth } from '@/context/authContext';
-import { useProjectStore } from '@/store/projectStore';
+import { useActiveFilters } from '@/hooks/projectFilteringHooks/useActiveFilters';
+import { useFilterSections } from '@/hooks/projectFilteringHooks/useFilterSections';
+import { useProjectFilters } from '@/hooks/projectFilteringHooks/useProjectFilters';
+import { useHomeScreenStore } from '@/store/homeScreenStore';
+import { useProjectStore } from '@/store/projectScreenStore';
 import { ProjectWithRelations } from '@/types/projectSpecific';
+import { applyFilters } from '@/utils/projectFilteringUtils';
 import { FONT_SIZES } from '@/utils/responsive';
 import { EvilIcons, Feather } from '@expo/vector-icons';
 import { DrawerActions } from "@react-navigation/native";
@@ -33,132 +38,81 @@ export default function Projects() {
 
   const isInitialMount = useRef(true);
   const lastFilterCheck = useRef(0);
+  const { availableUsers } = useHomeScreenStore();
 
   const {
     backgroundLoading,
+    fetchProjects,
+    refresh,
+    projects,
     metadata,
-    availableUsers,
-    fetchActiveProjects,
-    fetchPlannedProjects,
-    getFilteredProjects,
-    applySmartFilters,
-    loadMore,
-    filters,
-    setFilters,
-    clearFilters,
-    toggleStateFilter,
-    toggleTypeFilter,
-    toggleUserFilter,
-    removeFilter,
+    //applyFilters,
+    // loadMore,
     unlockProject
   } = useProjectStore();
+
+  const filterState = useProjectFilters({
+    includeCities: false,
+    includeSearch: true
+  });
+
+  const filterSections = useFilterSections({
+    filters: filterState.filters,
+    availableUsers: availableUsers,
+    toggleType: filterState.toggleType,
+    toggleState: filterState.toggleState,
+    toggleUser: filterState.toggleUser,
+  });
+
+  const activeFilters = useActiveFilters(filterState.filters, availableUsers);
 
   // clear filters on screen blur
   useFocusEffect(
     useCallback(() => {
       return () => {
-        clearFilters();
-        setFilters({searchQuery: ''});
+        filterState.clearFilters();
         setSearchText('');
       }
-    }, [clearFilters, setFilters])
+    }, [filterState.clearFilters])
   );
 
+  // if initial mount and not planned was not fetch than fetch planned
   useEffect(() => {
-    if(isInitialMount.current){
+    if (isInitialMount.current) {
       isInitialMount.current = false;
-      return;
+        fetchProjects();
     }
+  }, [fetchProjects]);
 
-    const now = Date.now();
-    if (now - lastFilterCheck.current < 300){
-      return;
-    }
-    lastFilterCheck.current = now;
 
-    const filteredProjects = getFilteredProjects(filters);
-    const hasActiveFilters = 
-      filters.searchQuery || 
-      filters.state.length > 0 || 
-      filters.type.length > 0 || 
-      filters.users.length > 0;
-  
-    const shouldFetch = 
-      filteredProjects.length < MINIMUM_RESULTS && !backgroundLoading &&
-      metadata.projects.hasMore &&  (hasActiveFilters || filteredProjects.length === 0);
-  
-    if (shouldFetch) {
-      const amountToFetch = MINIMUM_RESULTS - filteredProjects.length;
-      applySmartFilters(filters, Math.max(amountToFetch, 30));
-    }
-  }, [filters, backgroundLoading, metadata.projects.hasMore, getFilteredProjects, applySmartFilters]);
-
-  const filterSections = useMemo(() =>[
-    {
-      id: 'type',
-      title: 'Typ',
-      type: 'styled' as const,
-      options: TYPE_OPTIONS.map(type => ({
-        value: type.value,
-        colors: type.colors,
-      })),
-      selectedValues: filters.type,
-      onToggle: toggleTypeFilter,
-    },
-    {
-      id: 'state',
-      title: 'Stav',
-      type: 'styled' as const,
-      options: STATE_OPTIONS.map(state => ({
-        value: state.value,
-        colors: state.colors,
-      })),
-      selectedValues: filters.state,
-      onToggle: toggleStateFilter,
-    },
-    {
-      id: 'users',
-      title: 'Priradení používatelia',
-      type: 'simple' as const,
-      options: availableUsers.map(user => ({
-        value: user.id,
-        label: user.name,
-      })),
-      selectedValues: filters.users,
-      onToggle: toggleUserFilter,
-    },
-  ], [filters.type, filters.state, filters.users, availableUsers, toggleStateFilter, toggleTypeFilter, toggleUserFilter]);
-
-  const filteredProjects = getFilteredProjects(filters);
+  const filteredProjects = applyFilters(Array.from(projects.values()), filterState.filters);
     
   const handleRefresh = useCallback(() => {
-    fetchActiveProjects();
-    fetchPlannedProjects();
-  },[fetchActiveProjects, fetchPlannedProjects]);
+    refresh(filterState.filters);
+  },[refresh, filterState.filters]);
 
   const handleSearch = useCallback((text: string) => {
     setSearchText(text);
-    setFilters({searchQuery: text});
-  }, [setFilters]);
-
-  const activeFilters = useMemo(() => [
-      ...filters.type.map(t => ({ type: "type" as const, value: t })),
-      ...filters.state.map(s => ({ type: "state" as const, value: s })),
-      ...filters.users.map(u => ({ type: "users" as const, value: u }))
-    ], [filters.type, filters.state, filters.users]);
-
-  //const hasActiveFilters = useMemo(() =>
-  //  !!(filters.searchQuery || (filters.state.length > 0 ) || (filters.type.length > 0) || (filters.users.length > 0)),
-  //[filters.searchQuery, filters.state.length, filters.type.length, filters.users.length]);
+    filterState.setSearchQuery(text);
+  }, [filterState.setSearchQuery]);
 
   const handleModalVisibility = useCallback((projectID: string, value: boolean) => {
     setSelectedProjectID(projectID);
     setShowDetails(value);
   }, []);
 
-  const loadMoreProjects = useCallback(() => {
-    loadMore(filters, 30);
-  },[loadMore, filters]);
+  // const loadMoreProjects = useCallback(() => {
+  //   if(backgroundLoading || !metadata.hasMore) {
+  //     console.log("load more handler called but returned");
+  //     return;
+  //   }
+  //   loadMore(filterState.filters);
+  // },[
+  //   backgroundLoading,
+  //   metadata.hasMore,
+  //   loadMore, 
+  //   filterState.filters
+  // ]);
 
   const handleCloseWithUnlock = useCallback(() => {
       setShowDetails(false);
@@ -196,46 +150,6 @@ export default function Projects() {
   }, [handleModalVisibility]);
 
   const keyExtractor = useCallback((item: ProjectWithRelations) => item.project.id, []);
-
-  // TODO finish this
-  const renderFilterPills = useCallback(() => {
-    if (activeFilters.length === 0) return null;
-
-    return (
-  
-      <View className="px-6 mt-4">
-        <View className="flex-row flex-wrap">
-          {activeFilters.map((filter, index) => {
-            let pillColor = "bg-blue-100";
-            let textColor = "text-blue-700";
-
-            if (filter.type === 'type') {
-              const typeOption = TYPE_OPTIONS.find(s => s.value === filter.value);
-              pillColor = typeOption?.colors[1] ?? "bg-yellow-100";
-              textColor = typeOption?.colors[0] ?? "bg-yellow-700";
-            } 
-            else if (filter.type === "state") {
-              const stateOption = STATE_OPTIONS.find(s => s.value === filter.value);
-              pillColor = stateOption?.colors[1] ?? "bg-yellow-100";
-              textColor = stateOption?.colors[0] ?? "bg-yellow-700";
-            }
-
-            return (
-              <TouchableOpacity
-                key={`${filter.type}-${filter.value}-${index}`}
-                onPress={() => removeFilter(filter.type, filter.value)}
-                className={`${pillColor} rounded-full px-3 py-2 mr-2 mb-2 flex-row items-center`}
-              >
-                <Body className={`${textColor} font-medium mr-1`}>{filter.value}</Body>
-                <Body className={`${textColor} font-bold`}>✕</Body>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    )
-  }, [activeFilters, removeFilter]);
-
 
   return (
     <View
@@ -285,7 +199,7 @@ export default function Projects() {
         </View>
 
         {/* Active filters indicator */}
-        {renderFilterPills()}
+        <FilterPills filters={activeFilters} onRemove={filterState.removeFilter}/>
 
         <NotificationToast screen="projects" />
       </View>
@@ -300,8 +214,8 @@ export default function Projects() {
                 renderItem={renderItem}
                 refreshing={backgroundLoading}
                 onRefresh={handleRefresh}
-                onEndReached={loadMoreProjects}
-                onEndReachedThreshold={0.5}
+                // onEndReached={loadMoreProjects}
+                // onEndReachedThreshold={0.5}
                 ListEmptyComponent={
                   backgroundLoading ? (
                     <Body className="text-center text-gray-500 mt-10">Načítavam...</Body>
@@ -340,7 +254,7 @@ export default function Projects() {
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         sections={filterSections}
-        onClearAll={clearFilters}
+        onClearAll={filterState.clearFilters}
       />
       
     </View>

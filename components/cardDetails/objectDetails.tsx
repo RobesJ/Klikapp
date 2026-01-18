@@ -1,16 +1,19 @@
 import { useAuth } from "@/context/authContext";
+import { useHandlePDFs } from "@/hooks/useHandlePDFs";
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useObjectStore } from "@/store/objectStore";
+import { useProjectStore } from "@/store/projectScreenStore";
 import { PDF } from "@/types/generics";
 import { ObjectWithRelations } from "@/types/objectSpecific";
+import { ProjectWithRelations } from "@/types/projectSpecific";
 import { regeneratePDFUtil } from "@/utils/pdfRegeneration";
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { parseISO } from "date-fns";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { PDF_Viewer } from "../modals/pdfViewer";
 import { NotificationToast } from "../notificationToast";
 import { Body, BodyLarge, Caption, Heading3 } from "../typography";
@@ -25,41 +28,34 @@ interface ObjectCardDetailsProps {
 export default function ObjectDetails({ objectWithRelations, visible, onClose, onCloseWithUnlock} : ObjectCardDetailsProps) { 
   const router = useRouter();
   const { user } = useAuth();
+
   const [loadingPDFs, setLoadingPDFs] = useState(false);
   const [PDFs, setPDFs] = useState<PDF[]>([]);
   const [selectedPDF, setSelectedPDF] = useState<PDF | null>(null);
   const [showPDFReports, setShowPDFReports] = useState(false);
+
   const [canEdit, setCanEdit] = useState(false);
   const [lockedByName, setLockedByName] = useState<string | null>(null);
   const {deleteObject, lockObject } = useObjectStore();
   const {updateClientCounts} = useClientStore();
+  let project: ProjectWithRelations | undefined;
  
   useEffect(() => {
     if( objectWithRelations.object){
       fetchPDFs();
     }
+    if (PDFs.length > 0){
+      project = useProjectStore.getState().projects.get(PDFs[0].project_id);
+    }
   }, [objectWithRelations.object.id]);
 
-  async function fetchPDFs(){
-    setLoadingPDFs(true);
-    try {
-        const {data, error} = await supabase
-            .from("pdfs")
-            .select('*')
-            .eq("object_id", objectWithRelations.object.id)
-            .order("generated_at", {ascending: false});
-        
-        if (error) throw error;
-        setPDFs(data || []);
-    }
-    catch (error: any) {
-        console.log("Error fetching pdfs:", error);
-    }
-    finally {
-        setLoadingPDFs(false);
-    }
-  };
+  const { deletePdf, fetchPDFs } = useHandlePDFs({
+      projectWithRelations: project!,
+      users: project?.users || [],
+      objectId: objectWithRelations.object.id
+  });
 
+  
   useEffect(() => {
     if (!visible || !objectWithRelations.object || !user) return;
     let active = true;
@@ -100,60 +96,6 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
     setShowPDFReports(false);
     setSelectedPDF(null);
   }, [selectedPDF]);
-
-  const deletePDF = useCallback(async (pdf: PDF) => {
-    const parts = pdf.storage_path.split("pdf-reports/");
-    const filename = parts[1];
-
-    Alert.alert(
-      'Odstrániť PDF',
-      'Naozaj chcete odstrániť tento PDF záznam?',
-      [
-        { text: 'Zrušiť', style: 'cancel' },
-        {
-          text: 'Odstrániť',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-
-              // Delete from storage
-              const { error: storageError } = await supabase.storage
-                .from("pdf-reports")
-                .remove([filename]);
-
-              if (storageError) throw storageError;
-
-              // Delete from database
-              const { error: dbError } = await supabase
-                .from("pdfs")
-                .delete()
-                .eq('id', pdf.id);
-
-              if (dbError) throw dbError;
-
-              // Update local state
-              setPDFs(PDFs.filter(p => p.id !== pdf.id));
-              setSelectedPDF(null);
-              useNotificationStore.getInitialState().addNotification(
-                "PDF záznam bol odstránený",
-                "success",
-                "objectDetails",
-                3000
-              )
-            } catch (error: any) {
-              console.error('Error deleting pdf:', error);
-              useNotificationStore.getInitialState().addNotification(
-                "Nepodarilo sa odstrániť PDF záznam",
-                "error",
-                "objectDetails",
-                4000
-              )
-            }
-          }
-        }
-      ]
-    );
-  },[selectedPDF, PDFs]);
 
     const handleRegeneratePDF = useCallback(async (pdf: PDF) => {
         try{
@@ -377,7 +319,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
                     visible={showPDFReports}
                     onClose={() => handleClosePdfViewer()}
                     selectedPDF={selectedPDF}
-                    onDelete={() => deletePDF(selectedPDF)}
+                    onDelete={() => deletePdf(selectedPDF)}
                     regeneratePDF={() => handleRegeneratePDF(selectedPDF)}
                 />
             )}  

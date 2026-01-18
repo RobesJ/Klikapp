@@ -2,7 +2,7 @@ import ProjectForm from '@/components/forms/projectForm';
 import { useAuth } from '@/context/authContext';
 import { supabase } from '@/lib/supabase';
 import { useClientStore } from '@/store/clientStore';
-import { useProjectStore } from "@/store/projectStore";
+import { useProjectStore } from "@/store/projectScreenStore";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';

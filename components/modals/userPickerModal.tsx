@@ -1,4 +1,4 @@
-import { useProjectStore } from "@/store/projectStore";
+import { useProjectStore } from "@/store/projectScreenStore";
 import { FlatList, Modal, TouchableOpacity, View } from "react-native";
 import { Body, BodySmall, Caption, Heading3 } from "../typography";
 
