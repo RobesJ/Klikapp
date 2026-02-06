@@ -9,8 +9,7 @@ import { useAuth } from '@/context/authContext';
 import { useActiveFilters } from '@/hooks/projectFilteringHooks/useActiveFilters';
 import { useFilterSections } from '@/hooks/projectFilteringHooks/useFilterSections';
 import { useProjectFilters } from '@/hooks/projectFilteringHooks/useProjectFilters';
-import { useHomeScreenStore } from '@/store/homeScreenStore';
-import { usePlanningScreenStore } from '@/store/planningScreenStore';
+import { useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from '@/types/projectSpecific';
 import { applyFilters, extractCitiesFromProjects } from '@/utils/projectFilteringUtils';
 import { EvilIcons, Feather } from '@expo/vector-icons';
@@ -19,7 +18,7 @@ import { FlashList } from '@shopify/flash-list';
 import { format, parseISO } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Dimensions, TouchableOpacity, Vibration, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -37,26 +36,23 @@ export default function Planning() {
   const [showFilterModalAssigned,  setShowFilterModalAssigned] = useState(false);
   const [showFilterModalUnassigned,  setShowFilterModalUnassigned] = useState(false);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [unassignedDaysAhead, setUnassignedDaysAhead] = useState(30);
   
   const hasInitialized = useRef(false);
   const currentAssingmentsRef = useRef<Record<string, Date>>({});
 
-  const {availableUsers} = useHomeScreenStore();
+  const availableUsers  = useProjectStore(state => state.availableUsers);
+  const getAssignedProjects  = useProjectStore(state => state.getAssignedProjects);
+  const getUnassignedProjects  = useProjectStore(state => state.getUnassignedProjects);
 
   const {
-    loadMoreUnassigned,
-    loadMoreAssigned,
-    metadata,
-    refreshPlanning,
+    syncProjects,
     backgroundLoading,
-    getAssignedProjects,
-    getUnassignedProjects,
-    fetchPlannedProjects,
     assignProjectToDate,
-    changeStateOfAssignedProject,
     unassignProject,
-    unlockProject
-  } = usePlanningScreenStore();
+    unlockProject,
+    changeStateOfAssignedProject,
+  } = useProjectStore();
 
   const assignedFilterState = useProjectFilters({includeCities: false});
   const unassignedFilterState = useProjectFilters({includeCities: true});
@@ -85,9 +81,8 @@ export default function Planning() {
   useEffect(() => {  
     if (!hasInitialized.current){
       hasInitialized.current = true;
-      fetchPlannedProjects();
     }
-  }, [fetchPlannedProjects]);
+  }, []);
 
   useEffect(() => {  
     if (preselectedDate) {
@@ -126,45 +121,55 @@ export default function Planning() {
   );
   
   useEffect(() => {
-    const unassigned = getUnassignedProjects(selectedDate);
+    const unassigned = getUnassignedProjects(unassignedDaysAhead);
     setAvailableCities(extractCitiesFromProjects(unassigned));
-  }, [selectedDate, getUnassignedProjects]);
+  }, [getUnassignedProjects, unassignedDaysAhead]);
 
-  const assignedRaw = getAssignedProjects(selectedDate);
-  const assignedProjects = applyFilters(assignedRaw, assignedFilterState.filters);
-  const unassignedRaw = getUnassignedProjects(selectedDate);
-  const unassignedProjects = applyFilters(unassignedRaw, unassignedFilterState.filters);
 
-  const handleLoadMoreUnassigned = useCallback(() => {
-    if (backgroundLoading || !metadata.unassigned.hasMore) return;
-    loadMoreUnassigned(unassignedFilterState.filters);
-  }, [
-    backgroundLoading,
-    metadata.unassigned.hasMore,
-    loadMoreUnassigned,
-    selectedDate,
-    unassignedFilterState.filters
-  ]);
+  const assignedRaw = getAssignedProjects();
+  const unassignedRaw = getUnassignedProjects(unassignedDaysAhead);
+  //const assignedProjects = applyFilters(assignedRaw, assignedFilterState.filters);
+//
+  //const unassignedProjects = applyFilters(unassignedRaw, unassignedFilterState.filters);
 
-  const handleLoadMoreAssigned = useCallback(() => {
-    if (backgroundLoading || !metadata.assigned.hasMore) return;
-    loadMoreAssigned(selectedDate);
-  }, [
-    backgroundLoading,
-    metadata.assigned.hasMore,
-    loadMoreAssigned,
-    selectedDate
-  ]);
+  const assignedForDate = useMemo(() => {
+    const dateString = format(selectedDate, "yyyy-MM-dd");
+    return assignedRaw.filter(p => p.project.start_date === dateString);
+  }, [assignedRaw, selectedDate]);
+  
+  // Apply user filters
+  const assignedProjects = useMemo(() => 
+    applyFilters(assignedForDate, assignedFilterState.filters),
+    [assignedForDate, assignedFilterState.filters]
+  );
+  
+  const unassignedProjects = useMemo(() => 
+    applyFilters(unassignedRaw, unassignedFilterState.filters),
+    [unassignedRaw, unassignedFilterState.filters]
+  );
+
+  //const handleLoadMoreUnassigned = useCallback(() => {
+  //  if (backgroundLoading || !metadata.unassigned.hasMore) return;
+  //  loadMoreUnassigned(unassignedFilterState.filters);
+  //}, [
+  //  backgroundLoading,
+  //  metadata.unassigned.hasMore,
+  //  loadMoreUnassigned,
+  //  selectedDate,
+  //  unassignedFilterState.filters
+  //]);
+
+
 
   const handleDateSelect = useCallback((date: Date) => {
-  setSelectedDate(date);
-  
-  // Check if we need to load more assigned projects for future dates
-  const dateStr = format(date, 'yyyy-MM-dd');
-  if (metadata.assigned.cursor && dateStr > metadata.assigned.cursor) {
-    loadMoreAssigned(date);
-  }
-}, [metadata.assigned.cursor, loadMoreAssigned]);
+    setSelectedDate(date);
+    
+    // Check if we need to load more assigned projects for future dates
+  //  const dateStr = format(date, 'yyyy-MM-dd');
+  //  if (metadata.assigned.cursor && dateStr > metadata.assigned.cursor) {
+  //    loadMoreAssigned(date);
+  //  }
+  }, []); //[metadata.assigned.cursor, loadMoreAssigned]);
 
   const handleAssignProject = useCallback(async (projectId: string) => {
     try {
@@ -185,8 +190,8 @@ export default function Planning() {
     try{
       await unassignProject(projectId);
       delete currentAssingmentsRef.current[projectId];
-      getAssignedProjects(selectedDate);
-      getUnassignedProjects(selectedDate);
+      getAssignedProjects();
+      getUnassignedProjects(unassignedDaysAhead);
       Vibration.vibrate(50);
     }
     catch(error: any){
@@ -209,8 +214,8 @@ export default function Planning() {
   }, [selectedProject, user, unlockProject]);
 
   const handleRefresh = useCallback(() => {
-    refreshPlanning();
-  }, [refreshPlanning]);
+    syncProjects();
+  }, [syncProjects]);  
   
   const renderAssignedItem = useCallback(({ item }: { item: ProjectWithRelations }) => (
     <SwipeableProjectCard 
@@ -307,9 +312,9 @@ export default function Planning() {
                 keyExtractor={keyExtractor}
                 renderItem={renderAssignedItem}
                 showsVerticalScrollIndicator={false}
-                refreshing={metadata.assigned.isLoading}
-                onRefresh={handleRefresh}
-                onEndReached={handleLoadMoreAssigned}
+                // refreshing={metadata.assigned.isLoading}
+                // onRefresh={handleRefresh}
+                // onEndReached={handleLoadMoreAssigned}
                 onEndReachedThreshold={0.5}          
               />
               </View>
@@ -323,7 +328,7 @@ export default function Planning() {
           )}
         </View>
       </View>
-      <View>
+      <View className='"flex-1'>
         {/* Unassigned Projects List - 60% of available space */}
           <View className='flex-row justify-between items-center mb-3'>
             <BodyLarge className="text-dark-text_color text-xl font-bold">
@@ -344,7 +349,8 @@ export default function Planning() {
             filters={activeFiltersUnassigned} 
             onRemove={unassignedFilterState.removeFilter} 
           />
-  
+          
+          <View className='flex-1'>
           {unassignedProjects.length === 0 && backgroundLoading ? (
             <PlanningListSkeleton/>
           ) : (
@@ -354,9 +360,9 @@ export default function Planning() {
                 keyExtractor={keyExtractor}
                 renderItem={renderUnassignedItem}
                 showsVerticalScrollIndicator={false}
-                refreshing={metadata.unassigned.isLoading}
+                // refreshing={metadata.unassigned.isLoading}  // style={{ height: unassignedProjects.length === 0 ? 0 : SCREEN_HEIGHT/3}}>
                 onRefresh={handleRefresh}
-                onEndReached={handleLoadMoreUnassigned}
+                // onEndReached={handleLoadMoreUnassigned}
                 onEndReachedThreshold={0.5}
                 ListEmptyComponent={
                   <Body className="text-dark-text_color text-center opacity-50 mt-4">
@@ -366,6 +372,7 @@ export default function Planning() {
               />
                </View>
           )}
+          </View>
       </View>
   
       {/* Modals remain the same */}

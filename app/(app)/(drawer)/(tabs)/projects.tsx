@@ -9,8 +9,8 @@ import { useAuth } from '@/context/authContext';
 import { useActiveFilters } from '@/hooks/projectFilteringHooks/useActiveFilters';
 import { useFilterSections } from '@/hooks/projectFilteringHooks/useFilterSections';
 import { useProjectFilters } from '@/hooks/projectFilteringHooks/useProjectFilters';
-import { useHomeScreenStore } from '@/store/homeScreenStore';
-import { useProjectStore } from '@/store/projectScreenStore';
+import { useProjectSync } from '@/hooks/useProjectSync';
+import { useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from '@/types/projectSpecific';
 import { applyFilters } from '@/utils/projectFilteringUtils';
 import { FONT_SIZES } from '@/utils/responsive';
@@ -22,7 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelRatio, TextInput, TextStyle, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const MINIMUM_RESULTS = 20;
+// const MINIMUM_RESULTS = 20;
 
 export default function Projects() {
   const insets = useSafeAreaInsets();
@@ -37,19 +37,13 @@ export default function Projects() {
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const isInitialMount = useRef(true);
-  const lastFilterCheck = useRef(0);
-  const { availableUsers } = useHomeScreenStore();
+  useProjectSync();
 
-  const {
-    backgroundLoading,
-    fetchProjects,
-    refresh,
-    projects,
-    metadata,
-    //applyFilters,
-    // loadMore,
-    unlockProject
-  } = useProjectStore();
+  const availableUsers = useProjectStore(state => state.availableUsers);
+  const backgroundLoading = useProjectStore(state => state.backgroundLoading);
+  const projects = useProjectStore(state => state.projects);
+  const syncProjects = useProjectStore(state => state.syncProjects);
+  const unlockProject = useProjectStore(state => state.unlockProject);
 
   const filterState = useProjectFilters({
     includeCities: false,
@@ -80,16 +74,15 @@ export default function Projects() {
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
-        fetchProjects();
     }
-  }, [fetchProjects]);
+  }, []);
 
 
   const filteredProjects = applyFilters(Array.from(projects.values()), filterState.filters);
     
   const handleRefresh = useCallback(() => {
-    refresh(filterState.filters);
-  },[refresh, filterState.filters]);
+    syncProjects();
+  },[syncProjects]);
 
   const handleSearch = useCallback((text: string) => {
     setSearchText(text);
@@ -256,7 +249,6 @@ export default function Projects() {
         sections={filterSections}
         onClearAll={filterState.clearFilters}
       />
-      
     </View>
   );
 }

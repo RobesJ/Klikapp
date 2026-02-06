@@ -2,7 +2,7 @@ import { useProjectSubmit } from "@/hooks/submitHooks/useProjectSubmit";
 import { useSearchClient } from "@/hooks/useSearchClient";
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
-import { useProjectStore } from "@/store/projectScreenStore";
+import { useProjectStore } from "@/store/projectStore";
 import { Project, User } from "@/types/generics";
 import { Chimney, ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";

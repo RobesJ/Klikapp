@@ -5,7 +5,7 @@ import { useHandlePhotos } from '@/hooks/useHandlePhotos';
 import { supabase } from "@/lib/supabase";
 import { useClientStore } from '@/store/clientStore';
 import { useNotificationStore } from '@/store/notificationStore';
-import { useProjectStore } from "@/store/projectScreenStore";
+import { useProjectStore } from "@/store/projectStore";
 import { PDF, User } from "@/types/generics";
 import { regeneratePDFUtil } from '@/utils/pdfRegeneration';
 import { EvilIcons, Feather, MaterialIcons } from "@expo/vector-icons";
@@ -75,6 +75,7 @@ export default function ProjectDetails({
     } = useHandlePhotos({ projectWithRelations: projectWithRelations! });
    
     const [canEdit, setCanEdit] = useState(false);
+    const [checkingLock, setCheckingLock] = useState(true);
     const [showUserModal, setShowUserModal] = useState(false);
     const [lockedByName, setLockedByName] = useState<string | null>(null);
 
@@ -107,6 +108,8 @@ export default function ProjectDetails({
         if(!visible || !projectWithRelations.project.id || !user) return;
         let active = true ;
 
+        setCheckingLock(true);
+
         (async () => {  
             const result = await lockProject(projectWithRelations.project.id, user.id, user.user_metadata.name);
             if(!active) return;
@@ -118,7 +121,9 @@ export default function ProjectDetails({
             else{ 
                 setCanEdit(false);
                 setLockedByName(result.lockedByName);
-          }
+            }
+
+            setCheckingLock(false);
         })();
 
         return () => {
@@ -352,7 +357,7 @@ export default function ProjectDetails({
               {/* Project data*/}
               <ScrollView className="max-h-screen-safe-offset-12 p-4">
                 <ScrollView className="flex-1">
-                  {!canEdit && <Body style={{color: "#F59E0B"}}>Tento projekt upravuje používateľ {lockedByName}</Body>}
+                  {!canEdit && !checkingLock && <Body style={{color: "#F59E0B"}}>Tento projekt upravuje používateľ {lockedByName}</Body>}
                   <NotificationToast
                     screen="projectDetails"
                   />

@@ -1,4 +1,4 @@
-import { ProjectFilters } from "@/store/projectScreenStore";
+import { ProjectFilters } from "@/store/projectStore";
 import { ProjectWithRelations } from "@/types/projectSpecific";
 
 // helpers for project filters

@@ -1,4 +1,4 @@
-import { ProjectFilters } from "@/store/projectScreenStore";
+import { ProjectFilters } from "@/store/projectStore";
 import { useCallback, useState } from "react";
 
 export type FilterType = "type" | "state" | "users" | "cities" | "dateFrom" | "dateTo" | "searchQuery";

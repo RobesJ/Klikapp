@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { ProjectFilters } from "@/types/projectSpecific";
 
+/*
 export async function activeProjectsQuery(today: string) {
     let query = supabase
         .from("projects")
@@ -193,8 +193,8 @@ export async function assignedPlannedQuery(
     }
     return await query;
 };
-
-export async function allProjectsQuery(offset?: number, limit?: number, filters?: ProjectFilters){
+*/
+export async function allProjectsQuery(sync: boolean, timestamp?: string | null){
     let query = supabase
         .from("projects")
         .select(`
@@ -226,18 +226,9 @@ export async function allProjectsQuery(offset?: number, limit?: number, filters?
             )
           )
         `);
-      //  .range(offset, offset + limit - 1);
-    //
-      if (filters) {
-        if (filters.type.length > 0) {
-          query = query.in("type", filters.type);
-        }
-        if (filters.dateFrom) {
-          query = query.gte("start_date", filters.dateFrom);
-        }
-        if (filters.dateTo) {
-          query = query.lte("start_date", filters.dateTo);
-        }
-      }
+    
+    if (sync){
+      query = query.gt('updated_at', timestamp);
+    }
     return  await query;
 }

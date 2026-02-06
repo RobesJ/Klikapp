@@ -214,18 +214,18 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
           }
         } 
         catch (err: any) {
-          console.error('Error fetching relations:', err);
-          setError(err.message || 'Nepodarilo sa načítať dáta');
+            console.error('Error fetching relations:', err);
+            setError(err.message || 'Nepodarilo sa načítať dáta');
         } 
         finally {
-          setLoading(false);
+            setLoading(false);
         }
     }
 
     const handleNavigateAndRefresh = useCallback(async (pathname: any, params: any) => {
         onClose(); 
         router.push({ pathname, params });
-    },[router, onClose]);
+    }, [router, onClose]);
 
     // handler for editing client
     const handleEditClient = useCallback(() => {
@@ -432,8 +432,8 @@ export default function ClientDetails({client, visible, onClose, onCloseWithUnlo
                         className="flex-row gap-1 bg-green-700 rounded-full items-center justify-center px-4 py-2"
                         disabled={!canEdit}
                     >
-                        <Feather name="edit-2" size={16} color="white" />
-                        <Body className='text-white'>Upraviť</Body>
+                          <Feather name="edit-2" size={16} color="white" />
+                          <Body className='text-white'>Upraviť</Body>
                       </TouchableOpacity>   
                     </View>
                 </View>

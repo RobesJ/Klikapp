@@ -8,7 +8,7 @@ export interface ProjectWithRelations {
   objects: ObjectWithRelations[];
 }
 
-export interface Photo{
+export interface Photo {
   id: string;
   project_id: string;
   file_name: string;

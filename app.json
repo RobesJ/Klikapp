@@ -5,7 +5,6 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/chimney-sweep-holding-sweeper-logo-vector.jpg",
-    "main": "expo-router/entry",
     "scheme": "klikapp",
     "userInterfaceStyle": "automatic",
     "jsEngine": "hermes",
@@ -77,8 +76,8 @@
       "@sentry/react-native"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+      //"reactCompiler": true
     },
     "extra": {
       "router": {},

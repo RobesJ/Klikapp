@@ -1,7 +1,9 @@
 import { supabase } from '@/lib/supabase';
+import { User } from '@/types/generics';
 import { ProjectFilters, ProjectWithRelations } from '@/types/projectSpecific';
 import { allProjectsQuery } from '@/utils/projectQueries';
 import { transformProjects } from '@/utils/transformProject';
+import { addDays, format, isBefore } from 'date-fns';
 import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { useClientStore } from './clientStore';
@@ -24,19 +26,29 @@ interface ProjectsMetadata {
 
 interface ProjectStore {
   projects: Map<string, ProjectWithRelations>;
+  lastSync: string | null; 
+  syncCount: number, 
   metadata: ProjectsMetadata;
+  availableUsers: User[];
   initialLoading : boolean;
   backgroundLoading: boolean;
   error: string | null;
 
   // Fetching functions
   fetchProjects: () => Promise<void>;
+  fetchAvailableUsers: () => Promise<void>;
 
-  // Pagination
-  // loadMore: (filters: ProjectFilters) => Promise<void>;
+  syncProjects: () => Promise<void>;
 
-  // Filtering
-  // applyFilters: (filters: ProjectFilters) => Promise<void>;
+  // Getters
+  getActiveProjects: () => ProjectWithRelations[];
+  getAssignedProjects: () => ProjectWithRelations[];
+  getUnassignedProjects: (daysAhead: number) => ProjectWithRelations[];
+
+  // Planning functions
+  assignProjectToDate: (projectId: string, date: Date) => void; 
+  unassignProject: (projectId: string) => Promise<void>;   
+  changeStateOfAssignedProject: (projectId: string, date: Date) => Promise<void>; 
 
   // Project management
   addProject: (project: ProjectWithRelations) => void;
@@ -46,23 +58,19 @@ interface ProjectStore {
   // Lock management
   lockProject: (id: string, userID: string, userName: string) => Promise<LockResult>;
   unlockProject: (id: string, userID: string) => void;
-  
-  // Refresh
-  refresh: (filters: ProjectFilters) => Promise<void>;
 }
-
-const PAGE_SIZE = 20;
-const MIN_RESULTS = 20;
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Initial state
   projects: new Map(),
+  lastSync:  null, 
+  syncCount: 0, 
   metadata: {
       hasMore: true,
       isLoading: false,
       offset: 0
   },
-
+  availableUsers: [],
   initialLoading: true,
   backgroundLoading: false,
   error: null,
@@ -72,7 +80,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set({ initialLoading: true, error: null });
 
     try {
-      const { data, error } = await allProjectsQuery();
+      const { data, error } = await allProjectsQuery(false);
         
       if (error) throw error;
 
@@ -82,12 +90,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       
       set({
         projects: projectsMap,
-        //metadata: {
-        //  hasMore: data.length === PAGE_SIZE,
-        //  isLoading: false,
-        //  offset: data.length
-        //},
-        initialLoading: false
+        initialLoading: false,
+        lastSync: new Date().toISOString()
       });
 
       console.log(`Fetched ${transformedProjects.length} projects`);
@@ -107,122 +111,205 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
   },
 
-  // ======== PAGINATION FUNCTIONS ========
-  //loadMore: async (filters: ProjectFilters) => {
-  //  const { backgroundLoading, metadata } = get();
-  //  
-  //  if (backgroundLoading || !metadata.hasMore) {
-  //    console.log("Load more: already loading or no more data");
-  //    return;
-  //  }
-//
-  //  set({ backgroundLoading: true });
-//
-  //  try {
-  //    // Apply server-side filters for type, state, dates
-  //    const serverFilters = {
-  //      type: filters.type,
-  //      state: filters.state,
-  //      dateFrom: filters.dateFrom,
-  //      dateTo: filters.dateTo,
-  //      users: [], // Don't send to server
-  //      searchQuery: '' // Don't send to server
-  //    };
-//
-  //    const { data, error } = await allProjectsQuery(
-  //      metadata.offset,
-  //      PAGE_SIZE,
-  //      isInitialFilter(serverFilters) ? undefined : serverFilters
-  //    );
-//
-  //    if (error) throw error;
-//
-  //    const transformed = transformProjects(data || []);
-  //    
-  //    // Merge with existing projects
-  //    const projectsMap = new Map(get().projects);
-  //    transformed.forEach(p => projectsMap.set(p.project.id, p));
-//
-  //    set({
-  //      projects: projectsMap,
-  //      backgroundLoading: false,
-  //      metadata: {
-  //        hasMore: data.length === PAGE_SIZE,
-  //        isLoading: false,
-  //        offset: metadata.offset + data.length
-  //      }
-  //    });
-//
-  //    console.log(`Loaded ${transformed.length} more projects (total offset: ${metadata.offset + data.length})`);
-  //  } catch (error: any) {
-  //    console.error('Load more error:', error);
-  //    set({ 
-  //      backgroundLoading: false,
-  //      error: error.message
-  //    });
-  //  }
-  //},
+  fetchAvailableUsers: async() =>{
+    try{
+      const {data, error} = await supabase
+        .from("user_profiles")
+        .select("id, name, email")
+        .order("name", {ascending: true});
+      
+      if(error) throw error;
 
-  // ======== FILTER FUNCTIONS ========
-  // applyFilters: async (filters: ProjectFilters) => {
-  //   const { backgroundLoading } = get();
-  //   
-  //   if (backgroundLoading) return;
-  //   
-  //   // Reset state and fetch fresh data with filters
-  //   set({ 
-  //     backgroundLoading: true,
-  //     projects: new Map(), // Clear existing projects
-  //     metadata: {
-  //       hasMore: true, 
-  //       offset: 0,
-  //       isLoading: false 
-  //     }
-  //   });
-  // 
-  //   try {
-  //     // Server-side filters only for database-indexable fields
-  //     const serverFilters = {
-  //       type: filters.type,
-  //       state: filters.state,
-  //       dateFrom: filters.dateFrom,
-  //       dateTo: filters.dateTo,
-  //       users: [], // Client-side only
-  //       searchQuery: '' // Client-side only
-  //     };
-// 
-  //     const { data, error } = await allProjectsQuery(
-  //       0,
-  //       PAGE_SIZE,
-  //       isInitialFilter(serverFilters) ? undefined : serverFilters
-  //     );
-// 
-  //     if (error) throw error;
-// 
-  //     const transformed = transformProjects(data || []);
-  //     const projectsMap = new Map<string, ProjectWithRelations>();
-  //     transformed.forEach(p => projectsMap.set(p.project.id, p));
-  // 
-  //     set({
-  //       projects: projectsMap,
-  //       backgroundLoading: false,
-  //       metadata: {
-  //         hasMore: data.length === PAGE_SIZE,
-  //         offset: data.length,
-  //         isLoading: false
-  //       }
-  //     });
-  // 
-  //     console.log(`Applied filters, found ${transformed.length} projects`);
-  //   } catch (error: any) {
-  //     console.error("Filter error:", error);
-  //     set({ 
-  //       backgroundLoading: false,
-  //       error: error.message 
-  //     });
-  //   }
-  // },
+      set({availableUsers: data || []});
+    }
+    catch(error: any){
+      console.error("Error fetching users:", error);
+    }
+  },
 
+  syncProjects: async() =>{
+    const {lastSync, syncCount} = get();
+
+    // refrehshin whole dataset after 20 sync to get catch deletions
+    // to improve => implement soft deletes
+    const shouldRefetch = syncCount === 20;
+
+    if (!lastSync || shouldRefetch) {
+      set({ syncCount: 0});
+      return get().fetchProjects();
+    }
+
+    try{
+        const { data, error } = await allProjectsQuery(true, lastSync);
+       
+        if(error) throw error;
+
+        if (data && data.length > 0){
+          const transformedProjects = transformProjects(data || []);
+          set(state => {
+            const projectsMap = new Map(state.projects);
+            transformedProjects.forEach(p => projectsMap.set(p.project.id, p));
+          
+            return {
+              projects: projectsMap,
+              lastSync: new Date().toISOString(),
+              syncCount: state.syncCount + 1
+            }
+          });
+        
+          console.log(`Fetched ${transformedProjects.length} projects`);
+        }
+        else {
+          set({
+            lastSync: new Date().toISOString(),
+            syncCount: get().syncCount + 1
+          });
+        }
+    }
+    catch(error: any){
+        console.error("Error syncing projects:", error);
+    }
+  },
+
+  getActiveProjects: () => {
+    const { projects } = get();
+    const dateString = format(Date.now(), "yyyy-MM-dd");
+    return Array.from(projects.values()).filter(p =>
+      p?.project?.state === "Prebieha" || 
+      p?.project?.state === "Pozastavený" ||
+      (p?.project?.state === "Naplánovaný" &&
+      p.project.start_date === dateString)
+    );
+  },
+
+  // all the projects with state Naplanovany 
+  // the planning screen will filter value based on date
+  getAssignedProjects: () => {
+    const { projects } = get();
+   // const dateString = format(date, "yyyy-MM-dd");
+    
+    return Array.from(projects.values())
+      .filter(p =>p?.project?.state === "Naplánovaný")
+      .sort((a, b) => (a.project.start_date || "").localeCompare(b.project.start_date || ""));
+  },
+
+  // by default are unassigned all the projects where
+  // scheduled_date < today + 30
+  getUnassignedProjects: (daysAhead: number = 30) => {
+    const { projects } = get();
+    const futureDate = format(addDays(Date.now(), daysAhead), "yyyy-MM-dd");
+
+    return Array.from(projects.values())
+      .filter(p => 
+        p?.project?.state === "Nový" &&
+        p.project.scheduled_date &&
+        p.project.scheduled_date <= futureDate 
+      )
+      .sort((a, b) =>
+        (a.project.scheduled_date || "").localeCompare(b.project.scheduled_date || "")
+      );
+  },
+
+
+  // ======== PLANNING FUNCTIONS ========
+  assignProjectToDate: (projectId: string, date: Date) => {
+    try {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const project = get().projects.get(projectId);
+
+      if (project) {
+        const updated = {
+          ...project,
+          project: {
+            ...project.project,
+            state: "Naplánovaný",
+            start_date: dateStr
+          }
+        };
+        get().updateProject(projectId, updated, false);
+      }
+    }
+    catch(error: any){
+      console.error("Error assigning project:", error);
+      throw error;
+    }
+  },
+
+  unassignProject: async(projectId: string) => {
+    try {
+      const {error} = await supabase
+        .from("projects")
+        .update({
+          state: "Nový",
+          start_date: null
+        })
+        .eq("id", projectId);
+
+      if(error) throw error;
+      
+      const project = get().projects.get(projectId);
+      if (project) {
+        const updated = {
+          ...project,
+          project: {
+            ...project.project,
+            state: "Nový",
+            start_date: null
+          }
+        };
+        get().updateProject(projectId, updated, false);
+      }
+    }
+    catch(error: any){
+      console.error("Error unassigning project:", error);
+      throw error;
+    }
+  },
+
+  changeStateOfAssignedProject: async(projectId: string, date: Date) => {
+    try{
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const today = new Date();
+      
+      const project = get().projects.get(projectId);
+      if(isBefore(date, today)){
+        const {error} = await supabase
+          .from("projects")
+          .update({
+            state: "Prebieha",
+            start_date: dateStr
+          })
+          .eq("id", projectId);
+        if(error) throw error;
+        
+        if (project) {
+          const updated = {
+            ...project,
+            project: {
+              ...project.project,
+              state: "Prebieha",
+              start_date: dateStr
+            }
+          };
+          get().updateProject(projectId, updated, true);
+        }
+      }
+      else{
+        const {error} = await supabase
+          .from("projects")
+          .update({
+            state: "Naplánovaný",
+            start_date: dateStr
+          })
+          .eq("id", projectId);
+        if(error) throw error;
+      }
+    }
+    catch(error: any){
+      console.error("Error changing project state:", error);
+      throw error;
+    }
+  },
 
   // ======== PROJECT MANAGEMENT ========
   addProject: (project) => {
@@ -381,30 +468,5 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     catch (error: any){
       console.error("Error unlocking project:", error);
     }
-  },
-
-  // ======== REFRESH FUNCTIONS ========
-  refresh: async (filters: ProjectFilters) => {
-    set({ 
-      backgroundLoading: true,
-      metadata: {
-          offset: 0,
-          hasMore: true,
-          isLoading: false
-      }
-    });
-    //await get().applyFilters(filters);
   }
 }));
-
-
-function isInitialFilter(filters: ProjectFilters): boolean {
-  return (
-    filters.type.length === 0 &&
-    filters.state.length === 0 &&
-    filters.users.length === 0 &&
-    (!filters.dateFrom || filters.dateFrom === null) &&
-    (!filters.dateTo || filters.dateTo === null) &&
-    (!filters.searchQuery || filters.searchQuery === '')
-  );
-}

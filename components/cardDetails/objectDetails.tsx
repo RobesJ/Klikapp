@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useClientStore } from "@/store/clientStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useObjectStore } from "@/store/objectStore";
-import { useProjectStore } from "@/store/projectScreenStore";
+import { useProjectStore } from "@/store/projectStore";
 import { PDF } from "@/types/generics";
 import { ObjectWithRelations } from "@/types/objectSpecific";
 import { ProjectWithRelations } from "@/types/projectSpecific";
@@ -35,7 +35,9 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
   const [showPDFReports, setShowPDFReports] = useState(false);
 
   const [canEdit, setCanEdit] = useState(false);
+  const [checkingLock, setCheckingLock] = useState(true);
   const [lockedByName, setLockedByName] = useState<string | null>(null);
+
   const {deleteObject, lockObject } = useObjectStore();
   const {updateClientCounts} = useClientStore();
   let project: ProjectWithRelations | undefined;
@@ -55,10 +57,12 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
       objectId: objectWithRelations.object.id
   });
 
-  
+  // acquire lock when modal opens
   useEffect(() => {
     if (!visible || !objectWithRelations.object || !user) return;
     let active = true;
+
+    setCheckingLock(true);
 
     (async () => {
       const result = await lockObject(objectWithRelations.object.id, user.id, user.user_metadata.name);
@@ -66,6 +70,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
 
       if(result.success){
         setCanEdit(true);
+        setLockedByName(null);
         console.log("Object lock aquired");
       }
       else{
@@ -73,7 +78,12 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
         setLockedByName(result.lockedByName);
         console.log("Object lock not aquired");
       }
+
+      setCheckingLock(false);
     })();
+    return () => {
+      active = false;
+    };
   }, [visible, user?.id, objectWithRelations.object?.id]);
 
 
@@ -92,10 +102,10 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
             
   }, [visible, canEdit, user?.id]);
   
-  const handleClosePdfViewer = useCallback(() => {
-    setShowPDFReports(false);
-    setSelectedPDF(null);
-  }, [selectedPDF]);
+    const handleClosePdfViewer = useCallback(() => {
+      setShowPDFReports(false);
+      setSelectedPDF(null);
+    }, [selectedPDF]);
 
     const handleRegeneratePDF = useCallback(async (pdf: PDF) => {
         try{
@@ -172,7 +182,7 @@ export default function ObjectDetails({ objectWithRelations, visible, onClose, o
                       
                     <ScrollView className="max-h-screen-safe-offset-12 p-4">
                       <View className="flex-1">
-                        {!canEdit && <Body style={{color: "#F59E0B"}}>Tento objekt upravuje používateľ {lockedByName}</Body>}
+                        {!canEdit && !checkingLock && <Body style={{color: "#F59E0B"}}>Tento objekt upravuje používateľ {lockedByName}</Body>}
                         <NotificationToast
                           screen="objectDetails"
                         />

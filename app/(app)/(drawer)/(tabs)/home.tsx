@@ -10,7 +10,8 @@ import { useAuth } from '@/context/authContext';
 import { useActiveFilters } from '@/hooks/projectFilteringHooks/useActiveFilters';
 import { useFilterSections } from '@/hooks/projectFilteringHooks/useFilterSections';
 import { useProjectFilters } from '@/hooks/projectFilteringHooks/useProjectFilters';
-import { useHomeScreenStore } from '@/store/homeScreenStore';
+import { useProjectSync } from '@/hooks/useProjectSync';
+import { useProjectStore } from '@/store/projectStore';
 import { ProjectWithRelations } from '@/types/projectSpecific';
 import { applyFilters } from '@/utils/projectFilteringUtils';
 import { EvilIcons, Feather } from '@expo/vector-icons';
@@ -19,7 +20,7 @@ import { FlashList } from '@shopify/flash-list';
 import { format, isBefore, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,25 +37,26 @@ export default function Home() {
   
   const hasInitialized = useRef(false);
   
-  const {
-    initialLoading,
-    fetchAvailableUsers,
-    fetchActiveProjects,
-    availableUsers,
-    activeProjects,
-    unlockProject
-  } = useHomeScreenStore();
-
+  const syncProjects = useProjectStore(state => state.syncProjects);
+  const initialLoading = useProjectStore(state => state.initialLoading);
+  const fetchProjects  = useProjectStore(state => state.fetchProjects);
+  const fetchAvailableUsers = useProjectStore(state => state.fetchAvailableUsers);
+  const availableUsers = useProjectStore(state => state.availableUsers);
+  const unlockProject = useProjectStore(state => state.unlockProject);
+  const getActiveProjects = useProjectStore(state => state.getActiveProjects);
+  const activeProjects = getActiveProjects();
   const filterState = useProjectFilters({includeCities: false});
+
+  useProjectSync();
 
   // Init data on screen mount
   useEffect(() => {
       if (!hasInitialized.current){
         hasInitialized.current = true;
-        fetchActiveProjects();
+        fetchProjects();
         fetchAvailableUsers();
       }
-  }, [fetchActiveProjects, fetchAvailableUsers]);
+  }, [fetchProjects, fetchAvailableUsers]);
   
   // clear filters when leaving the screen
   useFocusEffect(
@@ -75,7 +77,7 @@ export default function Home() {
   });
 
   const activeFilters = useActiveFilters(filterState.filters, availableUsers);
-  const filtered = applyFilters(Array.from(activeProjects.values()),filterState.filters);
+  const filtered = useMemo(() => applyFilters(activeProjects ,filterState.filters), [activeProjects, filterState.filters]);
   const selectedDay = startOfDay(selectedDate);
   
   const projectsForSelectedDate = filtered.filter((p) => {
@@ -109,8 +111,8 @@ export default function Home() {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    fetchActiveProjects();
-  }, [fetchActiveProjects]);
+     syncProjects();
+  }, [syncProjects]);
 
   const handleCloseWithUnlock = useCallback(() => {
     setShowDetails(false);
@@ -211,24 +213,11 @@ export default function Home() {
                 </TouchableOpacity>
               </View>
             }
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
           />
         )}
       </View>
-      
-      {/*
-      ) : projectsForSelectedDate.length === 0 ? (
-          <View className="flex-1 items-center justify-center">
-            <Body className="text-red-500 mb-4">Žiadne bežiace projekty</Body>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              className="rounded-xl bg-blue-600 py-3 px-8"
-              onPress={handleNavigatePlanning}
-            >
-              <Body className="text-white font-semibold">Plánovať projekty</Body>
-            </TouchableOpacity>
-          </View>
-        ) : 
-         */}
 
       {/* Project details modal */}
       {selectedProject && (

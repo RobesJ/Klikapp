@@ -1,4 +1,4 @@
-import { ProjectFilters } from "@/store/projectScreenStore";
+import { ProjectFilters } from "@/store/projectStore";
 import { User } from "@/types/generics";
 import { useMemo } from "react";
 
